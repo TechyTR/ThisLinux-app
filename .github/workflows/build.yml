@@ -10,24 +10,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.0'
-          channel: 'stable'
+          channel: stable
 
-      - name: Create Android platform files
+      - name: Create Android platform
         run: |
           flutter create --platforms=android --org org.test temp_scaffold
           cp -r temp_scaffold/android .
           rm -rf temp_scaffold
 
-          sed -i 's/android:label="temp_scaffold"/android:label="This Linux"/' android/app/src/main/AndroidManifest.xml
+      - name: Set application name
+        run: |
+          sed -i 's/android:label="temp_scaffold"/android:label="This Linux"/' \
+            android/app/src/main/AndroidManifest.xml
 
-          # Kotlin sürümünü güncelle
-          sed -i "s/ext.kotlin_version = '[^']*'/ext.kotlin_version = '1.9.24'/" android/build.gradle
+      - name: Update Kotlin version
+        run: |
+          sed -i "s/id 'org.jetbrains.kotlin.android' version '[^']*'/id 'org.jetbrains.kotlin.android' version '1.9.24'/" \
+            android/settings.gradle
+
+          sed -i 's/id("org.jetbrains.kotlin.android") version("[^"]*")/id("org.jetbrains.kotlin.android") version("1.9.24")/' \
+            android/settings.gradle
 
       - name: Get dependencies
         run: flutter pub get
