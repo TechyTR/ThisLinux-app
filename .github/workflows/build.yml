@@ -30,13 +30,17 @@ jobs:
           sed -i 's/android:label="temp_scaffold"/android:label="This Linux"/' \
             android/app/src/main/AndroidManifest.xml
 
-      - name: Update Kotlin version
+      - name: Fix Kotlin version
         run: |
-          sed -i "s/id 'org.jetbrains.kotlin.android' version '[^']*'/id 'org.jetbrains.kotlin.android' version '1.9.24'/" \
+          echo "Before:"
+          grep -n "org.jetbrains.kotlin.android" android/settings.gradle || true
+
+          sed -i -E \
+            "s/(id[[:space:]]*['\"]org\.jetbrains\.kotlin\.android['\"][[:space:]]*version[[:space:]]*['\"])[^'\"]+(['\"])/\11.9.24\2/" \
             android/settings.gradle
 
-          sed -i 's/id("org.jetbrains.kotlin.android") version("[^"]*")/id("org.jetbrains.kotlin.android") version("1.9.24")/' \
-            android/settings.gradle
+          echo "After:"
+          grep -n "org.jetbrains.kotlin.android" android/settings.gradle || true
 
       - name: Get dependencies
         run: flutter pub get
