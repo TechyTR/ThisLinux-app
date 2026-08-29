@@ -22,6 +22,7 @@ jobs:
           flutter create --platforms=android --org org.test temp_scaffold
           cp -r temp_scaffold/android .
           rm -rf temp_scaffold
+          sed -i 's/android:label="temp_scaffold"/android:label="This Linux"/' android/app/src/main/AndroidManifest.xml
 
       - name: Get dependencies
         run: flutter pub get
