@@ -45,6 +45,9 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Generate app icon
+        run: dart run flutter_launcher_icons
+
       - name: Build APK
         run: flutter build apk --release
 
@@ -53,3 +56,4 @@ jobs:
         with:
           name: apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
