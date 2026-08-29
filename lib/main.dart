@@ -88,64 +88,66 @@ class _BootScreenState extends State<BootScreen> {
     "[    0.086717] GPU: detecting graphics processor",
     "[    0.089058] GPU: graphics processor detected",
     "[    0.091399] GPU: loading graphics driver",
-    "[    0.093740] GPU: hardware acceleration enabled",
-    "[    0.096081] Audio: initializing audio subsystem",
-    "[    0.098422] Audio: sound device detected",
-    "[    0.100763] Audio: audio driver initialized",
-    "[    0.103104] Network: initializing network stack",
-    "[    0.105445] Network: loading network protocols",
-    "[    0.107786] Network: network interface detected",
-    "[    0.110127] Network: network manager started",
-    "[    0.112468] Bluetooth: initializing subsystem",
-    "[    0.114809] Bluetooth: controller detected",
-    "[    0.117150] Security: initializing security modules",
-    "[    0.119491] Security: verifying system integrity",
-    "[    0.121832] Security: integrity check passed",
-    "[    0.124173] Drivers: loading hardware drivers",
-    "[    0.126514] Drivers: USB driver loaded",
-    "[    0.128855] Drivers: display driver loaded",
-    "[    0.131196] Drivers: audio driver loaded",
-    "[    0.133537] Drivers: network driver loaded",
-    "[    0.135878] Drivers: storage driver loaded",
-    "[    0.138219] Drivers: hardware initialization complete",
-    "[    0.140560] Modules: loading kernel modules",
-    "[    0.142901] Modules: core modules loaded",
-    "[    0.145242] Modules: device modules loaded",
-    "[    0.147583] Runtime: initializing runtime",
-    "[    0.149924] Runtime: loading system libraries",
-    "[    0.152265] Runtime: loading application framework",
-    "[    0.154606] Runtime: initializing Flutter engine",
-    "[    0.156947] Runtime: rendering engine initialized",
-    "[    0.159288] Services: starting system services",
-    "[    0.161629] Services: network service started",
-    "[    0.163970] Services: storage service started",
-    "[    0.166311] Services: display service started",
-    "[    0.168652] Services: power service started",
-    "[    0.170993] Services: background services ready",
-    "[    0.173334] System: checking filesystem",
-    "[    0.175675] System: filesystem check complete",
-    "[    0.178016] System: checking system integrity",
-    "[    0.180357] System: integrity check passed",
-    "[    0.182698] System: loading user environment",
-    "[    0.185039] System: preparing graphical interface",
-    "[    0.187380] UI: initializing user interface",
-    "[    0.189721] UI: loading interface components",
-    "[    0.192062] UI: preparing application environment",
-    "[    0.194403] ThisLinux: initializing application",
-    "[    0.196744] ThisLinux: loading device information",
-    "[    0.199085] ThisLinux: loading system information",
-    "[    0.201426] ThisLinux: loading battery service",
-    "[    0.203767] ThisLinux: loading performance service",
-    "[    0.206108] ThisLinux: initializing dashboard",
-    "[    0.208449] ThisLinux: preparing interface",
-    "[    0.210790] ThisLinux: starting user interface",
-    "[    0.213131] System: finalizing startup sequence",
-    "[    0.215472] System: all services operational",
-    "[    0.217813] Boot: performing final checks",
-    "[    0.220154] Boot: final checks passed",
-    "[    0.222495] Boot: initialization complete",
-    "[    0.224836] Boot: starting ThisLinux",
-    "[    0.227177] Welcome to ThisLinux.",
+    "[    0.093740] GPU: graphics driver initialized",
+    "[    0.096081] GPU: hardware acceleration enabled",
+    "[    0.098422] Audio: initializing audio subsystem",
+    "[    0.100763] Audio: sound device detected",
+    "[    0.103104] Audio: audio driver initialized",
+    "[    0.105445] Network: initializing network stack",
+    "[    0.107786] Network: loading network protocols",
+    "[    0.110127] Network: network interface detected",
+    "[    0.112468] Network: wireless subsystem initialized",
+    "[    0.114809] Network: network manager started",
+    "[    0.117150] Bluetooth: initializing subsystem",
+    "[    0.119491] Bluetooth: controller detected",
+    "[    0.121832] Security: initializing security modules",
+    "[    0.124173] Security: verifying system integrity",
+    "[    0.126514] Security: integrity check passed",
+    "[    0.128855] Drivers: loading hardware drivers",
+    "[    0.131196] Drivers: USB driver loaded",
+    "[    0.133537] Drivers: display driver loaded",
+    "[    0.135878] Drivers: audio driver loaded",
+    "[    0.138219] Drivers: network driver loaded",
+    "[    0.140560] Drivers: storage driver loaded",
+    "[    0.142901] Drivers: hardware initialization complete",
+    "[    0.145242] Modules: loading kernel modules",
+    "[    0.147583] Modules: core modules loaded",
+    "[    0.149924] Modules: device modules loaded",
+    "[    0.152265] Runtime: initializing runtime",
+    "[    0.154606] Runtime: loading system libraries",
+    "[    0.156947] Runtime: loading application framework",
+    "[    0.159288] Runtime: initializing Flutter engine",
+    "[    0.161629] Runtime: rendering engine initialized",
+    "[    0.163970] Services: starting system services",
+    "[    0.166311] Services: network service started",
+    "[    0.168652] Services: storage service started",
+    "[    0.170993] Services: display service started",
+    "[    0.173334] Services: power service started",
+    "[    0.175675] Services: background services ready",
+    "[    0.178016] System: checking filesystem",
+    "[    0.180357] System: filesystem check complete",
+    "[    0.182698] System: checking system integrity",
+    "[    0.185039] System: integrity check passed",
+    "[    0.187380] System: loading user environment",
+    "[    0.189721] System: preparing graphical interface",
+    "[    0.192062] UI: initializing user interface",
+    "[    0.194403] UI: loading interface components",
+    "[    0.196744] UI: preparing application environment",
+    "[    0.199085] ThisLinux: initializing application",
+    "[    0.201426] ThisLinux: loading device information",
+    "[    0.203767] ThisLinux: loading system information",
+    "[    0.206108] ThisLinux: loading battery service",
+    "[    0.208449] ThisLinux: loading performance service",
+    "[    0.210790] ThisLinux: initializing dashboard",
+    "[    0.213131] ThisLinux: preparing interface",
+    "[    0.215472] ThisLinux: starting user interface",
+    "[    0.217813] System: finalizing startup sequence",
+    "[    0.220154] System: all services operational",
+    "[    0.222495] Boot: performing final checks",
+    "[    0.224836] Boot: final checks passed",
+    "[    0.227177] Boot: initialization complete",
+    "[    0.229518] Boot: starting ThisLinux",
+    "[    0.231859] Welcome to ThisLinux.",
   ];
 
   final List<String> visibleLines = [];
@@ -157,7 +159,6 @@ class _BootScreenState extends State<BootScreen> {
   void initState() {
     super.initState();
 
-    // Yaklaşık 4 saniyede tamamlanır.
     _bootTimer = Timer.periodic(
       const Duration(milliseconds: 40),
       (_) => _addNextLine(),
@@ -310,12 +311,16 @@ class _HomeScreenState extends State<HomeScreen> {
     switch (state) {
       case BatteryState.charging:
         return "Charging";
+
       case BatteryState.full:
         return "Full";
+
       case BatteryState.discharging:
         return "Discharging";
-      case BatteryState.connected:
+
+      case BatteryState.connectedNotCharging:
         return "Connected";
+
       case BatteryState.unknown:
         return "Unknown";
     }
@@ -348,7 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (_) {
-      // İnternet yoksa uygulama normal şekilde çalışmaya devam eder.
+      // İnternet bağlantısı yoksa uygulama normal çalışır.
     }
   }
 
@@ -359,11 +364,17 @@ class _HomeScreenState extends State<HomeScreen> {
     for (int i = 0; i < 3; i++) {
       final latestNumber =
           i < latestParts.length ? (latestParts[i] ?? 0) : 0;
+
       final currentNumber =
           i < currentParts.length ? (currentParts[i] ?? 0) : 0;
 
-      if (latestNumber > currentNumber) return true;
-      if (latestNumber < currentNumber) return false;
+      if (latestNumber > currentNumber) {
+        return true;
+      }
+
+      if (latestNumber < currentNumber) {
+        return false;
+      }
     }
 
     return false;
@@ -484,7 +495,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Sürüm numarası sağ altta.
           Positioned(
             right: 14,
             bottom: 12,
@@ -498,7 +508,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Yeni sürüm varsa güncelleme butonu.
           if (_updateAvailable)
             Positioned(
               left: 14,
@@ -508,9 +517,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: _openUpdate,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
-                  side: const BorderSide(color: Colors.white),
+                  side: const BorderSide(
+                    color: Colors.white,
+                  ),
                   backgroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 13,
+                  ),
                 ),
                 child: Text(
                   "UPDATE AVAILABLE  →  v$_latestVersion",
