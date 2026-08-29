@@ -1,5 +1,8 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:battery_plus/battery_plus.dart';
 
 void main() {
   runApp(const ThisLinuxApp());
@@ -77,76 +80,68 @@ class _BootScreenState extends State<BootScreen> {
     "[    0.084376] Display: Initializing graphics subsystem",
     "[    0.086717] DRM: Direct rendering manager initialized",
     "[    0.089058] GPU: Detecting graphics processor",
-    "[    0.091399] GPU: Graphics processor detected",
-    "[    0.093740] GPU: Loading graphics driver",
-    "[    0.096081] GPU: Graphics driver initialized",
-    "[    0.098422] GPU: Hardware acceleration enabled",
-    "[    0.100763] Audio: Initializing audio subsystem",
-    "[    0.103104] Audio: Sound device detected",
-    "[    0.105445] Audio: Audio driver initialized",
-    "[    0.107786] Network: Initializing network stack",
-    "[    0.110127] Network: Loading network protocols",
-    "[    0.112468] Network: Network interface detected",
-    "[    0.114809] Network: Wireless subsystem initialized",
-    "[    0.117150] Network: Network manager started",
-    "[    0.119491] Bluetooth: Initializing subsystem",
-    "[    0.121832] Bluetooth: Controller detected",
-    "[    0.124173] Security: Initializing security modules",
-    "[    0.126514] Security: Verifying system integrity",
-    "[    0.128855] Security: Integrity check passed",
-    "[    0.131196] Drivers: Loading hardware drivers",
-    "[    0.133537] Drivers: USB driver loaded",
-    "[    0.135878] Drivers: Display driver loaded",
-    "[    0.138219] Drivers: Audio driver loaded",
-    "[    0.140560] Drivers: Network driver loaded",
-    "[    0.142901] Drivers: Storage driver loaded",
-    "[    0.145242] Drivers: Hardware initialization complete",
-    "[    0.147583] Modules: Loading kernel modules",
-    "[    0.149924] Modules: Core modules loaded",
-    "[    0.152265] Modules: Device modules loaded",
-    "[    0.154606] Modules: System modules loaded",
-    "[    0.156947] Runtime: Initializing runtime",
-    "[    0.159288] Runtime: Loading system libraries",
-    "[    0.161629] Runtime: Loading application framework",
-    "[    0.163970] Runtime: Initializing Flutter engine",
-    "[    0.166311] Runtime: Rendering engine initialized",
-    "[    0.168652] Runtime: Graphics pipeline ready",
-    "[    0.170993] Services: Starting system services",
-    "[    0.173334] Services: Network service started",
-    "[    0.175675] Services: Storage service started",
-    "[    0.178016] Services: Display service started",
-    "[    0.180357] Services: Audio service started",
-    "[    0.182698] Services: Power service started",
-    "[    0.185039] Services: Background services ready",
-    "[    0.187380] System: Checking filesystem",
-    "[    0.189721] System: Filesystem check complete",
-    "[    0.192062] System: Checking system integrity",
-    "[    0.194403] System: Integrity check passed",
-    "[    0.196744] System: Loading user environment",
-    "[    0.199085] System: Preparing graphical interface",
-    "[    0.201426] UI: Initializing user interface",
-    "[    0.203767] UI: Loading interface components",
-    "[    0.206108] UI: Loading system widgets",
-    "[    0.208449] UI: Preparing application environment",
-    "[    0.210790] ThisLinux: Initializing application",
-    "[    0.213131] ThisLinux: Loading device information",
-    "[    0.215472] ThisLinux: Loading system information",
-    "[    0.217813] ThisLinux: Loading system monitor",
-    "[    0.220154] ThisLinux: Loading hardware monitor",
-    "[    0.222495] ThisLinux: Loading battery service",
-    "[    0.224836] ThisLinux: Loading performance service",
-    "[    0.227177] ThisLinux: Initializing dashboard",
-    "[    0.229518] ThisLinux: Preparing interface",
-    "[    0.231859] ThisLinux: Starting user interface",
-    "[    0.234200] System: Finalizing startup sequence",
-    "[    0.236541] System: Starting background tasks",
-    "[    0.238882] System: All services operational",
-    "[    0.241223] Boot: Performing final checks",
-    "[    0.243564] Boot: Final checks passed",
-    "[    0.245905] Boot: System initialization complete",
-    "[    0.248246] Boot: Starting ThisLinux",
-    "[    0.250587] Boot: Application ready",
-    "[    0.252928] Welcome to ThisLinux",
+    "[    0.091399] GPU: Graphics driver initialized",
+    "[    0.093740] GPU: Hardware acceleration enabled",
+    "[    0.096081] Audio: Initializing audio subsystem",
+    "[    0.098422] Audio: Sound device detected",
+    "[    0.100763] Network: Initializing network stack",
+    "[    0.103104] Network: Loading network protocols",
+    "[    0.105445] Network: Network interface detected",
+    "[    0.107786] Bluetooth: Initializing subsystem",
+    "[    0.110127] Security: Initializing security modules",
+    "[    0.112468] Security: Verifying system integrity",
+    "[    0.114809] Security: Integrity check passed",
+    "[    0.117150] Drivers: Loading hardware drivers",
+    "[    0.119491] Drivers: USB driver loaded",
+    "[    0.121832] Drivers: Display driver loaded",
+    "[    0.124173] Drivers: Audio driver loaded",
+    "[    0.126514] Drivers: Network driver loaded",
+    "[    0.128855] Drivers: Storage driver loaded",
+    "[    0.131196] Drivers: Hardware initialization complete",
+    "[    0.133537] Modules: Loading kernel modules",
+    "[    0.135878] Modules: Core modules loaded",
+    "[    0.138219] Modules: Device modules loaded",
+    "[    0.140560] Modules: System modules loaded",
+    "[    0.142901] Runtime: Initializing runtime",
+    "[    0.145242] Runtime: Loading system libraries",
+    "[    0.147583] Runtime: Loading application framework",
+    "[    0.149924] Runtime: Initializing Flutter engine",
+    "[    0.152265] Runtime: Rendering engine initialized",
+    "[    0.154606] Runtime: Graphics pipeline ready",
+    "[    0.156947] Services: Starting system services",
+    "[    0.159288] Services: Network service started",
+    "[    0.161629] Services: Storage service started",
+    "[    0.163970] Services: Display service started",
+    "[    0.166311] Services: Audio service started",
+    "[    0.168652] Services: Power service started",
+    "[    0.170993] Services: Background services ready",
+    "[    0.173334] System: Checking filesystem",
+    "[    0.175675] System: Filesystem check complete",
+    "[    0.178016] System: Checking system integrity",
+    "[    0.180357] System: Integrity check passed",
+    "[    0.182698] System: Loading user environment",
+    "[    0.185039] System: Preparing graphical interface",
+    "[    0.187380] UI: Initializing user interface",
+    "[    0.189721] UI: Loading interface components",
+    "[    0.192062] UI: Loading system widgets",
+    "[    0.194403] UI: Preparing application environment",
+    "[    0.196744] ThisLinux: Initializing application",
+    "[    0.199085] ThisLinux: Loading device information",
+    "[    0.201426] ThisLinux: Loading battery service",
+    "[    0.203767] ThisLinux: Loading system monitor",
+    "[    0.206108] ThisLinux: Loading performance service",
+    "[    0.208449] ThisLinux: Initializing dashboard",
+    "[    0.210790] ThisLinux: Preparing interface",
+    "[    0.213131] ThisLinux: Starting user interface",
+    "[    0.215472] System: Finalizing startup sequence",
+    "[    0.217813] System: Starting background tasks",
+    "[    0.220154] System: All services operational",
+    "[    0.222495] Boot: Performing final checks",
+    "[    0.224836] Boot: Final checks passed",
+    "[    0.227177] Boot: System initialization complete",
+    "[    0.229518] Boot: Starting ThisLinux",
+    "[    0.231859] Boot: Application ready",
+    "[    0.234200] Welcome to ThisLinux",
   ];
 
   final List<String> visibleLines = [];
@@ -158,12 +153,9 @@ class _BootScreenState extends State<BootScreen> {
   void initState() {
     super.initState();
 
-    // Yaklaşık 4 saniyede tamamlanır.
     _bootTimer = Timer.periodic(
       const Duration(milliseconds: 38),
-      (_) {
-        _addNextLine();
-      },
+      (_) => _addNextLine(),
     );
   }
 
@@ -234,7 +226,6 @@ class _BootScreenState extends State<BootScreen> {
                 fontFamily: 'monospace',
                 fontSize: 12,
                 height: 1.08,
-                letterSpacing: 0,
               ),
             );
           },
@@ -245,11 +236,111 @@ class _BootScreenState extends State<BootScreen> {
 }
 
 // ============================================================
-// MAIN SCREEN
+// SYSTEM INFORMATION
 // ============================================================
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
+  final Battery _battery = Battery();
+
+  String deviceName = "Loading...";
+  String manufacturer = "Loading...";
+  String model = "Loading...";
+  String androidVersion = "Loading...";
+  String sdkVersion = "Loading...";
+  String batteryLevel = "Loading...";
+  String batteryStatus = "Loading...";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSystemInfo();
+  }
+
+  Future<void> _loadSystemInfo() async {
+    try {
+      final androidInfo = await _deviceInfo.androidInfo;
+
+      final level = await _battery.batteryLevel;
+      final state = await _battery.batteryState;
+
+      if (!mounted) return;
+
+      setState(() {
+        deviceName = androidInfo.device;
+        manufacturer = androidInfo.manufacturer;
+        model = androidInfo.model;
+        androidVersion = androidInfo.version.release;
+        sdkVersion = androidInfo.version.sdkInt.toString();
+        batteryLevel = "$level%";
+        batteryStatus = _batteryStateText(state);
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        deviceName = "Unknown";
+        manufacturer = "Unknown";
+        model = "Unknown";
+        androidVersion = "Unknown";
+        sdkVersion = "Unknown";
+        batteryLevel = "Unknown";
+        batteryStatus = "Unknown";
+      });
+    }
+  }
+
+  String _batteryStateText(BatteryState state) {
+    switch (state) {
+      case BatteryState.charging:
+        return "Charging";
+      case BatteryState.full:
+        return "Full";
+      case BatteryState.discharging:
+        return "Discharging";
+      case BatteryState.connectedNotCharging:
+        return "Connected";
+      case BatteryState.unknown:
+        return "Unknown";
+    }
+  }
+
+  Widget _infoRow(String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -260,21 +351,76 @@ class HomeScreen extends StatelessWidget {
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
-          'This Linux',
+          "This Linux",
           style: TextStyle(
             fontFamily: 'monospace',
             fontWeight: FontWeight.bold,
           ),
         ),
       ),
-      body: const Center(
-        child: Text(
-          'SYSTEM READY',
-          style: TextStyle(
-            color: Colors.white,
-            fontFamily: 'monospace',
-            fontSize: 18,
-          ),
+      body: RefreshIndicator(
+        onRefresh: _loadSystemInfo,
+        color: Colors.white,
+        backgroundColor: Colors.black,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text(
+              "SYSTEM INFORMATION",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            const Divider(color: Colors.white24),
+
+            const SizedBox(height: 8),
+
+            _infoRow("Device", deviceName),
+            _infoRow("Manufacturer", manufacturer),
+            _infoRow("Model", model),
+            _infoRow("Android", androidVersion),
+            _infoRow("SDK", sdkVersion),
+
+            const SizedBox(height: 12),
+
+            const Text(
+              "BATTERY",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            const Divider(color: Colors.white24),
+
+            const SizedBox(height: 8),
+
+            _infoRow("Level", batteryLevel),
+            _infoRow("Status", batteryStatus),
+
+            const SizedBox(height: 25),
+
+            const Center(
+              child: Text(
+                "ThisLinux System Monitor",
+                style: TextStyle(
+                  color: Colors.white38,
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
