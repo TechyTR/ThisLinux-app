@@ -7,12 +7,49 @@ enum AppThemeColor {
   orange,
 }
 
+extension AppThemeColorSeed on AppThemeColor {
+  Color get seed {
+    switch (this) {
+      case AppThemeColor.purple:
+        return const Color(0xFF8E7CC3);
+
+      case AppThemeColor.blue:
+        return const Color(0xFF5B8DEF);
+
+      case AppThemeColor.green:
+        return const Color(0xFF6FAE7A);
+
+      case AppThemeColor.orange:
+        return const Color(0xFFE0A972);
+    }
+  }
+
+  String get label {
+    switch (this) {
+      case AppThemeColor.purple:
+        return 'Mor';
+
+      case AppThemeColor.blue:
+        return 'Mavi';
+
+      case AppThemeColor.green:
+        return 'Yeşil';
+
+      case AppThemeColor.orange:
+        return 'Turuncu';
+    }
+  }
+}
+
 class AppTheme {
   static ThemeData light(AppThemeColor color) {
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.light,
-      colorSchemeSeed: _getColor(color),
+      brightness: Brightness.dark,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: color.seed,
+        brightness: Brightness.dark,
+      ),
     );
   }
 
@@ -20,56 +57,29 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      colorSchemeSeed: _getColor(color),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: color.seed,
+        brightness: Brightness.dark,
+      ),
     );
   }
 
-  static Color _getColor(AppThemeColor color) {
-    switch (color) {
-      case AppThemeColor.purple:
-        return Colors.deepPurple;
-
-      case AppThemeColor.blue:
-        return Colors.blue;
-
-      case AppThemeColor.green:
-        return Colors.green;
-
-      case AppThemeColor.orange:
-        return Colors.orange;
-    }
-  }
-
   static AppThemeColor fromString(String value) {
-    switch (value) {
-      case 'blue':
-        return AppThemeColor.blue;
-
-      case 'green':
-        return AppThemeColor.green;
-
-      case 'orange':
-        return AppThemeColor.orange;
-
-      case 'purple':
-      default:
-        return AppThemeColor.purple;
-    }
+    return AppThemeColor.values.firstWhere(
+      (theme) => theme.name == value,
+      orElse: () => AppThemeColor.purple,
+    );
   }
 
   static String toStringValue(AppThemeColor color) {
-    switch (color) {
-      case AppThemeColor.purple:
-        return 'purple';
+    return color.name;
+  }
 
-      case AppThemeColor.blue:
-        return 'blue';
+  static Color colorOf(AppThemeColor color) {
+    return color.seed;
+  }
 
-      case AppThemeColor.green:
-        return 'green';
-
-      case AppThemeColor.orange:
-        return 'orange';
-    }
+  static String labelOf(AppThemeColor color) {
+    return color.label;
   }
 }
