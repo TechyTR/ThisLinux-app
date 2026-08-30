@@ -7,12 +7,17 @@ import '../widgets/info_card.dart';
 
 class SystemInfoPage extends StatefulWidget {
   final AppThemeColor selectedTheme;
+  final AppThemeStyle selectedStyle;
+
   final Future<void> Function(AppThemeColor) onThemeChanged;
+  final Future<void> Function(AppThemeStyle) onStyleChanged;
 
   const SystemInfoPage({
     super.key,
     required this.selectedTheme,
+    required this.selectedStyle,
     required this.onThemeChanged,
+    required this.onStyleChanged,
   });
 
   @override
@@ -27,6 +32,7 @@ class _SystemInfoPageState extends State<SystemInfoPage> {
   @override
   void initState() {
     super.initState();
+
     _loadDeviceInfo();
     _loadBatteryInfo();
   }
@@ -39,7 +45,8 @@ class _SystemInfoPageState extends State<SystemInfoPage> {
       if (!mounted) return;
 
       setState(() {
-        deviceModel = '${androidInfo.manufacturer} ${androidInfo.model}';
+        deviceModel =
+            '${androidInfo.manufacturer} ${androidInfo.model}';
       });
     } catch (_) {
       if (!mounted) return;
@@ -121,6 +128,7 @@ class _SystemInfoPageState extends State<SystemInfoPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+
             const SizedBox(height: 20),
 
             InfoCard(
@@ -147,7 +155,9 @@ class _SystemInfoPageState extends State<SystemInfoPage> {
               'Bilgileri yenilemek için aşağı çek.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurfaceVariant,
               ),
             ),
           ],
