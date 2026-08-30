@@ -1,65 +1,155 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
-class AppInfoPage extends StatelessWidget {
-  const AppInfoPage({super.key});
+import '../theme/app_theme.dart';
+
+class AppInfoPage extends StatefulWidget {
+  final AppThemeColor selectedTheme;
+  final Future<void> Function(AppThemeColor) onThemeChanged;
+
+  const AppInfoPage({
+    super.key,
+    required this.selectedTheme,
+    required this.onThemeChanged,
+  });
+
+  @override
+  State<AppInfoPage> createState() => _AppInfoPageState();
+}
+
+class _AppInfoPageState extends State<AppInfoPage> {
+  String currentVersion = 'Yükleniyor...';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+
+      if (!mounted) return;
+
+      setState(() {
+        currentVersion = packageInfo.version;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        currentVersion = 'Bilinmiyor';
+      });
+    }
+  }
+
+  Widget _themeButton(
+    BuildContext context,
+    AppThemeColor theme,
+  ) {
+    final isSelected = widget.selectedTheme == theme;
+    final color = AppTheme.colorOf(theme);
+
+    return GestureDetector(
+      onTap: () => widget.onThemeChanged(theme),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(
+          right: 12,
+          bottom: 12,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 12,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? color
+              : Colors.transparent,
+          border: Border.all(
+            color: color,
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Text(
+          AppTheme.labelOf(theme),
+          style: TextStyle(
+            color: isSelected
+                ? Colors.black
+                : color,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final scheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('ThisLinux'),
-        centerTitle: true,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Icon(
-            Icons.terminal,
-            size: 72,
-            color: theme.colorScheme.primary,
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        const Text(
+          'Uygulama',
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
           ),
-          const SizedBox(height: 16),
-          Text(
-            'ThisLinux',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+        ),
+        const SizedBox(height: 24),
+
+        Text(
+          'Tema',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurfaceVariant,
           ),
-          const SizedBox(height: 8),
-          Text(
-            'A system and app information utility.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium,
+        ),
+
+        const SizedBox(height: 12),
+
+        Wrap(
+          children: AppThemeColor.values
+              .map(
+                (theme) => _themeButton(
+                  context,
+                  theme,
+                ),
+              )
+              .toList(),
+        ),
+
+        const SizedBox(height: 24),
+
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(20),
           ),
-          const SizedBox(height: 32),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('Version'),
-              subtitle: const Text('2.0.0'),
-            ),
-          ),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.code),
-              title: const Text('Built with'),
-              subtitle: const Text('Flutter & Dart'),
-            ),
-          ),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.description_outlined),
-              title: const Text('Purpose'),
-              subtitle: const Text(
-                'View system information and manage useful tools.',
+          child: Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: scheme.primary,
               ),
-            ),
+              const SizedBox(width: 16),
+              Text(
+                'Sürüm v$currentVersion',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
