@@ -7,12 +7,16 @@ import '../theme/app_theme.dart';
 
 class AppInfoPage extends StatefulWidget {
   final AppThemeColor selectedTheme;
+  final AppThemeStyle selectedStyle;
   final Future<void> Function(AppThemeColor) onThemeChanged;
+  final Future<void> Function(AppThemeStyle) onStyleChanged;
 
   const AppInfoPage({
     super.key,
     required this.selectedTheme,
+    required this.selectedStyle,
     required this.onThemeChanged,
+    required this.onStyleChanged,
   });
 
   @override
@@ -54,9 +58,8 @@ class _AppInfoPageState extends State<AppInfoPage> {
       isCheckingUpdate = true;
     });
 
-    final updateInfo = await UpdateService.checkForUpdate(
-      currentVersion,
-    );
+    final updateInfo =
+        await UpdateService.checkForUpdate(currentVersion);
 
     if (!mounted) return;
 
@@ -104,9 +107,7 @@ class _AppInfoPageState extends State<AppInfoPage> {
 
     final uri = Uri.tryParse(updateInfo.downloadUrl);
 
-    if (uri == null) {
-      return;
-    }
+    if (uri == null) return;
 
     await launchUrl(
       uri,
@@ -114,10 +115,10 @@ class _AppInfoPageState extends State<AppInfoPage> {
     );
   }
 
-  Widget _themeButton(
-    AppThemeColor theme,
-  ) {
-    final isSelected = widget.selectedTheme == theme;
+  Widget _themeButton(AppThemeColor theme) {
+    final isSelected =
+        widget.selectedTheme == theme;
+
     final color = AppTheme.colorOf(theme);
 
     return GestureDetector(
@@ -125,10 +126,10 @@ class _AppInfoPageState extends State<AppInfoPage> {
         widget.onThemeChanged(theme);
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 220),
         margin: const EdgeInsets.only(
-          right: 12,
-          bottom: 12,
+          right: 10,
+          bottom: 10,
         ),
         padding: const EdgeInsets.symmetric(
           horizontal: 18,
@@ -140,18 +141,123 @@ class _AppInfoPageState extends State<AppInfoPage> {
               : Colors.transparent,
           border: Border.all(
             color: color,
-            width: 2,
+            width: isSelected ? 2.5 : 1.5,
           ),
           borderRadius: BorderRadius.circular(30),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.35),
+                    blurRadius: 12,
+                  ),
+                ]
+              : null,
         ),
-        child: Text(
-          AppTheme.labelOf(theme),
-          style: TextStyle(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration:
+                  const Duration(milliseconds: 220),
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? Colors.white
+                    : color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              AppTheme.labelOf(theme),
+              style: TextStyle(
+                color: isSelected
+                    ? Colors.white
+                    : color,
+                fontWeight: isSelected
+                    ? FontWeight.bold
+                    : FontWeight.w600,
+              ),
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 6),
+              const Icon(
+                Icons.check,
+                size: 18,
+                color: Colors.white,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _styleButton(AppThemeStyle style) {
+    final isSelected =
+        widget.selectedStyle == style;
+
+    final isLight =
+        style == AppThemeStyle.liquidGlassLight;
+
+    final color =
+        AppTheme.colorOf(widget.selectedTheme);
+
+    return GestureDetector(
+      onTap: () {
+        widget.onStyleChanged(style);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? color.withOpacity(
+                  isLight ? 0.18 : 0.28,
+                )
+              : Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
             color: isSelected
-                ? Colors.black
-                : color,
-            fontWeight: FontWeight.bold,
+                ? color
+                : Colors.transparent,
+            width: isSelected ? 2 : 1,
           ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              style == AppThemeStyle.normal
+                  ? Icons.palette_outlined
+                  : Icons.blur_on,
+              color: isSelected
+                  ? color
+                  : Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                AppTheme.styleLabelOf(style),
+                style: TextStyle(
+                  fontWeight: isSelected
+                      ? FontWeight.bold
+                      : FontWeight.w500,
+                ),
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle,
+                color: color,
+              ),
+          ],
         ),
       ),
     );
@@ -159,11 +265,12 @@ class _AppInfoPageState extends State<AppInfoPage> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final scheme =
+        Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Uygulama'),
+        title: const Text('Uygulama Hakkında'),
         centerTitle: true,
       ),
       body: ListView(
@@ -182,7 +289,6 @@ class _AppInfoPageState extends State<AppInfoPage> {
           Text(
             'Sistem yardımcı uygulaması',
             style: TextStyle(
-              fontSize: 15,
               color: scheme.onSurfaceVariant,
             ),
           ),
@@ -190,10 +296,10 @@ class _AppInfoPageState extends State<AppInfoPage> {
           const SizedBox(height: 28),
 
           Text(
-            'Tema',
+            'Renk Teması',
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               color: scheme.onSurfaceVariant,
             ),
           ),
@@ -208,37 +314,32 @@ class _AppInfoPageState extends State<AppInfoPage> {
             ).toList(),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.info_outline,
-                  color: scheme.primary,
-                ),
-
-                const SizedBox(width: 16),
-
-                Expanded(
-                  child: Text(
-                    'Sürüm v$currentVersion',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+          Text(
+            'Görünüm',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurfaceVariant,
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+
+          _styleButton(
+            AppThemeStyle.normal,
+          ),
+
+          _styleButton(
+            AppThemeStyle.liquidGlassLight,
+          ),
+
+          _styleButton(
+            AppThemeStyle.liquidGlassDark,
+          ),
+
+          const SizedBox(height: 12),
 
           SizedBox(
             height: 52,
@@ -264,6 +365,20 @@ class _AppInfoPageState extends State<AppInfoPage> {
               ),
             ),
           ),
+
+          const SizedBox(height: 30),
+
+          Center(
+            child: Text(
+              'Sürüm v$currentVersion',
+              style: TextStyle(
+                fontSize: 13,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
         ],
       ),
     );
