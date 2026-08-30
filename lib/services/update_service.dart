@@ -3,20 +3,18 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class UpdateInfo {
-  final String version;
-  final String name;
-  final String? downloadUrl;
+  final String latestVersion;
+  final String downloadUrl;
 
   const UpdateInfo({
-    required this.version,
-    required this.name,
-    this.downloadUrl,
+    required this.latestVersion,
+    required this.downloadUrl,
   });
 }
 
 class UpdateService {
   static const String versionUrl =
-      'https://raw.githubusercontent.com/TechyTR/ThisLinux-app/Version2/version.json';
+      'https://raw.githubusercontent.com/TechyTR/This-Linux/main/version.json';
 
   static Future<UpdateInfo?> checkForUpdate(
     String currentVersion,
@@ -32,39 +30,42 @@ class UpdateService {
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
 
-      final latestVersion = data['version']?.toString();
+      final remoteVersion = data['latest_version']?.toString();
+      final downloadUrl = data['download_url']?.toString();
 
-      if (latestVersion == null || latestVersion.isEmpty) {
+      if (remoteVersion == null ||
+          remoteVersion.isEmpty ||
+          downloadUrl == null ||
+          downloadUrl.isEmpty) {
         return null;
       }
 
-      if (_isNewerVersion(latestVersion, currentVersion)) {
-        return UpdateInfo(
-          version: latestVersion,
-          name: data['name']?.toString() ?? 'New version',
-          downloadUrl: data['downloadUrl']?.toString(),
-        );
+      if (!_isNewer(remoteVersion, currentVersion)) {
+        return null;
       }
 
-      return null;
+      return UpdateInfo(
+        latestVersion: remoteVersion,
+        downloadUrl: downloadUrl,
+      );
     } catch (_) {
       return null;
     }
   }
 
-  static bool _isNewerVersion(
-    String latest,
-    String current,
+  static bool _isNewer(
+    String remote,
+    String local,
   ) {
-    final latestParts = _parseVersion(latest);
-    final currentParts = _parseVersion(current);
+    final remoteParts = _parseVersion(remote);
+    final localParts = _parseVersion(local);
 
     for (int i = 0; i < 3; i++) {
-      if (latestParts[i] > currentParts[i]) {
+      if (remoteParts[i] > localParts[i]) {
         return true;
       }
 
-      if (latestParts[i] < currentParts[i]) {
+      if (remoteParts[i] < localParts[i]) {
         return false;
       }
     }
@@ -73,7 +74,11 @@ class UpdateService {
   }
 
   static List<int> _parseVersion(String version) {
-    final cleaned = version.replaceFirst('v', '');
+    final cleaned = version.trim().replaceFirst(
+          RegExp(r'^[vV]'),
+          '',
+        );
+
     final parts = cleaned.split('.');
 
     return List.generate(
@@ -83,7 +88,12 @@ class UpdateService {
           return 0;
         }
 
-        return int.tryParse(parts[index]) ?? 0;
+        final number = RegExp(r'^\d+').firstMatch(parts[index]);
+
+        return int.tryParse(
+              number?.group(0) ?? '',
+            ) ??
+            0;
       },
     );
   }
