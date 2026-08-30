@@ -236,8 +236,31 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int currentIndex = 0;
 
+  Widget circleTab(IconData icon, int index, Color activeColor) {
+    final isSelected = currentIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => currentIndex = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 60,
+        height: 60,
+        margin: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isSelected ? activeColor : activeColor.withOpacity(0.15),
+        ),
+        child: Icon(
+          icon,
+          color: isSelected ? Colors.white : activeColor,
+          size: 26,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final pages = [
       const SystemInfoPage(),
       AppInfoPage(
@@ -249,185 +272,21 @@ class _HomeShellState extends State<HomeShell> {
 
     return Scaffold(
       body: SafeArea(child: pages[currentIndex]),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: currentIndex,
-        onDestinationSelected: (i) {
-          setState(() {
-            currentIndex = i;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.memory_outlined),
-            selectedIcon: Icon(Icons.memory),
-            label: 'Sistem',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.info_outline),
-            selectedIcon: Icon(Icons.info),
-            label: 'Uygulama',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.note_outlined),
-            selectedIcon: Icon(Icons.note),
-            label: 'Notlar',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class SystemInfoPage extends StatefulWidget {
-  const SystemInfoPage({super.key});
-
-  @override
-  State<SystemInfoPage> createState() => _SystemInfoPageState();
-}
-
-class _SystemInfoPageState extends State<SystemInfoPage> {
-  String deviceModel = "Yükleniyor...";
-  String batteryLevel = "Yükleniyor...";
-  String batteryState = "Yükleniyor...";
-
-  @override
-  void initState() {
-    super.initState();
-    loadDeviceInfo();
-    loadBatteryInfo();
-  }
-
-  Future<void> loadDeviceInfo() async {
-    try {
-      final deviceInfo = DeviceInfoPlugin();
-      final androidInfo = await deviceInfo.androidInfo;
-      setState(() {
-        deviceModel = "${androidInfo.manufacturer} ${androidInfo.model}";
-      });
-    } catch (e) {
-      setState(() {
-        deviceModel = "Alınamadı";
-      });
-    }
-  }
-
-  Future<void> loadBatteryInfo() async {
-    try {
-      final battery = Battery();
-      final level = await battery.batteryLevel;
-      final state = await battery.batteryState;
-      setState(() {
-        batteryLevel = "%$level";
-        batteryState = state == BatteryState.charging
-            ? "Şarj oluyor"
-            : state == BatteryState.discharging
-                ? "Şarj olmuyor"
-                : "Bilinmiyor";
-      });
-    } catch (e) {
-      setState(() {
-        batteryLevel = "Alınamadı";
-        batteryState = "Alınamadı";
-      });
-    }
-  }
-
-  Widget infoCard(BuildContext context, IconData icon, String title, String value) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: scheme.primary),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(color: scheme.onSurfaceVariant)),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ],
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        const Text(
-          "Sistem",
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+          ],
         ),
-        const SizedBox(height: 20),
-        infoCard(context, Icons.smartphone, "Cihaz Modeli", deviceModel),
-        infoCard(context, Icons.battery_full, "Pil Yüzdesi", batteryLevel),
-        infoCard(context, Icons.bolt, "Şarj Durumu", batteryState),
-      ],
-    );
-  }
-}
-
-class AppInfoPage extends StatefulWidget {
-  final AppThemeColor selectedTheme;
-  final Function(AppThemeColor) onThemeChanged;
-
-  const AppInfoPage({
-    super.key,
-    required this.selectedTheme,
-    required this.onThemeChanged,
-  });
-
-  @override
-  State<AppInfoPage> createState() => _AppInfoPageState();
-}
-
-class _AppInfoPageState extends State<AppInfoPage> {
-  String currentVersion = "";
-  String? updateUrl;
-  bool updateAvailable = false;
-  bool downloading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    checkVersion();
-  }
-
-  Future<void> checkVersion() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      final local = packageInfo.version;
-      setState(() {
-        currentVersion = local;
-      });
-
-      final response = await http.get(Uri.parse(
-        'https://raw.githubusercontent.com/TechyTR/This-Linux/main/version.json',
-      ));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final remote = data['latest_version'] as String;
-        final url = data['download_url'] as String;
-        if (_isNewer(remote, local)) {
-          setState(() {
-            updateAvailable = true;
-            updateUrl = url;
-          });
-        }
-      }
-    } catch (e) {
-      // ses
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            circleTab(Icons.memory, 0, scheme.primary),
+            circleTab(Icons.info, 1, scheme.primary),
+            circleTab(Icons.note, 2, sch
