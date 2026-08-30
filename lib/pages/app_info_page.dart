@@ -1,28 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../pages/benchmark_page.dart';
-import '../services/update_service.dart';
 import '../theme/app_theme.dart';
 
 class AppInfoPage extends StatefulWidget {
   final AppThemeColor selectedTheme;
-  final Future<void> Function(AppThemeColor) onThemeChanged;
+  final AppThemeStyle selectedStyle;
+
+  final Future<void> Function(AppThemeColor)
+      onThemeChanged;
+
+  final Future<void> Function(AppThemeStyle)
+      onStyleChanged;
 
   const AppInfoPage({
     super.key,
     required this.selectedTheme,
+    required this.selectedStyle,
     required this.onThemeChanged,
+    required this.onStyleChanged,
   });
 
   @override
-  State<AppInfoPage> createState() => _AppInfoPageState();
+  State<AppInfoPage> createState() =>
+      _AppInfoPageState();
 }
 
-class _AppInfoPageState extends State<AppInfoPage> {
+class _AppInfoPageState
+    extends State<AppInfoPage> {
   String currentVersion = 'Yükleniyor...';
-  bool isCheckingUpdate = false;
 
   @override
   void initState() {
@@ -32,135 +38,27 @@ class _AppInfoPageState extends State<AppInfoPage> {
 
   Future<void> _loadVersion() async {
     try {
-      final packageInfo = await PackageInfo.fromPlatform();
+      final packageInfo =
+          await PackageInfo.fromPlatform();
 
       if (!mounted) return;
 
       setState(() {
-        currentVersion = packageInfo.version;
+        currentVersion =
+            packageInfo.version;
       });
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
-        currentVersion = 'Bilinmiyor';
+        currentVersion =
+            'Bilinmiyor';
       });
     }
-  }
-
-  Future<void> _checkForUpdate() async {
-    if (isCheckingUpdate) return;
-
-    setState(() {
-      isCheckingUpdate = true;
-    });
-
-    final updateInfo =
-        await UpdateService.checkForUpdate(
-      currentVersion,
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      isCheckingUpdate = false;
-    });
-
-    if (updateInfo == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Uygulamanız güncel.',
-          ),
-        ),
-      );
-
-      return;
-    }
-
-    final shouldUpdate =
-        await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text(
-            'Güncelleme mevcut',
-          ),
-          content: Text(
-            'Yeni sürüm: '
-            '${updateInfo.latestVersion}\n\n'
-            'Mevcut sürüm: '
-            '$currentVersion',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(
-                  context,
-                  false,
-                );
-              },
-              child: const Text(
-                'İptal',
-              ),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(
-                  context,
-                  true,
-                );
-              },
-              child: const Text(
-                'APK\'yı Aç',
-              ),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (shouldUpdate != true) {
-      return;
-    }
-
-    final uri =
-        Uri.tryParse(
-      updateInfo.downloadUrl,
-    );
-
-    if (uri == null) {
-      _showUpdateError();
-      return;
-    }
-
-    try {
-      final opened = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
-
-      if (!opened) {
-        _showUpdateError();
-      }
-    } catch (_) {
-      _showUpdateError();
-    }
-  }
-
-  void _showUpdateError() {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Güncelleme dosyası açılamadı.',
-        ),
-      ),
-    );
   }
 
   Widget _themeButton(
+    BuildContext context,
     AppThemeColor theme,
   ) {
     final isSelected =
@@ -198,9 +96,7 @@ class _AppInfoPageState extends State<AppInfoPage> {
             width: 2,
           ),
           borderRadius:
-              BorderRadius.circular(
-            30,
-          ),
+              BorderRadius.circular(30),
         ),
         child: Text(
           AppTheme.labelOf(theme),
@@ -216,43 +112,62 @@ class _AppInfoPageState extends State<AppInfoPage> {
     );
   }
 
-  Widget _sectionButton({
+  Widget _styleButton(
+    BuildContext context,
+    AppThemeStyle style,
+  ) {
+    final isSelected =
+        widget.selectedStyle == style;
+
+    return Card(
+      margin:
+          const EdgeInsets.only(
+        bottom: 10,
+      ),
+      child: ListTile(
+        leading: Icon(
+          style ==
+                  AppThemeStyle
+                      .liquidGlassLight
+              ? Icons.light_mode
+              : Icons.dark_mode,
+        ),
+        title: Text(
+          style ==
+                  AppThemeStyle
+                      .liquidGlassLight
+              ? 'Liquid Glass Light'
+              : 'Liquid Glass Dark',
+        ),
+        trailing: isSelected
+            ? const Icon(
+                Icons.check_circle,
+              )
+            : null,
+        onTap: () {
+          widget.onStyleChanged(style);
+        },
+      ),
+    );
+  }
+
+  Widget _toolButton({
     required IconData icon,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    final scheme =
-        Theme.of(context)
-            .colorScheme;
-
     return Card(
       margin:
           const EdgeInsets.only(
-        bottom: 12,
+        bottom: 10,
       ),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 6,
-        ),
-        leading: Icon(
-          icon,
-          color: scheme.primary,
-        ),
-        title: Text(
-          title,
-          style:
-              const TextStyle(
-            fontWeight:
-                FontWeight.w600,
-          ),
-        ),
-        subtitle: Text(
-          subtitle,
-        ),
-        trailing: const Icon(
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing:
+            const Icon(
           Icons.chevron_right,
         ),
         onTap: onTap,
@@ -294,7 +209,6 @@ class _AppInfoPageState extends State<AppInfoPage> {
           Text(
             'Sistem yardımcı uygulaması',
             style: TextStyle(
-              fontSize: 15,
               color:
                   scheme.onSurfaceVariant,
             ),
@@ -307,7 +221,6 @@ class _AppInfoPageState extends State<AppInfoPage> {
           Text(
             'Tema',
             style: TextStyle(
-              fontSize: 16,
               fontWeight:
                   FontWeight.w600,
               color:
@@ -325,6 +238,7 @@ class _AppInfoPageState extends State<AppInfoPage> {
                     .map(
                       (theme) =>
                           _themeButton(
+                        context,
                         theme,
                       ),
                     )
@@ -336,9 +250,8 @@ class _AppInfoPageState extends State<AppInfoPage> {
           ),
 
           Text(
-            'Araçlar',
+            'Görünüm',
             style: TextStyle(
-              fontSize: 16,
               fontWeight:
                   FontWeight.w600,
               color:
@@ -350,125 +263,81 @@ class _AppInfoPageState extends State<AppInfoPage> {
             height: 12,
           ),
 
-          _sectionButton(
-            icon: Icons.speed,
-            title: 'Benchmark',
-            subtitle:
-                'Cihaz performansını test et',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      const BenchmarkPage(),
-                ),
-              );
-            },
+          _styleButton(
+            context,
+            AppThemeStyle
+                .liquidGlassLight,
           ),
 
-          _sectionButton(
-            icon: Icons.storage,
-            title:
-                'Storage Manager',
-            subtitle:
-                'Depolama kullanımını incele',
-            onTap: () {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Storage Manager yakında.',
-                  ),
-                ),
-              );
-            },
-          ),
-
-          _sectionButton(
-            icon: Icons.sensors,
-            title: 'SensorLab',
-            subtitle:
-                'Sensör bilgilerini görüntüle',
-            onTap: () {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'SensorLab yakında.',
-                  ),
-                ),
-              );
-            },
-          ),
-
-          _sectionButton(
-            icon: Icons.network_check,
-            title: 'Network Lab',
-            subtitle:
-                'Ağ bağlantısını incele',
-            onTap: () {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Network Lab yakında.',
-                  ),
-                ),
-              );
-            },
-          ),
-
-          _sectionButton(
-            icon: Icons.battery_full,
-            title: 'Battery Lab',
-            subtitle:
-                'Pil durumunu incele',
-            onTap: () {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Battery Lab yakında.',
-                  ),
-                ),
-              );
-            },
+          _styleButton(
+            context,
+            AppThemeStyle
+                .liquidGlassDark,
           ),
 
           const SizedBox(
             height: 12,
           ),
 
-          SizedBox(
-            height: 52,
-            child:
-                FilledButton.icon(
-              onPressed:
-                  isCheckingUpdate
-                      ? null
-                      : _checkForUpdate,
-              icon: isCheckingUpdate
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child:
-                          CircularProgressIndicator(
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Icon(
-                      Icons.system_update,
-                    ),
-              label: Text(
-                isCheckingUpdate
-                    ? 'Kontrol ediliyor...'
-                    : 'Güncellemeleri kontrol et',
-              ),
+          Text(
+            'Araçlar',
+            style: TextStyle(
+              fontWeight:
+                  FontWeight.w600,
+              color:
+                  scheme.onSurfaceVariant,
             ),
+          ),
+
+          const SizedBox(
+            height: 12,
+          ),
+
+          _toolButton(
+            icon: Icons.speed,
+            title: 'Benchmark',
+            subtitle:
+                'Cihaz performansını test et',
+            onTap: () {
+              // Benchmark bağlantısı
+              // mevcut sayfa yapısına
+              // göre ayrıca bağlanacak.
+            },
+          ),
+
+          _toolButton(
+            icon: Icons.storage,
+            title:
+                'Storage Manager',
+            subtitle:
+                'Depolama kullanımını incele',
+            onTap: () {},
+          ),
+
+          _toolButton(
+            icon: Icons.sensors,
+            title: 'SensorLab',
+            subtitle:
+                'Sensör bilgilerini incele',
+            onTap: () {},
+          ),
+
+          _toolButton(
+            icon:
+                Icons.network_check,
+            title: 'Network Lab',
+            subtitle:
+                'Ağ bağlantısını incele',
+            onTap: () {},
+          ),
+
+          _toolButton(
+            icon:
+                Icons.battery_full,
+            title: 'Battery Lab',
+            subtitle:
+                'Pil durumunu incele',
+            onTap: () {},
           ),
 
           const SizedBox(
@@ -484,10 +353,6 @@ class _AppInfoPageState extends State<AppInfoPage> {
                 fontSize: 13,
               ),
             ),
-          ),
-
-          const SizedBox(
-            height: 8,
           ),
         ],
       ),
