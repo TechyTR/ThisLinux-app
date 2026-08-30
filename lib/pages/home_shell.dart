@@ -1,88 +1,105 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_theme.dart';
-import '../widgets/bottom_nav_bar.dart';
-import 'app_info_page.dart';
-import 'notes_page.dart';
-import 'system_info_page.dart';
+import 'pages/boot_screen.dart';
+import 'services/preferences_service.dart';
+import 'theme/app_theme.dart';
 
-class HomeShell extends StatefulWidget {
-  final AppThemeColor selectedTheme;
-  final AppThemeStyle selectedStyle;
-
-  final Future<void> Function(AppThemeColor) onThemeChanged;
-  final Future<void> Function(AppThemeStyle) onStyleChanged;
-
-  const HomeShell({
-    super.key,
-    required this.selectedTheme,
-    required this.selectedStyle,
-    required this.onThemeChanged,
-    required this.onStyleChanged,
-  });
-
-  @override
-  State<HomeShell> createState() => _HomeShellState();
+void main() {
+  runApp(const ThisLinuxApp());
 }
 
-class _HomeShellState extends State<HomeShell> {
-  int _currentIndex = 0;
+class ThisLinuxApp extends StatefulWidget {
+  const ThisLinuxApp({super.key});
 
-  late List<Widget> _pages;
+  @override
+  State<ThisLinuxApp> createState() => _ThisLinuxAppState();
+}
 
-  List<Widget> _buildPages() {
-    return [
-      SystemInfoPage(
-        selectedTheme: widget.selectedTheme,
-        selectedStyle: widget.selectedStyle,
-        onThemeChanged: widget.onThemeChanged,
-        onStyleChanged: widget.onStyleChanged,
-      ),
-      const NotesPage(),
-      AppInfoPage(
-        selectedTheme: widget.selectedTheme,
-        selectedStyle: widget.selectedStyle,
-        onThemeChanged: widget.onThemeChanged,
-        onStyleChanged: widget.onStyleChanged,
-      ),
-    ];
-  }
+class _ThisLinuxAppState extends State<ThisLinuxApp> {
+  AppThemeColor _selectedTheme = AppThemeColor.purple;
+  AppThemeStyle _selectedStyle = AppThemeStyle.normal;
+
+  bool _preferencesLoaded = false;
 
   @override
   void initState() {
     super.initState();
-    _pages = _buildPages();
+    _loadPreferences();
   }
 
-  @override
-  void didUpdateWidget(
-    covariant HomeShell oldWidget,
-  ) {
-    super.didUpdateWidget(oldWidget);
+  Future<void> _loadPreferences() async {
+    final colorValue =
+        await PreferencesService.getThemeColor();
 
-    if (oldWidget.selectedTheme != widget.selectedTheme ||
-        oldWidget.selectedStyle != widget.selectedStyle) {
-      setState(() {
-        _pages = _buildPages();
-      });
-    }
+    final styleValue =
+        await PreferencesService.getThemeStyle();
+
+    if (!mounted) return;
+
+    setState(() {
+      _selectedTheme =
+          AppTheme.colorFromString(colorValue);
+
+      _selectedStyle =
+          AppTheme.styleFromString(styleValue);
+
+      _preferencesLoaded = true;
+    });
+  }
+
+  Future<void> _changeTheme(
+    AppThemeColor color,
+  ) async {
+    setState(() {
+      _selectedTheme = color;
+    });
+
+    await PreferencesService.saveThemeColor(
+      AppTheme.colorToString(color),
+    );
+  }
+
+  Future<void> _changeStyle(
+    AppThemeStyle style,
+  ) async {
+    setState(() {
+      _selectedStyle = style;
+    });
+
+    await PreferencesService.saveThemeStyle(
+      AppTheme.styleToString(style),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
+    if (!_preferencesLoaded) {
+      return const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          backgroundColor: Colors.black,
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
+    return MaterialApp(
+      title: 'ThisLinux',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.build(
+        _selectedTheme,
+        _selectedStyle,
       ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+      home: BootScreen(
+        selectedTheme: _selectedTheme,
+        selectedStyle: _selectedStyle,
+        onThemeChanged: _changeTheme,
+        onStyleChanged: _changeStyle,
       ),
     );
   }
 }
+
+Bunu yapınca 9 tamam. Ardından 10. adıma geçebiliriz.
