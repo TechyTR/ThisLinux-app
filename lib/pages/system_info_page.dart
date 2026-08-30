@@ -3,6 +3,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../widgets/info_card.dart';
 
 class SystemInfoPage extends StatefulWidget {
   final AppThemeColor selectedTheme;
@@ -38,8 +39,7 @@ class _SystemInfoPageState extends State<SystemInfoPage> {
       if (!mounted) return;
 
       setState(() {
-        deviceModel =
-            '${androidInfo.manufacturer} ${androidInfo.model}';
+        deviceModel = '${androidInfo.manufacturer} ${androidInfo.model}';
       });
     } catch (_) {
       if (!mounted) return;
@@ -62,13 +62,27 @@ class _SystemInfoPageState extends State<SystemInfoPage> {
       setState(() {
         batteryLevel = '%$level';
 
-        batteryState = switch (state) {
-          BatteryState.charging => 'Şarj oluyor',
-          BatteryState.discharging => 'Şarj olmuyor',
-          BatteryState.full => 'Dolu',
-          BatteryState.connectedNotCharging => 'Bağlı, şarj olmuyor',
-          BatteryState.unknown => 'Bilinmiyor',
-        };
+        switch (state) {
+          case BatteryState.charging:
+            batteryState = 'Şarj oluyor';
+            break;
+
+          case BatteryState.discharging:
+            batteryState = 'Şarj olmuyor';
+            break;
+
+          case BatteryState.full:
+            batteryState = 'Dolu';
+            break;
+
+          case BatteryState.connectedNotCharging:
+            batteryState = 'Bağlı, şarj olmuyor';
+            break;
+
+          case BatteryState.unknown:
+            batteryState = 'Bilinmiyor';
+            break;
+        }
       });
     } catch (_) {
       if (!mounted) return;
@@ -80,89 +94,65 @@ class _SystemInfoPageState extends State<SystemInfoPage> {
     }
   }
 
-  Widget _infoCard(
-    BuildContext context,
-    IconData icon,
-    String title,
-    String value,
-  ) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: scheme.primary,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  Future<void> _refresh() async {
+    await Future.wait([
+      _loadDeviceInfo(),
+      _loadBatteryInfo(),
+    ]);
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        const Text(
-          'Sistem',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 20),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Sistem'),
+        centerTitle: true,
+      ),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          children: [
+            const Text(
+              'Sistem Bilgileri',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
 
-        _infoCard(
-          context,
-          Icons.smartphone,
-          'Cihaz Modeli',
-          deviceModel,
-        ),
+            InfoCard(
+              icon: Icons.smartphone,
+              title: 'Cihaz Modeli',
+              value: deviceModel,
+            ),
 
-        _infoCard(
-          context,
-          Icons.battery_full,
-          'Pil Yüzdesi',
-          batteryLevel,
-        ),
+            InfoCard(
+              icon: Icons.battery_full,
+              title: 'Pil Yüzdesi',
+              value: batteryLevel,
+            ),
 
-        _infoCard(
-          context,
-          Icons.bolt,
-          'Şarj Durumu',
-          batteryState,
+            InfoCard(
+              icon: Icons.bolt,
+              title: 'Şarj Durumu',
+              value: batteryState,
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              'Bilgileri yenilemek için aşağı çek.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
