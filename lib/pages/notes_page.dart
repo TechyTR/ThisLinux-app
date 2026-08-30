@@ -21,14 +21,23 @@ class _NotesPageState extends State<NotesPage> {
   }
 
   Future<void> _loadNotes() async {
-    final loadedNotes = await NotesService.loadNotes();
+    try {
+      final loadedNotes = await NotesService.loadNotes();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      notes = loadedNotes;
-      isLoading = false;
-    });
+      setState(() {
+        notes = loadedNotes;
+        isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        notes = [];
+        isLoading = false;
+      });
+    }
   }
 
   Future<void> _saveNotes() async {
@@ -50,6 +59,7 @@ class _NotesPageState extends State<NotesPage> {
               children: [
                 TextField(
                   controller: titleController,
+                  textCapitalization: TextCapitalization.sentences,
                   decoration: const InputDecoration(
                     labelText: 'Başlık',
                     border: OutlineInputBorder(),
@@ -58,6 +68,7 @@ class _NotesPageState extends State<NotesPage> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: contentController,
+                  textCapitalization: TextCapitalization.sentences,
                   maxLines: 5,
                   decoration: const InputDecoration(
                     labelText: 'Not',
@@ -76,17 +87,19 @@ class _NotesPageState extends State<NotesPage> {
             ),
             FilledButton(
               onPressed: () {
-                if (contentController.text.trim().isEmpty) {
+                final content = contentController.text.trim();
+
+                if (content.isEmpty) {
                   return;
                 }
+
+                final title = titleController.text.trim();
 
                 Navigator.pop(
                   context,
                   NoteItem(
-                    title: titleController.text.trim().isEmpty
-                        ? 'Not'
-                        : titleController.text.trim(),
-                    content: contentController.text.trim(),
+                    title: title.isEmpty ? 'Not' : title,
+                    content: content,
                     createdAt: DateTime.now(),
                   ),
                 );
@@ -111,15 +124,29 @@ class _NotesPageState extends State<NotesPage> {
   }
 
   Future<void> _deleteNote(int index) async {
+    if (index < 0 || index >= notes.length) {
+      return;
+    }
+
+    final deletedNote = notes[index];
+
     setState(() {
       notes.removeAt(index);
     });
 
-    await _saveNotes();
+    try {
+      await _saveNotes();
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        notes.insert(index, deletedNote);
+      });
+    }
   }
 
   void _showNote(NoteItem note) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) {
         return AlertDialog(
@@ -170,7 +197,7 @@ class _NotesPageState extends State<NotesPage> {
 
                     return Dismissible(
                       key: ValueKey(
-                        '${note.createdAt.microsecondsSinceEpoch}_$index',
+                        note.createdAt.microsecondsSinceEpoch,
                       ),
                       direction: DismissDirection.endToStart,
                       background: Container(
