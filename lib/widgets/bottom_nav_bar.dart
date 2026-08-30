@@ -18,38 +18,9 @@ class BottomNavBar extends StatefulWidget {
 
 class _BottomNavBarState extends State<BottomNavBar>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+  late final AnimationController _controller;
 
   int _previousIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _previousIndex = widget.currentIndex;
-
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOutCubic,
-    );
-  }
-
-  @override
-  void didUpdateWidget(covariant BottomNavBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    if (oldWidget.currentIndex != widget.currentIndex) {
-      _previousIndex = oldWidget.currentIndex;
-      _controller.forward(from: 0);
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   final List<IconData> _icons = const [
     Icons.memory_outlined,
@@ -70,6 +41,34 @@ class _BottomNavBarState extends State<BottomNavBar>
   ];
 
   @override
+  void initState() {
+    super.initState();
+
+    _previousIndex = widget.currentIndex;
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant BottomNavBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.currentIndex != widget.currentIndex) {
+      _previousIndex = oldWidget.currentIndex;
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -86,14 +85,14 @@ class _BottomNavBarState extends State<BottomNavBar>
           child: Container(
             height: 72,
             decoration: BoxDecoration(
-              color: colorScheme.surface.withValues(alpha: 0.72),
+              color: colorScheme.surface.withOpacity(0.72),
               borderRadius: BorderRadius.circular(28),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.12),
+                color: Colors.white.withOpacity(0.12),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
+                  color: Colors.black.withOpacity(0.18),
                   blurRadius: 24,
                   spreadRadius: 2,
                 ),
@@ -101,22 +100,29 @@ class _BottomNavBarState extends State<BottomNavBar>
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final itemWidth = constraints.maxWidth / _icons.length;
+                final itemWidth =
+                    constraints.maxWidth / _icons.length;
 
                 return Stack(
                   children: [
                     AnimatedBuilder(
                       animation: _controller,
                       builder: (context, child) {
-                        final start = _previousIndex * itemWidth;
-                        final end = widget.currentIndex * itemWidth;
+                        final start =
+                            _previousIndex * itemWidth;
+
+                        final end =
+                            widget.currentIndex * itemWidth;
+
+                        final progress =
+                            Curves.easeOutCubic.transform(
+                          _controller.value,
+                        );
 
                         final position = lerpDouble(
                           start,
                           end,
-                          Curves.easeOutCubic.transform(
-                            _controller.value,
-                          ),
+                          progress,
                         )!;
 
                         return Positioned(
@@ -130,7 +136,6 @@ class _BottomNavBarState extends State<BottomNavBar>
                         );
                       },
                     ),
-
                     Row(
                       children: List.generate(
                         _icons.length,
@@ -147,7 +152,9 @@ class _BottomNavBarState extends State<BottomNavBar>
                               selected: selected,
                               color: colorScheme.primary,
                               onTap: () {
-                                widget.onDestinationSelected(index);
+                                widget.onDestinationSelected(
+                                  index,
+                                );
                               },
                             ),
                           );
@@ -183,14 +190,14 @@ class _GlassSelection extends StatelessWidget {
         ),
         child: Container(
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.22),
+            color: color.withOpacity(0.22),
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.20),
+              color: Colors.white.withOpacity(0.20),
             ),
             boxShadow: [
               BoxShadow(
-                color: color.withValues(alpha: 0.20),
+                color: color.withOpacity(0.20),
                 blurRadius: 16,
                 spreadRadius: 1,
               ),
@@ -205,7 +212,7 @@ class _GlassSelection extends StatelessWidget {
                 child: Container(
                   height: 1,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.28),
+                    color: Colors.white.withOpacity(0.28),
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
@@ -239,7 +246,7 @@ class _NavItem extends StatefulWidget {
 
 class _NavItemState extends State<_NavItem>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
+  late final AnimationController _animationController;
 
   @override
   void initState() {
@@ -248,11 +255,8 @@ class _NavItemState extends State<_NavItem>
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 250),
+      value: widget.selected ? 1 : 0,
     );
-
-    if (widget.selected) {
-      _animationController.value = 1;
-    }
   }
 
   @override
@@ -276,6 +280,8 @@ class _NavItemState extends State<_NavItem>
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return InkWell(
       onTap: widget.onTap,
       borderRadius: BorderRadius.circular(22),
@@ -284,12 +290,14 @@ class _NavItemState extends State<_NavItem>
         child: AnimatedBuilder(
           animation: _animationController,
           builder: (context, child) {
+            final progress = Curves.easeOutBack.transform(
+              _animationController.value,
+            );
+
             final scale = lerpDouble(
               0.88,
               1.08,
-              Curves.easeOutBack.transform(
-                _animationController.value,
-              ),
+              progress,
             )!;
 
             final opacity = lerpDouble(
@@ -299,4 +307,40 @@ class _NavItemState extends State<_NavItem>
             )!;
 
             return Column(
-             
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Transform.scale(
+                  scale: scale,
+                  child: Opacity(
+                    opacity: opacity,
+                    child: Icon(
+                      widget.icon,
+                      size: 25,
+                      color: widget.selected
+                          ? widget.color
+                          : scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: TextStyle(
+                    fontSize: widget.selected ? 12 : 11,
+                    fontWeight: widget.selected
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                    color: widget.selected
+                        ? widget.color
+                        : scheme.onSurfaceVariant,
+                  ),
+                  child: Text(widget.label),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
