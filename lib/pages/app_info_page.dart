@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../services/update_service.dart';
 import '../theme/app_theme.dart';
 
 class AppInfoPage extends StatefulWidget {
@@ -19,6 +21,7 @@ class AppInfoPage extends StatefulWidget {
 
 class _AppInfoPageState extends State<AppInfoPage> {
   String currentVersion = 'Yükleniyor...';
+  bool isCheckingUpdate = false;
 
   @override
   void initState() {
@@ -44,6 +47,73 @@ class _AppInfoPageState extends State<AppInfoPage> {
     }
   }
 
+  Future<void> _checkForUpdate() async {
+    if (isCheckingUpdate) return;
+
+    setState(() {
+      isCheckingUpdate = true;
+    });
+
+    final updateInfo = await UpdateService.checkForUpdate(
+      currentVersion,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      isCheckingUpdate = false;
+    });
+
+    if (updateInfo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Uygulamanız güncel.'),
+        ),
+      );
+      return;
+    }
+
+    final shouldOpen = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Güncelleme mevcut'),
+          content: Text(
+            'Yeni sürüm: ${updateInfo.latestVersion}\n\n'
+            'Mevcut sürüm: $currentVersion',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('İptal'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text('Güncellemeyi Aç'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldOpen != true) return;
+
+    final uri = Uri.tryParse(updateInfo.downloadUrl);
+
+    if (uri == null) {
+      return;
+    }
+
+    await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
   Widget _themeButton(
     BuildContext context,
     AppThemeColor theme,
@@ -64,9 +134,7 @@ class _AppInfoPageState extends State<AppInfoPage> {
           vertical: 12,
         ),
         decoration: BoxDecoration(
-          color: isSelected
-              ? color
-              : Colors.transparent,
+          color: isSelected ? color : Colors.transparent,
           border: Border.all(
             color: color,
             width: 2,
@@ -76,9 +144,7 @@ class _AppInfoPageState extends State<AppInfoPage> {
         child: Text(
           AppTheme.labelOf(theme),
           style: TextStyle(
-            color: isSelected
-                ? Colors.black
-                : color,
+            color: isSelected ? Colors.black : color,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -124,32 +190,4 @@ class _AppInfoPageState extends State<AppInfoPage> {
               .toList(),
         ),
 
-        const SizedBox(height: 24),
-
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerHigh,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.info_outline,
-                color: scheme.primary,
-              ),
-              const SizedBox(width: 16),
-              Text(
-                'Sürüm v$currentVersion',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
+        const
