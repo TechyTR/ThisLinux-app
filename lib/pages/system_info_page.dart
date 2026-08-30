@@ -4,12 +4,18 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-class SystemInfoPage extends StatefulWidget {
+class SystemInfoPage
+    extends StatefulWidget {
   final AppThemeColor selectedTheme;
   final AppThemeStyle selectedStyle;
 
-  final Future<void> Function(AppThemeColor) onThemeChanged;
-  final Future<void> Function(AppThemeStyle) onStyleChanged;
+  final Future<void> Function(
+    AppThemeColor,
+  ) onThemeChanged;
+
+  final Future<void> Function(
+    AppThemeStyle,
+  ) onStyleChanged;
 
   const SystemInfoPage({
     super.key,
@@ -26,30 +32,48 @@ class SystemInfoPage extends StatefulWidget {
 
 class _SystemInfoPageState
     extends State<SystemInfoPage> {
-  String deviceModel = 'Yükleniyor...';
-  String manufacturer = 'Yükleniyor...';
-  String androidVersion = 'Yükleniyor...';
-  String batteryLevel = 'Yükleniyor...';
-  String batteryState = 'Yükleniyor...';
+  String deviceModel =
+      'Yükleniyor...';
+
+  String manufacturer =
+      'Yükleniyor...';
+
+  String androidVersion =
+      'Yükleniyor...';
+
+  String batteryLevel =
+      'Yükleniyor...';
+
+  String batteryState =
+      'Yükleniyor...';
 
   @override
   void initState() {
     super.initState();
+
     _loadDeviceInfo();
     _loadBatteryInfo();
   }
 
-  Future<void> _loadDeviceInfo() async {
+  Future<void>
+      _loadDeviceInfo() async {
     try {
-      final deviceInfo = DeviceInfoPlugin();
+      final deviceInfo =
+          DeviceInfoPlugin();
+
       final androidInfo =
-          await deviceInfo.androidInfo;
+          await deviceInfo
+              .androidInfo;
 
       if (!mounted) return;
 
       setState(() {
-        deviceModel = androidInfo.model;
-        manufacturer = androidInfo.manufacturer;
+        deviceModel =
+            androidInfo.model;
+
+        manufacturer =
+            androidInfo.manufacturer;
+
         androidVersion =
             'Android ${androidInfo.version.release}';
       });
@@ -57,48 +81,65 @@ class _SystemInfoPageState
       if (!mounted) return;
 
       setState(() {
-        deviceModel = 'Alınamadı';
-        manufacturer = 'Alınamadı';
-        androidVersion = 'Alınamadı';
+        deviceModel =
+            'Alınamadı';
+
+        manufacturer =
+            'Alınamadı';
+
+        androidVersion =
+            'Alınamadı';
       });
     }
   }
 
-  Future<void> _loadBatteryInfo() async {
+  Future<void>
+      _loadBatteryInfo() async {
     try {
-      final battery = Battery();
+      final battery =
+          Battery();
 
       final level =
-          await battery.batteryLevel;
+          await battery
+              .batteryLevel;
 
       final state =
-          await battery.batteryState;
+          await battery
+              .batteryState;
 
       if (!mounted) return;
 
       setState(() {
-        batteryLevel = '%$level';
+        batteryLevel =
+            '%$level';
 
         switch (state) {
-          case BatteryState.charging:
-            batteryState = 'Şarj oluyor';
+          case BatteryState
+              .charging:
+            batteryState =
+                'Şarj oluyor';
             break;
 
-          case BatteryState.discharging:
-            batteryState = 'Şarj olmuyor';
+          case BatteryState
+              .discharging:
+            batteryState =
+                'Şarj olmuyor';
             break;
 
           case BatteryState.full:
-            batteryState = 'Dolu';
+            batteryState =
+                'Dolu';
             break;
 
-          case BatteryState.connectedNotCharging:
+          case BatteryState
+              .connectedNotCharging:
             batteryState =
                 'Bağlı, şarj olmuyor';
             break;
 
           case BatteryState.unknown:
-            batteryState = 'Bilinmiyor';
+            batteryState =
+                'Bilinmiyor';
             break;
         }
       });
@@ -106,8 +147,11 @@ class _SystemInfoPageState
       if (!mounted) return;
 
       setState(() {
-        batteryLevel = 'Alınamadı';
-        batteryState = 'Alınamadı';
+        batteryLevel =
+            'Alınamadı';
+
+        batteryState =
+            'Alınamadı';
       });
     }
   }
@@ -125,15 +169,18 @@ class _SystemInfoPageState
     required String value,
   }) {
     final scheme =
-        Theme.of(context).colorScheme;
+        Theme.of(context)
+            .colorScheme;
 
     return Card(
-      margin: const EdgeInsets.only(
+      margin:
+          const EdgeInsets.only(
         bottom: 12,
       ),
       child: ListTile(
         contentPadding:
-            const EdgeInsets.symmetric(
+            const EdgeInsets
+                .symmetric(
           horizontal: 18,
           vertical: 6,
         ),
@@ -143,24 +190,33 @@ class _SystemInfoPageState
         ),
         title: Text(
           title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
+          style:
+              const TextStyle(
+            fontWeight:
+                FontWeight.w600,
           ),
         ),
         subtitle: Padding(
-          padding: const EdgeInsets.only(
+          padding:
+              const EdgeInsets
+                  .only(
             top: 4,
           ),
-          child: Text(value),
+          child: Text(
+            value,
+          ),
         ),
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     final scheme =
-        Theme.of(context).colorScheme;
+        Theme.of(context)
+            .colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -174,25 +230,86 @@ class _SystemInfoPageState
         child: ListView(
           physics:
               const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
+          padding:
+              const EdgeInsets.all(
+            20,
+          ),
           children: [
             Text(
               'Sistem Bilgileri',
-              style: Theme.of(context)
+              style: Theme.of(
+                context,
+              )
                   .textTheme
                   .headlineMedium
                   ?.copyWith(
-                    fontWeight:
-                        FontWeight.bold,
-                  ),
+                fontWeight:
+                    FontWeight.bold,
+              ),
             ),
-
             const SizedBox(
               height: 8,
             ),
-
             Text(
               'Cihazınız hakkında temel bilgiler',
               style: TextStyle(
                 color:
                     scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(
+              height: 24,
+            ),
+            _infoCard(
+              icon:
+                  Icons.smartphone,
+              title: 'Cihaz',
+              value:
+                  deviceModel,
+            ),
+            _infoCard(
+              icon: Icons.business,
+              title: 'Üretici',
+              value:
+                  manufacturer,
+            ),
+            _infoCard(
+              icon: Icons.android,
+              title:
+                  'Android Sürümü',
+              value:
+                  androidVersion,
+            ),
+            _infoCard(
+              icon:
+                  Icons.battery_full,
+              title: 'Pil',
+              value:
+                  batteryLevel,
+            ),
+            _infoCard(
+              icon: Icons.bolt,
+              title:
+                  'Şarj Durumu',
+              value:
+                  batteryState,
+            ),
+            const SizedBox(
+              height: 8,
+            ),
+            Text(
+              'Yenilemek için ekranı aşağı çekin.',
+              textAlign:
+                  TextAlign.center,
+              style: TextStyle(
+                color:
+                    scheme.onSurfaceVariant,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
