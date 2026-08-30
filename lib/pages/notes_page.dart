@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-
-import '../models/note_item.dart';
-import '../services/notes_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotesPage extends StatefulWidget {
   const NotesPage({super.key});
@@ -11,8 +9,10 @@ class NotesPage extends StatefulWidget {
 }
 
 class _NotesPageState extends State<NotesPage> {
-  List<NoteItem> notes = [];
-  bool isLoading = true;
+  final TextEditingController _controller =
+      TextEditingController();
+
+  List<String> _notes = [];
 
   @override
   void initState() {
@@ -21,145 +21,118 @@ class _NotesPageState extends State<NotesPage> {
   }
 
   Future<void> _loadNotes() async {
-    try {
-      final loadedNotes = await NotesService.loadNotes();
+    final prefs =
+        await SharedPreferences.getInstance();
 
-      if (!mounted) return;
+    final notes =
+        prefs.getStringList('notes') ?? [];
 
-      setState(() {
-        notes = loadedNotes;
-        isLoading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
+    if (!mounted) return;
 
-      setState(() {
-        notes = [];
-        isLoading = false;
-      });
-    }
+    setState(() {
+      _notes = notes;
+    });
   }
 
   Future<void> _saveNotes() async {
-    await NotesService.saveNotes(notes);
+    final prefs =
+        await SharedPreferences.getInstance();
+
+    await prefs.setStringList(
+      'notes',
+      _notes,
+    );
   }
 
   Future<void> _addNote() async {
-    final titleController = TextEditingController();
-    final contentController = TextEditingController();
+    final text =
+        _controller.text.trim();
 
-    final result = await showDialog<NoteItem>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Yeni Not'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    labelText: 'Başlık',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: contentController,
-                  textCapitalization: TextCapitalization.sentences,
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: 'Not',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('İptal'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final content = contentController.text.trim();
-
-                if (content.isEmpty) {
-                  return;
-                }
-
-                final title = titleController.text.trim();
-
-                Navigator.pop(
-                  context,
-                  NoteItem(
-                    title: title.isEmpty ? 'Not' : title,
-                    content: content,
-                    createdAt: DateTime.now(),
-                  ),
-                );
-              },
-              child: const Text('Kaydet'),
-            ),
-          ],
-        );
-      },
-    );
-
-    titleController.dispose();
-    contentController.dispose();
-
-    if (result == null || !mounted) return;
+    if (text.isEmpty) return;
 
     setState(() {
-      notes.insert(0, result);
+      _notes.insert(0, text);
+      _controller.clear();
     });
 
     await _saveNotes();
   }
 
   Future<void> _deleteNote(int index) async {
-    if (index < 0 || index >= notes.length) {
-      return;
-    }
-
-    final deletedNote = notes[index];
+    final deletedNote = _notes[index];
 
     setState(() {
-      notes.removeAt(index);
+      _notes.removeAt(index);
     });
 
-    try {
-      await _saveNotes();
-    } catch (_) {
-      if (!mounted) return;
+    await _saveNotes();
 
-      setState(() {
-        notes.insert(index, deletedNote);
-      });
-    }
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+        .hideCurrentSnackBar();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'Not silindi.',
+        ),
+        action: SnackBarAction(
+          label: 'Geri Al',
+          onPressed: () async {
+            setState(() {
+              _notes.insert(
+                index.clamp(0, _notes.length),
+                deletedNote,
+              );
+            });
+
+            await _saveNotes();
+          },
+        ),
+      ),
+    );
   }
 
-  void _showNote(NoteItem note) {
-    showDialog<void>(
+  Future<void> _showAddNoteDialog() async {
+    _controller.clear();
+
+    await showDialog<void>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text(note.title),
-          content: SingleChildScrollView(
-            child: Text(note.content),
+          title: const Text(
+            'Yeni Not',
+          ),
+          content: TextField(
+            controller: _controller,
+            autofocus: true,
+            maxLines: 5,
+            decoration: const InputDecoration(
+              hintText: 'Notunuzu yazın...',
+              border: OutlineInputBorder(),
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
               },
-              child: const Text('Kapat'),
+              child: const Text(
+                'İptal',
+              ),
+            ),
+            FilledButton(
+              onPressed: () async {
+                await _addNote();
+
+                if (!context.mounted) return;
+
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'Kaydet',
+              ),
             ),
           ],
         );
@@ -168,75 +141,108 @@ class _NotesPageState extends State<NotesPage> {
   }
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final scheme =
+        Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notlar'),
+        title: const Text(
+          'Notlar',
+        ),
         centerTitle: true,
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addNote,
-        child: const Icon(Icons.add),
+      floatingActionButton:
+          FloatingActionButton(
+        onPressed: _showAddNoteDialog,
+        child: const Icon(
+          Icons.add,
+        ),
       ),
-      body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
-          : notes.isEmpty
-              ? const Center(
-                  child: Text(
-                    'Henüz not yok.',
-                    style: TextStyle(fontSize: 16),
+      body: _notes.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment:
+                    MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.note_outlined,
+                    size: 64,
+                    color:
+                        scheme.onSurfaceVariant,
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: notes.length,
-                  itemBuilder: (context, index) {
-                    final note = notes[index];
+                  const SizedBox(
+                    height: 16,
+                  ),
+                  Text(
+                    'Henüz not yok.',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color:
+                          scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding:
+                  const EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                100,
+              ),
+              itemCount: _notes.length,
+              itemBuilder:
+                  (context, index) {
+                final note =
+                    _notes[index];
 
-                    return Dismissible(
-                      key: ValueKey(
-                        note.createdAt.microsecondsSinceEpoch,
+                return Dismissible(
+                  key: ValueKey(
+                    '$note-$index',
+                  ),
+                  direction:
+                      DismissDirection.endToStart,
+                  background: Container(
+                    margin:
+                        const EdgeInsets.only(
+                      bottom: 12,
+                    ),
+                    alignment:
+                        Alignment.centerRight,
+                    padding:
+                        const EdgeInsets.only(
+                      right: 24,
+                    ),
+                    decoration:
+                        BoxDecoration(
+                      color: scheme.error,
+                      borderRadius:
+                          BorderRadius.circular(
+                        18,
                       ),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 20),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.error,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Icon(
-                          Icons.delete,
-                          color: Theme.of(context).colorScheme.onError,
-                        ),
-                      ),
-                      onDismissed: (_) => _deleteNote(index),
-                      child: Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          onTap: () => _showNote(note),
-                          leading: const Icon(Icons.note_outlined),
-                          title: Text(
-                            note.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            note.content,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          trailing: const Icon(
-                            Icons.chevron_right,
-                          ),
-                        ),
-                      ),
-                    );
+                    ),
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                    ),
+                  ),
+                  onDismissed: (_) {
+                    _deleteNote(index);
                   },
-                ),
-    );
-  }
-}
+                  child: Card(
+                    margin:
+                        const EdgeInsets.only(
+                      bottom: 12,
+                    ),
+                    child: ListTile(
+                      contentPadding:
+                         
