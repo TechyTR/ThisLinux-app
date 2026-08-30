@@ -244,6 +244,7 @@ class _HomeShellState extends State<HomeShell> {
         selectedTheme: widget.selectedTheme,
         onThemeChanged: widget.onThemeChanged,
       ),
+      const NotesPage(),
     ];
 
     return Scaffold(
@@ -265,6 +266,11 @@ class _HomeShellState extends State<HomeShell> {
             icon: Icon(Icons.info_outline),
             selectedIcon: Icon(Icons.info),
             label: 'Uygulama',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.note_outlined),
+            selectedIcon: Icon(Icons.note),
+            label: 'Notlar',
           ),
         ],
       ),
@@ -424,116 +430,4 @@ class _AppInfoPageState extends State<AppInfoPage> {
         }
       }
     } catch (e) {
-      // sessizce geç
-    }
-  }
-
-  bool _isNewer(String remote, String local) {
-    List<int> parse(String v) =>
-        v.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-    final r = parse(remote);
-    final l = parse(local);
-    for (int i = 0; i < r.length; i++) {
-      final lv = i < l.length ? l[i] : 0;
-      if (r[i] > lv) return true;
-      if (r[i] < lv) return false;
-    }
-    return false;
-  }
-
-  Future<void> downloadAndInstall() async {
-    if (updateUrl == null) return;
-    setState(() {
-      downloading = true;
-    });
-    try {
-      final response = await http.get(Uri.parse(updateUrl!));
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/update.apk');
-      await file.writeAsBytes(response.bodyBytes);
-      setState(() {
-        downloading = false;
-      });
-      await OpenFilex.open(file.path);
-    } catch (e) {
-      setState(() {
-        downloading = false;
-      });
-    }
-  }
-
-  Widget themeSwatch(AppThemeColor theme) {
-    final isSelected = widget.selectedTheme == theme;
-    return GestureDetector(
-      onTap: () => widget.onThemeChanged(theme),
-      child: Container(
-        margin: const EdgeInsets.only(right: 12, bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? theme.seed : Colors.transparent,
-          border: Border.all(color: theme.seed, width: 2),
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Text(
-          theme.label,
-          style: TextStyle(
-            color: isSelected ? Colors.black : theme.seed,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        const Text(
-          "Uygulama",
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 24),
-        Text(
-          "Tema",
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: scheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          children: AppThemeColor.values.map(themeSwatch).toList(),
-        ),
-        const SizedBox(height: 24),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerHigh,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.info_outline, color: scheme.primary),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  "Sürüm v$currentVersion",
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ),
-              if (updateAvailable)
-                ElevatedButton(
-                  onPressed: downloading ? null : downloadAndInstall,
-                  child: Text(downloading ? "İndiriliyor..." : "Güncelle"),
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
+      // ses
