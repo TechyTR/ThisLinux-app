@@ -289,4 +289,69 @@ class _HomeShellState extends State<HomeShell> {
           children: [
             circleTab(Icons.memory, 0, scheme.primary),
             circleTab(Icons.info, 1, scheme.primary),
-            circleTab(Icons.note, 2, sch
+            circleTab(Icons.note, 2, scheme.primary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class SystemInfoPage extends StatefulWidget {
+  const SystemInfoPage({super.key});
+
+  @override
+  State<SystemInfoPage> createState() => _SystemInfoPageState();
+}
+
+class _SystemInfoPageState extends State<SystemInfoPage> {
+  String deviceModel = "Yükleniyor...";
+  String batteryLevel = "Yükleniyor...";
+  String batteryState = "Yükleniyor...";
+
+  @override
+  void initState() {
+    super.initState();
+    loadDeviceInfo();
+    loadBatteryInfo();
+  }
+
+  Future<void> loadDeviceInfo() async {
+    try {
+      final deviceInfo = DeviceInfoPlugin();
+      final androidInfo = await deviceInfo.androidInfo;
+      setState(() {
+        deviceModel = "${androidInfo.manufacturer} ${androidInfo.model}";
+      });
+    } catch (e) {
+      setState(() {
+        deviceModel = "Alınamadı";
+      });
+    }
+  }
+
+  Future<void> loadBatteryInfo() async {
+    try {
+      final battery = Battery();
+      final level = await battery.batteryLevel;
+      final state = await battery.batteryState;
+      setState(() {
+        batteryLevel = "%$level";
+        batteryState = state == BatteryState.charging
+            ? "Şarj oluyor"
+            : state == BatteryState.discharging
+                ? "Şarj olmuyor"
+                : "Bilinmiyor";
+      });
+    } catch (e) {
+      setState(() {
+        batteryLevel = "Alınamadı";
+        batteryState = "Alınamadı";
+      });
+    }
+  }
+
+  Widget infoCard(BuildContext context, IconData icon, String title, String value) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 1
