@@ -8,12 +8,17 @@ import 'system_info_page.dart';
 
 class HomeShell extends StatefulWidget {
   final AppThemeColor selectedTheme;
+  final AppThemeStyle selectedStyle;
+
   final Future<void> Function(AppThemeColor) onThemeChanged;
+  final Future<void> Function(AppThemeStyle) onStyleChanged;
 
   const HomeShell({
     super.key,
     required this.selectedTheme,
+    required this.selectedStyle,
     required this.onThemeChanged,
+    required this.onStyleChanged,
   });
 
   @override
@@ -29,12 +34,16 @@ class _HomeShellState extends State<HomeShell> {
     return [
       SystemInfoPage(
         selectedTheme: widget.selectedTheme,
+        selectedStyle: widget.selectedStyle,
         onThemeChanged: widget.onThemeChanged,
+        onStyleChanged: widget.onStyleChanged,
       ),
       const NotesPage(),
       AppInfoPage(
         selectedTheme: widget.selectedTheme,
+        selectedStyle: widget.selectedStyle,
         onThemeChanged: widget.onThemeChanged,
+        onStyleChanged: widget.onStyleChanged,
       ),
     ];
   }
@@ -46,11 +55,16 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   @override
-  void didUpdateWidget(covariant HomeShell oldWidget) {
+  void didUpdateWidget(
+    covariant HomeShell oldWidget,
+  ) {
     super.didUpdateWidget(oldWidget);
 
-    if (oldWidget.selectedTheme != widget.selectedTheme) {
-      _pages = _buildPages();
+    if (oldWidget.selectedTheme != widget.selectedTheme ||
+        oldWidget.selectedStyle != widget.selectedStyle) {
+      setState(() {
+        _pages = _buildPages();
+      });
     }
   }
 
