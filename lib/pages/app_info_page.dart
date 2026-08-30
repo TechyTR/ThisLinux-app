@@ -2,21 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../pages/benchmark_page.dart';
 import '../services/update_service.dart';
 import '../theme/app_theme.dart';
 
 class AppInfoPage extends StatefulWidget {
   final AppThemeColor selectedTheme;
-  final AppThemeStyle selectedStyle;
   final Future<void> Function(AppThemeColor) onThemeChanged;
-  final Future<void> Function(AppThemeStyle) onStyleChanged;
 
   const AppInfoPage({
     super.key,
     required this.selectedTheme,
-    required this.selectedStyle,
     required this.onThemeChanged,
-    required this.onStyleChanged,
   });
 
   @override
@@ -59,7 +56,9 @@ class _AppInfoPageState extends State<AppInfoPage> {
     });
 
     final updateInfo =
-        await UpdateService.checkForUpdate(currentVersion);
+        await UpdateService.checkForUpdate(
+      currentVersion,
+    );
 
     if (!mounted) return;
 
@@ -70,288 +69,394 @@ class _AppInfoPageState extends State<AppInfoPage> {
     if (updateInfo == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Uygulamanız güncel.'),
+          content: Text(
+            'Uygulamanız güncel.',
+          ),
         ),
       );
+
       return;
     }
 
-    final shouldOpen = await showDialog<bool>(
+    final shouldUpdate =
+        await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Güncelleme mevcut'),
+          title: const Text(
+            'Güncelleme mevcut',
+          ),
           content: Text(
-            'Yeni sürüm: ${updateInfo.latestVersion}\n\n'
-            'Mevcut sürüm: $currentVersion',
+            'Yeni sürüm: '
+            '${updateInfo.latestVersion}\n\n'
+            'Mevcut sürüm: '
+            '$currentVersion',
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context, false);
+                Navigator.pop(
+                  context,
+                  false,
+                );
               },
-              child: const Text('İptal'),
+              child: const Text(
+                'İptal',
+              ),
             ),
             FilledButton(
               onPressed: () {
-                Navigator.pop(context, true);
+                Navigator.pop(
+                  context,
+                  true,
+                );
               },
-              child: const Text('Güncellemeyi Aç'),
+              child: const Text(
+                'APK\'yı Aç',
+              ),
             ),
           ],
         );
       },
     );
 
-    if (shouldOpen != true) return;
+    if (shouldUpdate != true) {
+      return;
+    }
 
-    final uri = Uri.tryParse(updateInfo.downloadUrl);
+    final uri =
+        Uri.tryParse(
+      updateInfo.downloadUrl,
+    );
 
-    if (uri == null) return;
+    if (uri == null) {
+      _showUpdateError();
+      return;
+    }
 
-    await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
+    try {
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!opened) {
+        _showUpdateError();
+      }
+    } catch (_) {
+      _showUpdateError();
+    }
+  }
+
+  void _showUpdateError() {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Güncelleme dosyası açılamadı.',
+        ),
+      ),
     );
   }
 
-  Widget _themeButton(AppThemeColor theme) {
+  Widget _themeButton(
+    AppThemeColor theme,
+  ) {
     final isSelected =
         widget.selectedTheme == theme;
 
-    final color = AppTheme.colorOf(theme);
+    final color =
+        AppTheme.colorOf(theme);
 
     return GestureDetector(
       onTap: () {
         widget.onThemeChanged(theme);
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        margin: const EdgeInsets.only(
-          right: 10,
-          bottom: 10,
+        duration:
+            const Duration(
+          milliseconds: 200,
         ),
-        padding: const EdgeInsets.symmetric(
+        margin:
+            const EdgeInsets.only(
+          right: 12,
+          bottom: 12,
+        ),
+        padding:
+            const EdgeInsets.symmetric(
           horizontal: 18,
           vertical: 12,
         ),
-        decoration: BoxDecoration(
+        decoration:
+            BoxDecoration(
           color: isSelected
               ? color
               : Colors.transparent,
           border: Border.all(
             color: color,
-            width: isSelected ? 2.5 : 1.5,
+            width: 2,
           ),
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: color.withOpacity(0.35),
-                    blurRadius: 12,
-                  ),
-                ]
-              : null,
+          borderRadius:
+              BorderRadius.circular(
+            30,
+          ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration:
-                  const Duration(milliseconds: 220),
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? Colors.white
-                    : color,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              AppTheme.labelOf(theme),
-              style: TextStyle(
-                color: isSelected
-                    ? Colors.white
-                    : color,
-                fontWeight: isSelected
-                    ? FontWeight.bold
-                    : FontWeight.w600,
-              ),
-            ),
-            if (isSelected) ...[
-              const SizedBox(width: 6),
-              const Icon(
-                Icons.check,
-                size: 18,
-                color: Colors.white,
-              ),
-            ],
-          ],
+        child: Text(
+          AppTheme.labelOf(theme),
+          style: TextStyle(
+            color: isSelected
+                ? Colors.black
+                : color,
+            fontWeight:
+                FontWeight.bold,
+          ),
         ),
       ),
     );
   }
 
-  Widget _styleButton(AppThemeStyle style) {
-    final isSelected =
-        widget.selectedStyle == style;
+  Widget _sectionButton({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    final scheme =
+        Theme.of(context)
+            .colorScheme;
 
-    final isLight =
-        style == AppThemeStyle.liquidGlassLight;
-
-    final color =
-        AppTheme.colorOf(widget.selectedTheme);
-
-    return GestureDetector(
-      onTap: () {
-        widget.onStyleChanged(style);
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? color.withOpacity(
-                  isLight ? 0.18 : 0.28,
-                )
-              : Theme.of(context)
-                  .colorScheme
-                  .surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? color
-                : Colors.transparent,
-            width: isSelected ? 2 : 1,
+    return Card(
+      margin:
+          const EdgeInsets.only(
+        bottom: 12,
+      ),
+      child: ListTile(
+        contentPadding:
+            const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 6,
+        ),
+        leading: Icon(
+          icon,
+          color: scheme.primary,
+        ),
+        title: Text(
+          title,
+          style:
+              const TextStyle(
+            fontWeight:
+                FontWeight.w600,
           ),
         ),
-        child: Row(
-          children: [
-            Icon(
-              style == AppThemeStyle.normal
-                  ? Icons.palette_outlined
-                  : Icons.blur_on,
-              color: isSelected
-                  ? color
-                  : Theme.of(context)
-                      .colorScheme
-                      .onSurfaceVariant,
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                AppTheme.styleLabelOf(style),
-                style: TextStyle(
-                  fontWeight: isSelected
-                      ? FontWeight.bold
-                      : FontWeight.w500,
-                ),
-              ),
-            ),
-            if (isSelected)
-              Icon(
-                Icons.check_circle,
-                color: color,
-              ),
-          ],
+        subtitle: Text(
+          subtitle,
         ),
+        trailing: const Icon(
+          Icons.chevron_right,
+        ),
+        onTap: onTap,
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     final scheme =
-        Theme.of(context).colorScheme;
+        Theme.of(context)
+            .colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Uygulama Hakkında'),
+        title:
+            const Text('Uygulama'),
         centerTitle: true,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding:
+            const EdgeInsets.all(20),
         children: [
           const Text(
             'ThisLinux',
             style: TextStyle(
               fontSize: 32,
-              fontWeight: FontWeight.bold,
+              fontWeight:
+                  FontWeight.bold,
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(
+            height: 8,
+          ),
 
           Text(
             'Sistem yardımcı uygulaması',
             style: TextStyle(
-              color: scheme.onSurfaceVariant,
+              fontSize: 15,
+              color:
+                  scheme.onSurfaceVariant,
             ),
           ),
 
-          const SizedBox(height: 28),
+          const SizedBox(
+            height: 28,
+          ),
 
           Text(
-            'Renk Teması',
+            'Tema',
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: scheme.onSurfaceVariant,
+              fontWeight:
+                  FontWeight.w600,
+              color:
+                  scheme.onSurfaceVariant,
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(
+            height: 12,
+          ),
 
           Wrap(
-            children: AppThemeColor.values.map(
-              (theme) {
-                return _themeButton(theme);
-              },
-            ).toList(),
+            children:
+                AppThemeColor.values
+                    .map(
+                      (theme) =>
+                          _themeButton(
+                        theme,
+                      ),
+                    )
+                    .toList(),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(
+            height: 12,
+          ),
 
           Text(
-            'Görünüm',
+            'Araçlar',
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: scheme.onSurfaceVariant,
+              fontWeight:
+                  FontWeight.w600,
+              color:
+                  scheme.onSurfaceVariant,
             ),
           ),
 
-          const SizedBox(height: 12),
-
-          _styleButton(
-            AppThemeStyle.normal,
+          const SizedBox(
+            height: 12,
           ),
 
-          _styleButton(
-            AppThemeStyle.liquidGlassLight,
+          _sectionButton(
+            icon: Icons.speed,
+            title: 'Benchmark',
+            subtitle:
+                'Cihaz performansını test et',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      const BenchmarkPage(),
+                ),
+              );
+            },
           ),
 
-          _styleButton(
-            AppThemeStyle.liquidGlassDark,
+          _sectionButton(
+            icon: Icons.storage,
+            title:
+                'Storage Manager',
+            subtitle:
+                'Depolama kullanımını incele',
+            onTap: () {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Storage Manager yakında.',
+                  ),
+                ),
+              );
+            },
           ),
 
-          const SizedBox(height: 12),
+          _sectionButton(
+            icon: Icons.sensors,
+            title: 'SensorLab',
+            subtitle:
+                'Sensör bilgilerini görüntüle',
+            onTap: () {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'SensorLab yakında.',
+                  ),
+                ),
+              );
+            },
+          ),
+
+          _sectionButton(
+            icon: Icons.network_check,
+            title: 'Network Lab',
+            subtitle:
+                'Ağ bağlantısını incele',
+            onTap: () {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Network Lab yakında.',
+                  ),
+                ),
+              );
+            },
+          ),
+
+          _sectionButton(
+            icon: Icons.battery_full,
+            title: 'Battery Lab',
+            subtitle:
+                'Pil durumunu incele',
+            onTap: () {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Battery Lab yakında.',
+                  ),
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(
+            height: 12,
+          ),
 
           SizedBox(
             height: 52,
-            child: FilledButton.icon(
-              onPressed: isCheckingUpdate
-                  ? null
-                  : _checkForUpdate,
+            child:
+                FilledButton.icon(
+              onPressed:
+                  isCheckingUpdate
+                      ? null
+                      : _checkForUpdate,
               icon: isCheckingUpdate
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(
+                      child:
+                          CircularProgressIndicator(
                         strokeWidth: 2,
                       ),
                     )
@@ -366,19 +471,24 @@ class _AppInfoPageState extends State<AppInfoPage> {
             ),
           ),
 
-          const SizedBox(height: 30),
+          const SizedBox(
+            height: 24,
+          ),
 
           Center(
             child: Text(
-              'Sürüm v$currentVersion',
+              'ThisLinux v$currentVersion',
               style: TextStyle(
+                color:
+                    scheme.onSurfaceVariant,
                 fontSize: 13,
-                color: scheme.onSurfaceVariant,
               ),
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(
+            height: 8,
+          ),
         ],
       ),
     );
