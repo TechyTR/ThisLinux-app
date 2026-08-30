@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'pages/boot_screen.dart';
+import 'services/preferences_service.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -15,22 +16,45 @@ class ThisLinuxApp extends StatefulWidget {
 }
 
 class _ThisLinuxAppState extends State<ThisLinuxApp> {
-  ThemeMode _themeMode = ThemeMode.system;
+  AppThemeColor _selectedTheme = AppThemeColor.purple;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTheme();
+  }
+
+  Future<void> _loadTheme() async {
+    final savedTheme = await PreferencesService.getThemeColor();
+
+    if (!mounted) return;
+
+    setState(() {
+      _selectedTheme = AppTheme.fromString(savedTheme);
+    });
+  }
+
+  Future<void> _changeTheme(AppThemeColor theme) async {
+    setState(() {
+      _selectedTheme = theme;
+    });
+
+    await PreferencesService.saveThemeColor(
+      AppTheme.toStringValue(theme),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'ThisLinux',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: _themeMode,
+      theme: AppTheme.light(_selectedTheme),
+      darkTheme: AppTheme.dark(_selectedTheme),
+      themeMode: ThemeMode.system,
       home: BootScreen(
-        onThemeChanged: (mode) {
-          setState(() {
-            _themeMode = mode;
-          });
-        },
+        selectedTheme: _selectedTheme,
+        onThemeChanged: _changeTheme,
       ),
     );
   }
