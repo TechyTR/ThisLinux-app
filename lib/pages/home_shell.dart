@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../widgets/bottom_nav_bar.dart';
 import 'app_info_page.dart';
 import 'notes_page.dart';
 import 'system_info_page.dart';
@@ -24,11 +25,8 @@ class _HomeShellState extends State<HomeShell> {
 
   late List<Widget> _pages;
 
-  @override
-  void initState() {
-    super.initState();
-
-    _pages = [
+  List<Widget> _buildPages() {
+    return [
       SystemInfoPage(
         selectedTheme: widget.selectedTheme,
         onThemeChanged: widget.onThemeChanged,
@@ -39,18 +37,18 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   @override
+  void initState() {
+    super.initState();
+
+    _pages = _buildPages();
+  }
+
+  @override
   void didUpdateWidget(covariant HomeShell oldWidget) {
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.selectedTheme != widget.selectedTheme) {
-      _pages = [
-        SystemInfoPage(
-          selectedTheme: widget.selectedTheme,
-          onThemeChanged: widget.onThemeChanged,
-        ),
-        const NotesPage(),
-        const AppInfoPage(),
-      ];
+      _pages = _buildPages();
     }
   }
 
@@ -61,30 +59,13 @@ class _HomeShellState extends State<HomeShell> {
         index: _currentIndex,
         children: _pages,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentIndex,
         onDestinationSelected: (index) {
           setState(() {
             _currentIndex = index;
           });
         },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.memory_outlined),
-            selectedIcon: Icon(Icons.memory),
-            label: 'System',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.note_outlined),
-            selectedIcon: Icon(Icons.note),
-            label: 'Notes',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.info_outline),
-            selectedIcon: Icon(Icons.info),
-            label: 'App',
-          ),
-        ],
       ),
     );
   }
