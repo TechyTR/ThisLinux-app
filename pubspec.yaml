@@ -1,8 +1,7 @@
 name: this_linux
-description: A system info app with a Linux-style boot screen.
+description: A system and app info utility with switchable themes.
 publish_to: 'none'
-
-version: 1.1.0+2
+version: 1.0.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -10,26 +9,24 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
   device_info_plus: ^10.1.0
   battery_plus: ^6.0.2
   http: ^1.2.2
-  url_launcher: ^6.3.1
   package_info_plus: ^8.1.0
+  open_filex: ^4.5.0
+  path_provider: ^2.1.4
+  shared_preferences: ^2.3.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
   flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
-
   assets:
     - assets/icon.png
 
 flutter_launcher_icons:
   android: true
   image_path: "assets/icon.png"
-
