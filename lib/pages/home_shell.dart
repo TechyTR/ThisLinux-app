@@ -32,14 +32,16 @@ class _HomeShellState extends State<HomeShell> {
         onThemeChanged: widget.onThemeChanged,
       ),
       const NotesPage(),
-      const AppInfoPage(),
+      AppInfoPage(
+        selectedTheme: widget.selectedTheme,
+        onThemeChanged: widget.onThemeChanged,
+      ),
     ];
   }
 
   @override
   void initState() {
     super.initState();
-
     _pages = _buildPages();
   }
 
