@@ -58,7 +58,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: ThisLinux Latest
+          name: v2.2.0
           body: |
             ThisLinux güncel sürüm.
           files: build/app/outputs/flutter-apk/app-release.apk
