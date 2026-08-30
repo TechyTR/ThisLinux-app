@@ -14,7 +14,7 @@ class UpdateInfo {
 
 class UpdateService {
   static const String versionUrl =
-      'https://raw.githubusercontent.com/TechyTR/This-Linux/main/version.json';
+      'https://raw.githubusercontent.com/TechyTR/ThisLinux-app/main/version.json';
 
   static Future<UpdateInfo?> checkForUpdate(
     String currentVersion,
@@ -22,50 +22,79 @@ class UpdateService {
     try {
       final response = await http
           .get(Uri.parse(versionUrl))
-          .timeout(const Duration(seconds: 10));
+          .timeout(
+            const Duration(seconds: 10),
+          );
 
       if (response.statusCode != 200) {
         return null;
       }
 
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data =
+          jsonDecode(response.body)
+              as Map<String, dynamic>;
 
-      final remoteVersion = data['latest_version']?.toString();
-      final downloadUrl = data['download_url']?.toString();
+      final latestVersion =
+          data['version']?.toString();
 
-      if (remoteVersion == null ||
-          remoteVersion.isEmpty ||
+      final downloadUrl =
+          data['download_url']?.toString();
+
+      if (latestVersion == null ||
           downloadUrl == null ||
+          latestVersion.isEmpty ||
           downloadUrl.isEmpty) {
         return null;
       }
 
-      if (!_isNewer(remoteVersion, currentVersion)) {
-        return null;
+      if (_isNewerVersion(
+        currentVersion,
+        latestVersion,
+      )) {
+        return UpdateInfo(
+          latestVersion: latestVersion,
+          downloadUrl: downloadUrl,
+        );
       }
 
-      return UpdateInfo(
-        latestVersion: remoteVersion,
-        downloadUrl: downloadUrl,
-      );
+      return null;
     } catch (_) {
       return null;
     }
   }
 
-  static bool _isNewer(
-    String remote,
-    String local,
+  static bool _isNewerVersion(
+    String current,
+    String latest,
   ) {
-    final remoteParts = _parseVersion(remote);
-    final localParts = _parseVersion(local);
+    final currentParts =
+        _parseVersion(current);
 
-    for (int i = 0; i < 3; i++) {
-      if (remoteParts[i] > localParts[i]) {
+    final latestParts =
+        _parseVersion(latest);
+
+    final length =
+        currentParts.length >
+                latestParts.length
+            ? currentParts.length
+            : latestParts.length;
+
+    for (int i = 0; i < length; i++) {
+      final currentValue =
+          i < currentParts.length
+              ? currentParts[i]
+              : 0;
+
+      final latestValue =
+          i < latestParts.length
+              ? latestParts[i]
+              : 0;
+
+      if (latestValue > currentValue) {
         return true;
       }
 
-      if (remoteParts[i] < localParts[i]) {
+      if (latestValue < currentValue) {
         return false;
       }
     }
@@ -73,28 +102,16 @@ class UpdateService {
     return false;
   }
 
-  static List<int> _parseVersion(String version) {
-    final cleaned = version.trim().replaceFirst(
-          RegExp(r'^[vV]'),
-          '',
-        );
-
-    final parts = cleaned.split('.');
-
-    return List.generate(
-      3,
-      (index) {
-        if (index >= parts.length) {
-          return 0;
-        }
-
-        final number = RegExp(r'^\d+').firstMatch(parts[index]);
-
-        return int.tryParse(
-              number?.group(0) ?? '',
-            ) ??
-            0;
-      },
-    );
+  static List<int> _parseVersion(
+    String version,
+  ) {
+    return version
+        .replaceFirst('v', '')
+        .split('.')
+        .map(
+          (part) =>
+              int.tryParse(part) ?? 0,
+        )
+        .toList();
   }
 }
