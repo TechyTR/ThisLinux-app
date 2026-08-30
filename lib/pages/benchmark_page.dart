@@ -297,7 +297,7 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
           _scoreCard(
             'Bellek',
             _memoryScore,
-            Icons.sd_memory,
+            Icons.memory,
           ),
 
           _scoreCard(
