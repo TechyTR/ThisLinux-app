@@ -18,10 +18,13 @@ extension AppThemeColorSeed on AppThemeColor {
     switch (this) {
       case AppThemeColor.purple:
         return const Color(0xFF8E7CC3);
+
       case AppThemeColor.blue:
         return const Color(0xFF5B8DEF);
+
       case AppThemeColor.green:
         return const Color(0xFF6FAE7A);
+
       case AppThemeColor.orange:
         return const Color(0xFFE0A972);
     }
@@ -31,23 +34,29 @@ extension AppThemeColorSeed on AppThemeColor {
     switch (this) {
       case AppThemeColor.purple:
         return 'Mor';
+
       case AppThemeColor.blue:
         return 'Mavi';
+
       case AppThemeColor.green:
         return 'Yeşil';
+
       case AppThemeColor.orange:
         return 'Turuncu';
     }
   }
 }
 
-extension AppThemeStyleExtension on AppThemeStyle {
+extension AppThemeStyleExtension
+    on AppThemeStyle {
   String get label {
     switch (this) {
       case AppThemeStyle.normal:
         return 'Normal';
+
       case AppThemeStyle.liquidGlassLight:
         return 'Liquid Glass Light';
+
       case AppThemeStyle.liquidGlassDark:
         return 'Liquid Glass Dark';
     }
@@ -61,8 +70,10 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF0B0B0F),
-      colorScheme: ColorScheme.fromSeed(
+      scaffoldBackgroundColor:
+          const Color(0xFF0B0B0F),
+      colorScheme:
+          ColorScheme.fromSeed(
         seedColor: color.seed,
         brightness: Brightness.dark,
       ),
@@ -72,19 +83,22 @@ class AppTheme {
   static ThemeData liquidGlassLight(
     AppThemeColor color,
   ) {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: color.seed,
-      brightness: Brightness.light,
-    );
-
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      scaffoldBackgroundColor: Colors.white,
-      colorScheme: scheme,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
+      scaffoldBackgroundColor:
+          Colors.white,
+      colorScheme:
+          ColorScheme.fromSeed(
+        seedColor: color.seed,
+        brightness: Brightness.light,
+      ),
+      appBarTheme:
+          const AppBarTheme(
+        backgroundColor:
+            Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
       ),
     );
   }
@@ -92,19 +106,22 @@ class AppTheme {
   static ThemeData liquidGlassDark(
     AppThemeColor color,
   ) {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: color.seed,
-      brightness: Brightness.dark,
-    );
-
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: Colors.black,
-      colorScheme: scheme,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
+      scaffoldBackgroundColor:
+          Colors.black,
+      colorScheme:
+          ColorScheme.fromSeed(
+        seedColor: color.seed,
+        brightness: Brightness.dark,
+      ),
+      appBarTheme:
+          const AppBarTheme(
+        backgroundColor:
+            Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
       ),
     );
   }
@@ -129,8 +146,10 @@ class AppTheme {
     String value,
   ) {
     return AppThemeColor.values.firstWhere(
-      (theme) => theme.name == value,
-      orElse: () => AppThemeColor.purple,
+      (theme) =>
+          theme.name == value,
+      orElse: () =>
+          AppThemeColor.purple,
     );
   }
 
@@ -138,8 +157,10 @@ class AppTheme {
     String value,
   ) {
     return AppThemeStyle.values.firstWhere(
-      (style) => style.name == value,
-      orElse: () => AppThemeStyle.normal,
+      (style) =>
+          style.name == value,
+      orElse: () =>
+          AppThemeStyle.normal,
     );
   }
 
