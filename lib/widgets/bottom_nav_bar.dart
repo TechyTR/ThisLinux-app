@@ -27,7 +27,8 @@ class BottomNavBar extends StatelessWidget {
     if (!isLiquidGlass) {
       return NavigationBar(
         selectedIndex: currentIndex,
-        onDestinationSelected: onDestinationSelected,
+        onDestinationSelected:
+            onDestinationSelected,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.memory_outlined),
@@ -49,7 +50,8 @@ class BottomNavBar extends StatelessWidget {
     }
 
     final isLight =
-        selectedStyle == AppThemeStyle.liquidGlassLight;
+        selectedStyle ==
+            AppThemeStyle.liquidGlassLight;
 
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(
@@ -59,7 +61,8 @@ class BottomNavBar extends StatelessWidget {
         12,
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius:
+            BorderRadius.circular(28),
         child: BackdropFilter(
           filter: ImageFilter.blur(
             sigmaX: 20,
@@ -71,7 +74,8 @@ class BottomNavBar extends StatelessWidget {
               color: isLight
                   ? Colors.white.withOpacity(0.55)
                   : Colors.black.withOpacity(0.55),
-              borderRadius: BorderRadius.circular(28),
+              borderRadius:
+                  BorderRadius.circular(28),
               border: Border.all(
                 color: isLight
                     ? Colors.white.withOpacity(0.65)
@@ -121,27 +125,100 @@ class BottomNavBar extends StatelessWidget {
     int index,
     Color accent,
   ) {
-    final selected = currentIndex == index;
+    final selected =
+        currentIndex == index;
+
     final isLight =
-        selectedStyle == AppThemeStyle.liquidGlassLight;
+        selectedStyle ==
+            AppThemeStyle.liquidGlassLight;
 
     return Expanded(
       child: GestureDetector(
         onTap: () {
           onDestinationSelected(index);
         },
-        behavior: HitTestBehavior.opaque,
+        behavior:
+            HitTestBehavior.opaque,
         child: Padding(
-          padding: const EdgeInsets.all(6),
+          padding:
+              const EdgeInsets.all(6),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
+            duration:
+                const Duration(
+              milliseconds: 300,
+            ),
+            curve:
+                Curves.easeOutCubic,
             decoration: BoxDecoration(
               color: selected
                   ? accent.withOpacity(
                       isLight ? 0.18 : 0.28,
                     )
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(22),
+              borderRadius:
+                  BorderRadius.circular(22),
               border: selected
-                 
+                  ? Border.all(
+                      color:
+                          Colors.white.withOpacity(
+                        isLight ? 0.65 : 0.20,
+                      ),
+                      width: 1,
+                    )
+                  : null,
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment:
+                    MainAxisAlignment.center,
+                children: [
+                  AnimatedSwitcher(
+                    duration:
+                        const Duration(
+                      milliseconds: 200,
+                    ),
+                    child: Icon(
+                      selected
+                          ? selectedIcon
+                          : icon,
+                      key: ValueKey(
+                        selected,
+                      ),
+                      color: selected
+                          ? accent
+                          : Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 3,
+                  ),
+                  AnimatedDefaultTextStyle(
+                    duration:
+                        const Duration(
+                      milliseconds: 200,
+                    ),
+                    style: TextStyle(
+                      fontSize:
+                          selected ? 12 : 11,
+                      fontWeight: selected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                      color: selected
+                          ? accent
+                          : Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant,
+                    ),
+                    child: Text(label),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
