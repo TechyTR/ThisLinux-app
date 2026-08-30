@@ -27,7 +27,7 @@ class _ThisLinuxAppState extends State<ThisLinuxApp> {
       themeMode: ThemeMode.dark,
       home: BootScreen(
         selectedTheme: _selectedTheme,
-        onThemeChanged: (theme) {
+        onThemeChanged: (theme) async {
           setState(() {
             _selectedTheme = theme;
           });
