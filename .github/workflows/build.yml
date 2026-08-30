@@ -5,6 +5,9 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,19 +31,13 @@ jobs:
       - name: Set application name
         run: |
           sed -i 's/android:label="temp_scaffold"/android:label="This Linux"/' \
-            android/app/src/main/AndroidManifest.xml
+          android/app/src/main/AndroidManifest.xml
 
       - name: Fix Kotlin version
         run: |
-          echo "Before:"
-          grep -n "org.jetbrains.kotlin.android" android/settings.gradle || true
-
           sed -i -E \
-            "s/(id[[:space:]]*['\"]org\.jetbrains\.kotlin\.android['\"][[:space:]]*version[[:space:]]*['\"])[^'\"]+(['\"])/\11.9.24\2/" \
-            android/settings.gradle
-
-          echo "After:"
-          grep -n "org.jetbrains.kotlin.android" android/settings.gradle || true
+          "s/(id[[:space:]]*['\"]org\.jetbrains\.kotlin\.android['\"][[:space:]]*version[[:space:]]*['\"])[^'\"]+(['\"])/\11.9.24\2/" \
+          android/settings.gradle
 
       - name: Get dependencies
         run: flutter pub get
@@ -51,9 +48,19 @@ jobs:
       - name: Build APK
         run: flutter build apk --release
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: ThisLinux Latest
+          body: |
+            ThisLinux güncel sürüm.
+          files: build/app/outputs/flutter-apk/app-release.apk
+          make_latest: true
+          overwrite_files: true
