@@ -115,14 +115,15 @@ class _AppInfoPageState extends State<AppInfoPage> {
   }
 
   Widget _themeButton(
-    BuildContext context,
     AppThemeColor theme,
   ) {
     final isSelected = widget.selectedTheme == theme;
     final color = AppTheme.colorOf(theme);
 
     return GestureDetector(
-      onTap: () => widget.onThemeChanged(theme),
+      onTap: () {
+        widget.onThemeChanged(theme);
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.only(
@@ -134,7 +135,9 @@ class _AppInfoPageState extends State<AppInfoPage> {
           vertical: 12,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? color : Colors.transparent,
+          color: isSelected
+              ? color
+              : Colors.transparent,
           border: Border.all(
             color: color,
             width: 2,
@@ -144,7 +147,9 @@ class _AppInfoPageState extends State<AppInfoPage> {
         child: Text(
           AppTheme.labelOf(theme),
           style: TextStyle(
-            color: isSelected ? Colors.black : color,
+            color: isSelected
+                ? Colors.black
+                : color,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -156,38 +161,111 @@ class _AppInfoPageState extends State<AppInfoPage> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        const Text(
-          'Uygulama',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Uygulama'),
+        centerTitle: true,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          const Text(
+            'ThisLinux',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-        const SizedBox(height: 24),
 
-        Text(
-          'Tema',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: scheme.onSurfaceVariant,
+          const SizedBox(height: 8),
+
+          Text(
+            'Sistem yardımcı uygulaması',
+            style: TextStyle(
+              fontSize: 15,
+              color: scheme.onSurfaceVariant,
+            ),
           ),
-        ),
 
-        const SizedBox(height: 12),
+          const SizedBox(height: 28),
 
-        Wrap(
-          children: AppThemeColor.values
-              .map(
-                (theme) => _themeButton(
-                  context,
-                  theme,
+          Text(
+            'Tema',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          Wrap(
+            children: AppThemeColor.values.map(
+              (theme) {
+                return _themeButton(theme);
+              },
+            ).toList(),
+          ),
+
+          const SizedBox(height: 20),
+
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: scheme.primary,
                 ),
-              )
-              .toList(),
-        ),
 
-        const
+                const SizedBox(width: 16),
+
+                Expanded(
+                  child: Text(
+                    'Sürüm v$currentVersion',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          SizedBox(
+            height: 52,
+            child: FilledButton.icon(
+              onPressed: isCheckingUpdate
+                  ? null
+                  : _checkForUpdate,
+              icon: isCheckingUpdate
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.system_update,
+                    ),
+              label: Text(
+                isCheckingUpdate
+                    ? 'Kontrol ediliyor...'
+                    : 'Güncellemeleri kontrol et',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
