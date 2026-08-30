@@ -3,12 +3,10 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 void main() {
   runApp(const MyApp());
@@ -157,24 +155,18 @@ class _BootScreenState extends State<BootScreen> {
   @override
   void initState() {
     super.initState();
-    Timer.periodic(const Duration(milliseconds: 250), (timer) {
+    Timer.periodic(const Duration(milliseconds: 20), (timer) {
       if (index < bootLines.length) {
         setState(() {
           shown.add(bootLines[index]);
           index++;
         });
-        Future.delayed(const Duration(milliseconds: 50), () {
-          if (scrollController.hasClients) {
-            scrollController.animateTo(
-              scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOut,
-            );
-          }
-        });
+        if (scrollController.hasClients) {
+          scrollController.jumpTo(scrollController.position.maxScrollExtent);
+        }
       } else {
         timer.cancel();
-        Future.delayed(const Duration(milliseconds: 800), () {
+        Future.delayed(const Duration(milliseconds: 300), () {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (context) => HomeShell(
@@ -213,84 +205,6 @@ class _BootScreenState extends State<BootScreen> {
               ),
             );
           },
-        ),
-      ),
-    );
-  }
-}
-
-class HomeShell extends StatefulWidget {
-  final AppThemeColor selectedTheme;
-  final Function(AppThemeColor) onThemeChanged;
-
-  const HomeShell({
-    super.key,
-    required this.selectedTheme,
-    required this.onThemeChanged,
-  });
-
-  @override
-  State<HomeShell> createState() => _HomeShellState();
-}
-
-class _HomeShellState extends State<HomeShell> {
-  int currentIndex = 0;
-
-  Widget circleTab(IconData icon, int index, Color activeColor) {
-    final isSelected = currentIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => currentIndex = index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 60,
-        height: 60,
-        margin: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isSelected ? activeColor : activeColor.withOpacity(0.15),
-        ),
-        child: Icon(
-          icon,
-          color: isSelected ? Colors.white : activeColor,
-          size: 26,
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final pages = [
-      const SystemInfoPage(),
-      AppInfoPage(
-        selectedTheme: widget.selectedTheme,
-        onThemeChanged: widget.onThemeChanged,
-      ),
-      const NotesPage(),
-    ];
-
-    return Scaffold(
-      body: SafeArea(child: pages[currentIndex]),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            circleTab(Icons.memory, 0, scheme.primary),
-            circleTab(Icons.info, 1, scheme.primary),
-            circleTab(Icons.note, 2, scheme.primary),
-          ],
         ),
       ),
     );
@@ -398,25 +312,24 @@ class _SystemInfoPageState extends State<SystemInfoPage> {
       ],
     );
   }
-}class AppInfoPage extends StatefulWidget {
+}class HomeShell extends StatefulWidget {
   final AppThemeColor selectedTheme;
   final Function(AppThemeColor) onThemeChanged;
 
-  const AppInfoPage({
+  const HomeShell({
     super.key,
     required this.selectedTheme,
     required this.onThemeChanged,
   });
 
   @override
-  State<AppInfoPage> createState() => _AppInfoPageState();
+  State<HomeShell> createState() => _HomeShellState();
 }
 
-class _AppInfoPageState extends State<AppInfoPage> {
-  String currentVersion = "";
-  String? updateUrl;
+class _HomeShellState extends State<HomeShell> {
+  int currentIndex = 0;
   bool updateAvailable = false;
-  bool downloading = false;
+  String? updateUrl;
 
   @override
   void initState() {
@@ -428,9 +341,6 @@ class _AppInfoPageState extends State<AppInfoPage> {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       final local = packageInfo.version;
-      setState(() {
-        currentVersion = local;
-      });
 
       final response = await http.get(Uri.parse(
         'https://raw.githubusercontent.com/TechyTR/This-Linux/main/version.json',
@@ -464,25 +374,129 @@ class _AppInfoPageState extends State<AppInfoPage> {
     return false;
   }
 
-  Future<void> downloadAndInstall() async {
-    if (updateUrl == null) return;
+  Widget navIcon(IconData icon, int index, Color activeColor) {
+    final isSelected = currentIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => currentIndex = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isSelected ? activeColor : Colors.transparent,
+        ),
+        child: Icon(
+          icon,
+          color: isSelected ? Colors.white : activeColor,
+          size: 24,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final pages = [
+      const SystemInfoPage(),
+      AppInfoPage(
+        selectedTheme: widget.selectedTheme,
+        onThemeChanged: widget.onThemeChanged,
+      ),
+      const NotesPage(),
+    ];
+
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            if (updateAvailable)
+              GestureDetector(
+                onTap: () {
+                  if (updateUrl != null) {
+                    launchUrl(Uri.parse(updateUrl!),
+                        mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: scheme.primary,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.system_update, color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      const Text(
+                        "Güncelleme hazır!",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            Expanded(child: pages[currentIndex]),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 40),
+        child: Container(
+          height: 64,
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(32),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              navIcon(Icons.memory, 0, scheme.primary),
+              navIcon(Icons.info, 1, scheme.primary),
+              navIcon(Icons.sticky_note_2, 2, scheme.primary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class AppInfoPage extends StatefulWidget {
+  final AppThemeColor selectedTheme;
+  final Function(AppThemeColor) onThemeChanged;
+
+  const AppInfoPage({
+    super.key,
+    required this.selectedTheme,
+    required this.onThemeChanged,
+  });
+
+  @override
+  State<AppInfoPage> createState() => _AppInfoPageState();
+}
+
+class _AppInfoPageState extends State<AppInfoPage> {
+  String currentVersion = "";
+
+  @override
+  void initState() {
+    super.initState();
+    loadVersion();
+  }
+
+  Future<void> loadVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
     setState(() {
-      downloading = true;
+      currentVersion = packageInfo.version;
     });
-    try {
-      final response = await http.get(Uri.parse(updateUrl!));
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/update.apk');
-      await file.writeAsBytes(response.bodyBytes);
-      setState(() {
-        downloading = false;
-      });
-      await OpenFilex.open(file.path);
-    } catch (e) {
-      setState(() {
-        downloading = false;
-      });
-    }
   }
 
   Widget themeSwatch(AppThemeColor theme) {
@@ -542,17 +556,10 @@ class _AppInfoPageState extends State<AppInfoPage> {
             children: [
               Icon(Icons.info_outline, color: scheme.primary),
               const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  "Sürüm v$currentVersion",
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
+              Text(
+                "Sürüm v$currentVersion",
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
-              if (updateAvailable)
-                ElevatedButton(
-                  onPressed: downloading ? null : downloadAndInstall,
-                  child: Text(downloading ? "İndiriliyor..." : "Güncelle"),
-                ),
             ],
           ),
         ),
