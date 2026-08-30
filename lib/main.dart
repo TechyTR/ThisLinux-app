@@ -354,4 +354,353 @@ class _SystemInfoPageState extends State<SystemInfoPage> {
   Widget infoCard(BuildContext context, IconData icon, String title, String value) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      margin: const EdgeInsets.only(bottom: 1
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: scheme.primary),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(color: scheme.onSurfaceVariant)),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        const Text(
+          "Sistem",
+          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 20),
+        infoCard(context, Icons.smartphone, "Cihaz Modeli", deviceModel),
+        infoCard(context, Icons.battery_full, "Pil Yüzdesi", batteryLevel),
+        infoCard(context, Icons.bolt, "Şarj Durumu", batteryState),
+      ],
+    );
+  }
+}class AppInfoPage extends StatefulWidget {
+  final AppThemeColor selectedTheme;
+  final Function(AppThemeColor) onThemeChanged;
+
+  const AppInfoPage({
+    super.key,
+    required this.selectedTheme,
+    required this.onThemeChanged,
+  });
+
+  @override
+  State<AppInfoPage> createState() => _AppInfoPageState();
+}
+
+class _AppInfoPageState extends State<AppInfoPage> {
+  String currentVersion = "";
+  String? updateUrl;
+  bool updateAvailable = false;
+  bool downloading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    checkVersion();
+  }
+
+  Future<void> checkVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      final local = packageInfo.version;
+      setState(() {
+        currentVersion = local;
+      });
+
+      final response = await http.get(Uri.parse(
+        'https://raw.githubusercontent.com/TechyTR/This-Linux/main/version.json',
+      ));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final remote = data['latest_version'] as String;
+        final url = data['download_url'] as String;
+        if (_isNewer(remote, local)) {
+          setState(() {
+            updateAvailable = true;
+            updateUrl = url;
+          });
+        }
+      }
+    } catch (e) {
+      // sessizce geç
+    }
+  }
+
+  bool _isNewer(String remote, String local) {
+    List<int> parse(String v) =>
+        v.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final r = parse(remote);
+    final l = parse(local);
+    for (int i = 0; i < r.length; i++) {
+      final lv = i < l.length ? l[i] : 0;
+      if (r[i] > lv) return true;
+      if (r[i] < lv) return false;
+    }
+    return false;
+  }
+
+  Future<void> downloadAndInstall() async {
+    if (updateUrl == null) return;
+    setState(() {
+      downloading = true;
+    });
+    try {
+      final response = await http.get(Uri.parse(updateUrl!));
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/update.apk');
+      await file.writeAsBytes(response.bodyBytes);
+      setState(() {
+        downloading = false;
+      });
+      await OpenFilex.open(file.path);
+    } catch (e) {
+      setState(() {
+        downloading = false;
+      });
+    }
+  }
+
+  Widget themeSwatch(AppThemeColor theme) {
+    final isSelected = widget.selectedTheme == theme;
+    return GestureDetector(
+      onTap: () => widget.onThemeChanged(theme),
+      child: Container(
+        margin: const EdgeInsets.only(right: 12, bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? theme.seed : Colors.transparent,
+          border: Border.all(color: theme.seed, width: 2),
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Text(
+          theme.label,
+          style: TextStyle(
+            color: isSelected ? Colors.black : theme.seed,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        const Text(
+          "Uygulama",
+          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          "Tema",
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          children: AppThemeColor.values.map(themeSwatch).toList(),
+        ),
+        const SizedBox(height: 24),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: scheme.primary),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  "Sürüm v$currentVersion",
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+              if (updateAvailable)
+                ElevatedButton(
+                  onPressed: downloading ? null : downloadAndInstall,
+                  child: Text(downloading ? "İndiriliyor..." : "Güncelle"),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class NoteItem {
+  String text;
+  NoteItem(this.text);
+
+  Map<String, dynamic> toJson() => {'text': text};
+  factory NoteItem.fromJson(Map<String, dynamic> json) =>
+      NoteItem(json['text'] as String);
+}
+
+class NotesPage extends StatefulWidget {
+  const NotesPage({super.key});
+
+  @override
+  State<NotesPage> createState() => _NotesPageState();
+}
+
+class _NotesPageState extends State<NotesPage> {
+  List<NoteItem> notes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    loadNotes();
+  }
+
+  Future<void> loadNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString('notes_list');
+    if (saved != null) {
+      final List decoded = json.decode(saved);
+      setState(() {
+        notes = decoded.map((e) => NoteItem.fromJson(e)).toList();
+      });
+    }
+  }
+
+  Future<void> saveNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = json.encode(notes.map((e) => e.toJson()).toList());
+    await prefs.setString('notes_list', encoded);
+  }
+
+  void addNote() async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Yeni Not"),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 4,
+          decoration: const InputDecoration(hintText: "Notunuzu yazın..."),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("İptal"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text("Kaydet"),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result.trim().isNotEmpty) {
+      setState(() {
+        notes.add(NoteItem(result.trim()));
+      });
+      saveNotes();
+    }
+  }
+
+  void deleteNote(int index) {
+    setState(() {
+      notes.removeAt(index);
+    });
+    saveNotes();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: FloatingActionButton(
+        onPressed: addNote,
+        child: const Icon(Icons.add),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Notlar",
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: notes.isEmpty
+                  ? Center(
+                      child: Text(
+                        "Henüz not yok",
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: notes.length,
+                      itemBuilder: (context, i) {
+                        return Dismissible(
+                          key: ValueKey(notes[i].hashCode.toString() + i.toString()),
+                          direction: DismissDirection.endToStart,
+                          onDismissed: (_) => deleteNote(i),
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(Icons.delete, color: Colors.white),
+                          ),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: scheme.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(notes[i].text),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
