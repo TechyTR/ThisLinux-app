@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NotesPage extends StatefulWidget {
-  const NotesPage({super.key});
+  const NotesPage({
+    super.key,
+  });
 
   @override
-  State<NotesPage> createState() => _NotesPageState();
+  State<NotesPage> createState() =>
+      _NotesPageState();
 }
 
-class _NotesPageState extends State<NotesPage> {
+class _NotesPageState
+    extends State<NotesPage> {
   final TextEditingController _controller =
       TextEditingController();
 
@@ -22,7 +26,8 @@ class _NotesPageState extends State<NotesPage> {
 
   Future<void> _loadNotes() async {
     final prefs =
-        await SharedPreferences.getInstance();
+        await SharedPreferences
+            .getInstance();
 
     final notes =
         prefs.getStringList('notes') ?? [];
@@ -36,7 +41,8 @@ class _NotesPageState extends State<NotesPage> {
 
   Future<void> _saveNotes() async {
     final prefs =
-        await SharedPreferences.getInstance();
+        await SharedPreferences
+            .getInstance();
 
     await prefs.setStringList(
       'notes',
@@ -58,8 +64,16 @@ class _NotesPageState extends State<NotesPage> {
     await _saveNotes();
   }
 
-  Future<void> _deleteNote(int index) async {
-    final deletedNote = _notes[index];
+  Future<void> _deleteNote(
+    int index,
+  ) async {
+    if (index < 0 ||
+        index >= _notes.length) {
+      return;
+    }
+
+    final deletedNote =
+        _notes[index];
 
     setState(() {
       _notes.removeAt(index);
@@ -72,7 +86,8 @@ class _NotesPageState extends State<NotesPage> {
     ScaffoldMessenger.of(context)
         .hideCurrentSnackBar();
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context)
+        .showSnackBar(
       SnackBar(
         content: const Text(
           'Not silindi.',
@@ -80,9 +95,15 @@ class _NotesPageState extends State<NotesPage> {
         action: SnackBarAction(
           label: 'Geri Al',
           onPressed: () async {
+            final insertIndex =
+                index.clamp(
+              0,
+              _notes.length,
+            );
+
             setState(() {
               _notes.insert(
-                index.clamp(0, _notes.length),
+                insertIndex,
                 deletedNote,
               );
             });
@@ -94,7 +115,8 @@ class _NotesPageState extends State<NotesPage> {
     );
   }
 
-  Future<void> _showAddNoteDialog() async {
+  Future<void>
+      _showAddNoteDialog() async {
     _controller.clear();
 
     await showDialog<void>(
@@ -108,15 +130,20 @@ class _NotesPageState extends State<NotesPage> {
             controller: _controller,
             autofocus: true,
             maxLines: 5,
-            decoration: const InputDecoration(
-              hintText: 'Notunuzu yazın...',
-              border: OutlineInputBorder(),
+            decoration:
+                const InputDecoration(
+              hintText:
+                  'Notunuzu yazın...',
+              border:
+                  OutlineInputBorder(),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(
+                  context,
+                );
               },
               child: const Text(
                 'İptal',
@@ -126,9 +153,13 @@ class _NotesPageState extends State<NotesPage> {
               onPressed: () async {
                 await _addNote();
 
-                if (!context.mounted) return;
+                if (!context.mounted) {
+                  return;
+                }
 
-                Navigator.pop(context);
+                Navigator.pop(
+                  context,
+                );
               },
               child: const Text(
                 'Kaydet',
@@ -147,9 +178,12 @@ class _NotesPageState extends State<NotesPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     final scheme =
-        Theme.of(context).colorScheme;
+        Theme.of(context)
+            .colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -160,7 +194,8 @@ class _NotesPageState extends State<NotesPage> {
       ),
       floatingActionButton:
           FloatingActionButton(
-        onPressed: _showAddNoteDialog,
+        onPressed:
+            _showAddNoteDialog,
         child: const Icon(
           Icons.add,
         ),
@@ -169,7 +204,8 @@ class _NotesPageState extends State<NotesPage> {
           ? Center(
               child: Column(
                 mainAxisAlignment:
-                    MainAxisAlignment.center,
+                    MainAxisAlignment
+                        .center,
                 children: [
                   Icon(
                     Icons.note_outlined,
@@ -193,13 +229,15 @@ class _NotesPageState extends State<NotesPage> {
             )
           : ListView.builder(
               padding:
-                  const EdgeInsets.fromLTRB(
+                  const EdgeInsets
+                      .fromLTRB(
                 16,
                 16,
                 16,
                 100,
               ),
-              itemCount: _notes.length,
+              itemCount:
+                  _notes.length,
               itemBuilder:
                   (context, index) {
                 final note =
@@ -210,39 +248,88 @@ class _NotesPageState extends State<NotesPage> {
                     '$note-$index',
                   ),
                   direction:
-                      DismissDirection.endToStart,
-                  background: Container(
+                      DismissDirection
+                          .endToStart,
+                  background:
+                      Container(
                     margin:
-                        const EdgeInsets.only(
+                        const EdgeInsets
+                            .only(
                       bottom: 12,
                     ),
                     alignment:
-                        Alignment.centerRight,
+                        Alignment
+                            .centerRight,
                     padding:
-                        const EdgeInsets.only(
+                        const EdgeInsets
+                            .only(
                       right: 24,
                     ),
                     decoration:
                         BoxDecoration(
-                      color: scheme.error,
+                      color:
+                          scheme.error,
                       borderRadius:
-                          BorderRadius.circular(
+                          BorderRadius
+                              .circular(
                         18,
                       ),
                     ),
-                    child: const Icon(
+                    child:
+                        const Icon(
                       Icons.delete,
-                      color: Colors.white,
+                      color:
+                          Colors.white,
                     ),
                   ),
-                  onDismissed: (_) {
-                    _deleteNote(index);
+                  onDismissed:
+                      (_) {
+                    _deleteNote(
+                      index,
+                    );
                   },
                   child: Card(
                     margin:
-                        const EdgeInsets.only(
+                        const EdgeInsets
+                            .only(
                       bottom: 12,
                     ),
                     child: ListTile(
                       contentPadding:
-                         
+                          const EdgeInsets
+                              .symmetric(
+                        horizontal: 18,
+                        vertical: 8,
+                      ),
+                      leading: Icon(
+                        Icons.notes,
+                        color:
+                            scheme.primary,
+                      ),
+                      title: Text(
+                        note,
+                      ),
+                      trailing:
+                          IconButton(
+                        tooltip:
+                            'Notu sil',
+                        icon: Icon(
+                          Icons
+                              .delete_outline,
+                          color:
+                              scheme.error,
+                        ),
+                        onPressed: () {
+                          _deleteNote(
+                            index,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
