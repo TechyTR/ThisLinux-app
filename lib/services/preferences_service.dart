@@ -11,13 +11,13 @@ class PreferencesService {
   }
 
   static Future<void> saveThemeColor(
-    String color,
+    String value,
   ) async {
     final prefs = await SharedPreferences.getInstance();
 
     await prefs.setString(
       _themeColorKey,
-      color,
+      value,
     );
   }
 
@@ -28,13 +28,13 @@ class PreferencesService {
   }
 
   static Future<void> saveThemeStyle(
-    String style,
+    String value,
   ) async {
     final prefs = await SharedPreferences.getInstance();
 
     await prefs.setString(
       _themeStyleKey,
-      style,
+      value,
     );
   }
 }
