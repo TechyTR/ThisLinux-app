@@ -22,7 +22,11 @@ class BootScreen extends StatefulWidget {
 class _BootScreenState extends State<BootScreen> {
   final ScrollController scrollController = ScrollController();
 
-  late final List<String> bootLines;
+  Timer? bootTimer;
+
+  final List<String> shown = [];
+
+  int index = 0;
 
   final List<String> bootMessages = [
     'Booting ThisLinux kernel...',
@@ -139,11 +143,7 @@ class _BootScreenState extends State<BootScreen> {
     'Starting ThisLinux',
   ];
 
-  Timer? bootTimer;
-
-  final List<String> shown = [];
-
-  int index = 0;
+  late final List<String> bootLines;
 
   @override
   void initState() {
@@ -196,18 +196,21 @@ class _BootScreenState extends State<BootScreen> {
 
     timer.cancel();
 
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
+    Future.delayed(
+      const Duration(milliseconds: 300),
+      () {
+        if (!mounted) return;
 
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => HomeShell(
-            selectedTheme: widget.selectedTheme,
-            onThemeChanged: widget.onThemeChanged,
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => HomeShell(
+              selectedTheme: widget.selectedTheme,
+              onThemeChanged: widget.onThemeChanged,
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 
   @override
