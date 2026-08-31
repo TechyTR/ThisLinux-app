@@ -6,14 +6,18 @@ import 'app_info_page.dart';
 import 'notes_page.dart';
 import 'system_info_page.dart';
 
-class HomeShell extends StatefulWidget {
+class HomeShell
+    extends StatefulWidget {
   final AppThemeColor selectedTheme;
   final AppThemeStyle selectedStyle;
 
-  final Future<void> Function(AppThemeColor)
-      onThemeChanged;
-  final Future<void> Function(AppThemeStyle)
-      onStyleChanged;
+  final Future<void> Function(
+    AppThemeColor,
+  ) onThemeChanged;
+
+  final Future<void> Function(
+    AppThemeStyle,
+  ) onStyleChanged;
 
   const HomeShell({
     super.key,
@@ -28,7 +32,8 @@ class HomeShell extends StatefulWidget {
       _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState
+    extends State<HomeShell> {
   int _currentIndex = 0;
 
   late List<Widget> _pages;
@@ -71,20 +76,22 @@ class _HomeShellState extends State<HomeShell> {
   void didUpdateWidget(
     covariant HomeShell oldWidget,
   ) {
-    super.didUpdateWidget(oldWidget);
+    super.didUpdateWidget(
+      oldWidget,
+    );
 
     if (oldWidget.selectedTheme !=
             widget.selectedTheme ||
         oldWidget.selectedStyle !=
             widget.selectedStyle) {
-      setState(() {
-        _pages = _buildPages();
-      });
+      _pages = _buildPages();
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
@@ -93,9 +100,8 @@ class _HomeShellState extends State<HomeShell> {
 
       bottomNavigationBar:
           BottomNavBar(
-        currentIndex: _currentIndex,
-        selectedStyle:
-            widget.selectedStyle,
+        currentIndex:
+            _currentIndex,
         onDestinationSelected:
             (index) {
           setState(() {
