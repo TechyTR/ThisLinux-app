@@ -6,7 +6,8 @@ import '../theme/app_theme.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
-  final ValueChanged<int> onDestinationSelected;
+  final ValueChanged<int>
+      onDestinationSelected;
   final AppThemeStyle selectedStyle;
 
   const BottomNavBar({
@@ -17,7 +18,9 @@ class BottomNavBar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     final scheme =
         Theme.of(context).colorScheme;
 
@@ -29,30 +32,24 @@ class BottomNavBar extends StatelessWidget {
             onDestinationSelected,
         destinations: const [
           NavigationDestination(
-            icon: Icon(
-              Icons.memory_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.memory,
-            ),
+            icon:
+                Icon(Icons.memory_outlined),
+            selectedIcon:
+                Icon(Icons.memory),
             label: 'System',
           ),
           NavigationDestination(
-            icon: Icon(
-              Icons.note_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.note,
-            ),
+            icon:
+                Icon(Icons.note_outlined),
+            selectedIcon:
+                Icon(Icons.note),
             label: 'Notes',
           ),
           NavigationDestination(
-            icon: Icon(
-              Icons.info_outline,
-            ),
-            selectedIcon: Icon(
-              Icons.info,
-            ),
+            icon:
+                Icon(Icons.info_outline),
+            selectedIcon:
+                Icon(Icons.info),
             label: 'App',
           ),
         ],
@@ -86,7 +83,7 @@ class BottomNavBar extends StatelessWidget {
                 BoxDecoration(
               color: isLight
                   ? Colors.white
-                      .withOpacity(0.52)
+                      .withOpacity(0.50)
                   : Colors.black
                       .withOpacity(0.55),
               borderRadius:
@@ -94,7 +91,7 @@ class BottomNavBar extends StatelessWidget {
               border: Border.all(
                 color: isLight
                     ? Colors.white
-                        .withOpacity(0.72)
+                        .withOpacity(0.75)
                     : Colors.white
                         .withOpacity(0.18),
               ),
@@ -103,16 +100,14 @@ class BottomNavBar extends StatelessWidget {
               builder:
                   (context, constraints) {
                 final itemWidth =
-                    constraints.maxWidth /
-                        3;
+                    constraints.maxWidth / 3;
 
                 return Stack(
                   children: [
-                    // Kayan Liquid Glass kapsülü
                     AnimatedPositioned(
                       duration:
                           const Duration(
-                        milliseconds: 420,
+                        milliseconds: 430,
                       ),
                       curve:
                           Curves.easeOutCubic,
@@ -124,13 +119,11 @@ class BottomNavBar extends StatelessWidget {
                       width:
                           itemWidth - 12,
                       height: 60,
-                      child:
-                          IgnorePointer(
-                        child:
-                            AnimatedContainer(
+                      child: IgnorePointer(
+                        child: AnimatedContainer(
                           duration:
                               const Duration(
-                            milliseconds: 420,
+                            milliseconds: 430,
                           ),
                           decoration:
                               BoxDecoration(
@@ -138,8 +131,8 @@ class BottomNavBar extends StatelessWidget {
                                 .primary
                                 .withOpacity(
                               isLight
-                                  ? 0.16
-                                  : 0.27,
+                                  ? 0.17
+                                  : 0.28,
                             ),
                             borderRadius:
                                 BorderRadius
@@ -152,8 +145,8 @@ class BottomNavBar extends StatelessWidget {
                                   .white
                                   .withOpacity(
                                 isLight
-                                    ? 0.68
-                                    : 0.20,
+                                    ? 0.72
+                                    : 0.22,
                               ),
                             ),
                             boxShadow: [
@@ -161,9 +154,7 @@ class BottomNavBar extends StatelessWidget {
                                 color: scheme
                                     .primary
                                     .withOpacity(
-                                  isLight
-                                      ? 0.18
-                                      : 0.20,
+                                  0.22,
                                 ),
                                 blurRadius: 18,
                                 spreadRadius: 1,
@@ -173,7 +164,6 @@ class BottomNavBar extends StatelessWidget {
                         ),
                       ),
                     ),
-
                     Row(
                       children: [
                         _item(
@@ -226,28 +216,35 @@ class BottomNavBar extends StatelessWidget {
     final selected =
         currentIndex == index;
 
+    final mutedColor =
+        Theme.of(context)
+            .colorScheme
+            .onSurfaceVariant;
+
     return Expanded(
       child: GestureDetector(
         behavior:
             HitTestBehavior.opaque,
-        onTap: () =>
-            onDestinationSelected(index),
+        onTap: () {
+          onDestinationSelected(index);
+        },
         child: SizedBox(
           height: 72,
           child: Center(
-            child: AnimatedScale(
-              scale: selected ? 1.04 : 1.0,
-              duration:
-                  const Duration(
-                milliseconds: 300,
-              ),
-              curve:
-                  Curves.easeOutCubic,
-              child: Column(
-                mainAxisAlignment:
-                    MainAxisAlignment.center,
-                children: [
-                  AnimatedSwitcher(
+            child: Column(
+              mainAxisAlignment:
+                  MainAxisAlignment.center,
+              children: [
+                AnimatedScale(
+                  scale:
+                      selected ? 1.08 : 1.0,
+                  duration:
+                      const Duration(
+                    milliseconds: 300,
+                  ),
+                  curve:
+                      Curves.easeOutCubic,
+                  child: AnimatedSwitcher(
                     duration:
                         const Duration(
                       milliseconds: 220,
@@ -261,40 +258,31 @@ class BottomNavBar extends StatelessWidget {
                       ),
                       color: selected
                           ? accent
-                          : Theme.of(
-                              context,
-                            )
-                              .colorScheme
-                              .onSurfaceVariant,
+                          : mutedColor,
                     ),
                   ),
-                  const SizedBox(
-                    height: 3,
+                ),
+                const SizedBox(
+                  height: 3,
+                ),
+                AnimatedDefaultTextStyle(
+                  duration:
+                      const Duration(
+                    milliseconds: 220,
                   ),
-                  AnimatedDefaultTextStyle(
-                    duration:
-                        const Duration(
-                      milliseconds: 220,
-                    ),
-                    style: TextStyle(
-                      fontSize:
-                          selected ? 12 : 11,
-                      fontWeight: selected
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                      color: selected
-                          ? accent
-                          : Theme.of(
-                              context,
-                            )
-                              .colorScheme
-                              .onSurfaceVariant,
-                    ),
-                    child:
-                        Text(label),
+                  style: TextStyle(
+                    fontSize:
+                        selected ? 12 : 11,
+                    fontWeight: selected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                    color: selected
+                        ? accent
+                        : mutedColor,
                   ),
-                ],
-              ),
+                  child: Text(label),
+                ),
+              ],
             ),
           ),
         ),
