@@ -7,13 +7,14 @@ class NotesPage extends StatefulWidget {
   });
 
   @override
-  State<NotesPage> createState() =>
-      _NotesPageState();
+  State<NotesPage> createState() => _NotesPageState();
 }
 
-class _NotesPageState
-    extends State<NotesPage> {
-  final TextEditingController _controller =
+class _NotesPageState extends State<NotesPage> {
+  final TextEditingController _titleController =
+      TextEditingController();
+
+  final TextEditingController _contentController =
       TextEditingController();
 
   List<String> _notes = [];
@@ -25,12 +26,9 @@ class _NotesPageState
   }
 
   Future<void> _loadNotes() async {
-    final prefs =
-        await SharedPreferences
-            .getInstance();
+    final prefs = await SharedPreferences.getInstance();
 
-    final notes =
-        prefs.getStringList('notes') ?? [];
+    final notes = prefs.getStringList('notes') ?? [];
 
     if (!mounted) return;
 
@@ -40,9 +38,7 @@ class _NotesPageState
   }
 
   Future<void> _saveNotes() async {
-    final prefs =
-        await SharedPreferences
-            .getInstance();
+    final prefs = await SharedPreferences.getInstance();
 
     await prefs.setStringList(
       'notes',
@@ -51,29 +47,30 @@ class _NotesPageState
   }
 
   Future<void> _addNote() async {
-    final text =
-        _controller.text.trim();
+    final title = _titleController.text.trim();
+    final content = _contentController.text.trim();
 
-    if (text.isEmpty) return;
+    if (title.isEmpty && content.isEmpty) {
+      return;
+    }
+
+    final note = '$title\n$content';
 
     setState(() {
-      _notes.insert(0, text);
-      _controller.clear();
+      _notes.insert(0, note);
+      _titleController.clear();
+      _contentController.clear();
     });
 
     await _saveNotes();
   }
 
-  Future<void> _deleteNote(
-    int index,
-  ) async {
-    if (index < 0 ||
-        index >= _notes.length) {
+  Future<void> _deleteNote(int index) async {
+    if (index < 0 || index >= _notes.length) {
       return;
     }
 
-    final deletedNote =
-        _notes[index];
+    final deletedNote = _notes[index];
 
     setState(() {
       _notes.removeAt(index);
@@ -86,17 +83,13 @@ class _NotesPageState
     ScaffoldMessenger.of(context)
         .hideCurrentSnackBar();
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text(
-          'Not silindi.',
-        ),
+        content: const Text('Not silindi.'),
         action: SnackBarAction(
           label: 'Geri Al',
           onPressed: () async {
-            final insertIndex =
-                index.clamp(
+            final insertIndex = index.clamp(
               0,
               _notes.length,
             );
@@ -115,39 +108,47 @@ class _NotesPageState
     );
   }
 
-  Future<void>
-      _showAddNoteDialog() async {
-    _controller.clear();
+  Future<void> _showAddNoteDialog() async {
+    _titleController.clear();
+    _contentController.clear();
 
     await showDialog<void>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text(
-            'Yeni Not',
-          ),
-          content: TextField(
-            controller: _controller,
-            autofocus: true,
-            maxLines: 5,
-            decoration:
-                const InputDecoration(
-              hintText:
-                  'Notunuzu yazın...',
-              border:
-                  OutlineInputBorder(),
+          title: const Text('Yeni Not'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _titleController,
+                  autofocus: true,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Başlık',
+                    hintText: 'Not başlığı',
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _contentController,
+                  maxLines: 6,
+                  decoration: const InputDecoration(
+                    labelText: 'İçerik',
+                    hintText: 'Not içeriği',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
             ),
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(
-                  context,
-                );
+                Navigator.pop(context);
               },
-              child: const Text(
-                'İptal',
-              ),
+              child: const Text('İptal'),
             ),
             FilledButton(
               onPressed: () async {
@@ -157,13 +158,9 @@ class _NotesPageState
                   return;
                 }
 
-                Navigator.pop(
-                  context,
-                );
+                Navigator.pop(context);
               },
-              child: const Text(
-                'Kaydet',
-              ),
+              child: const Text('Kaydet'),
             ),
           ],
         );
@@ -171,41 +168,51 @@ class _NotesPageState
     );
   }
 
+  List<String> _parseNote(String note) {
+    final lines = note.split('\n');
+
+    if (lines.isEmpty) {
+      return ['', ''];
+    }
+
+    final title = lines.first;
+
+    final content = lines.length > 1
+        ? lines.sublist(1).join('\n')
+        : '';
+
+    return [
+      title,
+      content,
+    ];
+  }
+
   @override
   void dispose() {
-    _controller.dispose();
+    _titleController.dispose();
+    _contentController.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     final scheme =
-        Theme.of(context)
-            .colorScheme;
+        Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Notlar',
-        ),
+        title: const Text('Notlar'),
         centerTitle: true,
       ),
-      floatingActionButton:
-          FloatingActionButton(
-        onPressed:
-            _showAddNoteDialog,
-        child: const Icon(
-          Icons.add,
-        ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddNoteDialog,
+        child: const Icon(Icons.add),
       ),
       body: _notes.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment:
-                    MainAxisAlignment
-                        .center,
+                    MainAxisAlignment.center,
                 children: [
                   Icon(
                     Icons.note_outlined,
@@ -213,9 +220,7 @@ class _NotesPageState
                     color:
                         scheme.onSurfaceVariant,
                   ),
-                  const SizedBox(
-                    height: 16,
-                  ),
+                  const SizedBox(height: 16),
                   Text(
                     'Henüz not yok.',
                     style: TextStyle(
@@ -229,101 +234,90 @@ class _NotesPageState
             )
           : ListView.builder(
               padding:
-                  const EdgeInsets
-                      .fromLTRB(
+                  const EdgeInsets.fromLTRB(
                 16,
                 16,
                 16,
                 100,
               ),
-              itemCount:
-                  _notes.length,
-              itemBuilder:
-                  (context, index) {
-                final note =
-                    _notes[index];
+              itemCount: _notes.length,
+              itemBuilder: (context, index) {
+                final note = _notes[index];
+                final parsed =
+                    _parseNote(note);
+
+                final title = parsed[0];
+                final content = parsed[1];
 
                 return Dismissible(
                   key: ValueKey(
                     '$note-$index',
                   ),
                   direction:
-                      DismissDirection
-                          .endToStart,
-                  background:
-                      Container(
+                      DismissDirection.endToStart,
+                  background: Container(
                     margin:
-                        const EdgeInsets
-                            .only(
+                        const EdgeInsets.only(
                       bottom: 12,
                     ),
                     alignment:
-                        Alignment
-                            .centerRight,
+                        Alignment.centerRight,
                     padding:
-                        const EdgeInsets
-                            .only(
+                        const EdgeInsets.only(
                       right: 24,
                     ),
-                    decoration:
-                        BoxDecoration(
-                      color:
-                          scheme.error,
+                    decoration: BoxDecoration(
+                      color: scheme.error,
                       borderRadius:
-                          BorderRadius
-                              .circular(
+                          BorderRadius.circular(
                         18,
                       ),
                     ),
-                    child:
-                        const Icon(
+                    child: const Icon(
                       Icons.delete,
-                      color:
-                          Colors.white,
+                      color: Colors.white,
                     ),
                   ),
-                  onDismissed:
-                      (_) {
-                    _deleteNote(
-                      index,
-                    );
+                  onDismissed: (_) {
+                    _deleteNote(index);
                   },
                   child: Card(
                     margin:
-                        const EdgeInsets
-                            .only(
+                        const EdgeInsets.only(
                       bottom: 12,
                     ),
-                    child: ListTile(
-                      contentPadding:
-                          const EdgeInsets
-                              .symmetric(
-                        horizontal: 18,
-                        vertical: 8,
-                      ),
-                      leading: Icon(
-                        Icons.notes,
-                        color:
-                            scheme.primary,
-                      ),
-                      title: Text(
-                        note,
-                      ),
-                      trailing:
-                          IconButton(
-                        tooltip:
-                            'Notu sil',
-                        icon: Icon(
-                          Icons
-                              .delete_outline,
-                          color:
-                              scheme.error,
-                        ),
-                        onPressed: () {
-                          _deleteNote(
-                            index,
-                          );
-                        },
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment:
+                            CrossAxisAlignment
+                                .start,
+                        children: [
+                          Text(
+                            title.isEmpty
+                                ? 'Başlıksız Not'
+                                : title,
+                            style: const TextStyle(
+                              fontSize: 19,
+                              fontWeight:
+                                  FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Divider(
+                            color: scheme
+                                .outlineVariant,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            content,
+                            style:
+                                const TextStyle(
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
