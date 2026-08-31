@@ -18,31 +18,41 @@ class BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final scheme =
+        Theme.of(context).colorScheme;
 
-    final isLiquidGlass =
-        selectedStyle != AppThemeStyle.normal;
-
-    if (!isLiquidGlass) {
+    if (selectedStyle ==
+        AppThemeStyle.normal) {
       return NavigationBar(
         selectedIndex: currentIndex,
         onDestinationSelected:
             onDestinationSelected,
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.memory_outlined),
-            selectedIcon: Icon(Icons.memory),
+            icon: Icon(
+              Icons.memory_outlined,
+            ),
+            selectedIcon: Icon(
+              Icons.memory,
+            ),
             label: 'System',
           ),
           NavigationDestination(
-            icon: Icon(Icons.note_outlined),
-            selectedIcon: Icon(Icons.note),
+            icon: Icon(
+              Icons.note_outlined,
+            ),
+            selectedIcon: Icon(
+              Icons.note,
+            ),
             label: 'Notes',
           ),
           NavigationDestination(
-            icon: Icon(Icons.info_outline),
-            selectedIcon: Icon(Icons.info),
+            icon: Icon(
+              Icons.info_outline,
+            ),
+            selectedIcon: Icon(
+              Icons.info,
+            ),
             label: 'App',
           ),
         ],
@@ -51,10 +61,12 @@ class BottomNavBar extends StatelessWidget {
 
     final isLight =
         selectedStyle ==
-            AppThemeStyle.liquidGlassLight;
+            AppThemeStyle
+                .liquidGlassLight;
 
     return SafeArea(
-      minimum: const EdgeInsets.fromLTRB(
+      minimum:
+          const EdgeInsets.fromLTRB(
         16,
         8,
         16,
@@ -65,51 +77,137 @@ class BottomNavBar extends StatelessWidget {
             BorderRadius.circular(28),
         child: BackdropFilter(
           filter: ImageFilter.blur(
-            sigmaX: 20,
-            sigmaY: 20,
+            sigmaX: 22,
+            sigmaY: 22,
           ),
           child: Container(
             height: 72,
-            decoration: BoxDecoration(
+            decoration:
+                BoxDecoration(
               color: isLight
-                  ? Colors.white.withOpacity(0.55)
-                  : Colors.black.withOpacity(0.55),
+                  ? Colors.white
+                      .withOpacity(0.52)
+                  : Colors.black
+                      .withOpacity(0.55),
               borderRadius:
                   BorderRadius.circular(28),
               border: Border.all(
                 color: isLight
-                    ? Colors.white.withOpacity(0.65)
-                    : Colors.white.withOpacity(0.18),
-                width: 1,
+                    ? Colors.white
+                        .withOpacity(0.72)
+                    : Colors.white
+                        .withOpacity(0.18),
               ),
             ),
-            child: Row(
-              children: [
-                _item(
-                  context,
-                  Icons.memory_outlined,
-                  Icons.memory,
-                  'System',
-                  0,
-                  scheme.primary,
-                ),
-                _item(
-                  context,
-                  Icons.note_outlined,
-                  Icons.note,
-                  'Notes',
-                  1,
-                  scheme.primary,
-                ),
-                _item(
-                  context,
-                  Icons.info_outline,
-                  Icons.info,
-                  'App',
-                  2,
-                  scheme.primary,
-                ),
-              ],
+            child: LayoutBuilder(
+              builder:
+                  (context, constraints) {
+                final itemWidth =
+                    constraints.maxWidth /
+                        3;
+
+                return Stack(
+                  children: [
+                    // Kayan Liquid Glass kapsülü
+                    AnimatedPositioned(
+                      duration:
+                          const Duration(
+                        milliseconds: 420,
+                      ),
+                      curve:
+                          Curves.easeOutCubic,
+                      left:
+                          itemWidth *
+                              currentIndex +
+                          6,
+                      top: 6,
+                      width:
+                          itemWidth - 12,
+                      height: 60,
+                      child:
+                          IgnorePointer(
+                        child:
+                            AnimatedContainer(
+                          duration:
+                              const Duration(
+                            milliseconds: 420,
+                          ),
+                          decoration:
+                              BoxDecoration(
+                            color: scheme
+                                .primary
+                                .withOpacity(
+                              isLight
+                                  ? 0.16
+                                  : 0.27,
+                            ),
+                            borderRadius:
+                                BorderRadius
+                                    .circular(
+                              22,
+                            ),
+                            border:
+                                Border.all(
+                              color: Colors
+                                  .white
+                                  .withOpacity(
+                                isLight
+                                    ? 0.68
+                                    : 0.20,
+                              ),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: scheme
+                                    .primary
+                                    .withOpacity(
+                                  isLight
+                                      ? 0.18
+                                      : 0.20,
+                                ),
+                                blurRadius: 18,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    Row(
+                      children: [
+                        _item(
+                          context,
+                          Icons
+                              .memory_outlined,
+                          Icons.memory,
+                          'System',
+                          0,
+                          scheme.primary,
+                        ),
+                        _item(
+                          context,
+                          Icons
+                              .note_outlined,
+                          Icons.note,
+                          'Notes',
+                          1,
+                          scheme.primary,
+                        ),
+                        _item(
+                          context,
+                          Icons
+                              .info_outline,
+                          Icons.info,
+                          'App',
+                          2,
+                          scheme.primary,
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -128,46 +226,23 @@ class BottomNavBar extends StatelessWidget {
     final selected =
         currentIndex == index;
 
-    final isLight =
-        selectedStyle ==
-            AppThemeStyle.liquidGlassLight;
-
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          onDestinationSelected(index);
-        },
         behavior:
             HitTestBehavior.opaque,
-        child: Padding(
-          padding:
-              const EdgeInsets.all(6),
-          child: AnimatedContainer(
-            duration:
-                const Duration(
-              milliseconds: 300,
-            ),
-            curve:
-                Curves.easeOutCubic,
-            decoration: BoxDecoration(
-              color: selected
-                  ? accent.withOpacity(
-                      isLight ? 0.18 : 0.28,
-                    )
-                  : Colors.transparent,
-              borderRadius:
-                  BorderRadius.circular(22),
-              border: selected
-                  ? Border.all(
-                      color:
-                          Colors.white.withOpacity(
-                        isLight ? 0.65 : 0.20,
-                      ),
-                      width: 1,
-                    )
-                  : null,
-            ),
-            child: Center(
+        onTap: () =>
+            onDestinationSelected(index),
+        child: SizedBox(
+          height: 72,
+          child: Center(
+            child: AnimatedScale(
+              scale: selected ? 1.04 : 1.0,
+              duration:
+                  const Duration(
+                milliseconds: 300,
+              ),
+              curve:
+                  Curves.easeOutCubic,
               child: Column(
                 mainAxisAlignment:
                     MainAxisAlignment.center,
@@ -175,18 +250,20 @@ class BottomNavBar extends StatelessWidget {
                   AnimatedSwitcher(
                     duration:
                         const Duration(
-                      milliseconds: 200,
+                      milliseconds: 220,
                     ),
                     child: Icon(
                       selected
                           ? selectedIcon
                           : icon,
                       key: ValueKey(
-                        selected,
+                        '$index-$selected',
                       ),
                       color: selected
                           ? accent
-                          : Theme.of(context)
+                          : Theme.of(
+                              context,
+                            )
                               .colorScheme
                               .onSurfaceVariant,
                     ),
@@ -197,7 +274,7 @@ class BottomNavBar extends StatelessWidget {
                   AnimatedDefaultTextStyle(
                     duration:
                         const Duration(
-                      milliseconds: 200,
+                      milliseconds: 220,
                     ),
                     style: TextStyle(
                       fontSize:
@@ -207,11 +284,14 @@ class BottomNavBar extends StatelessWidget {
                           : FontWeight.normal,
                       color: selected
                           ? accent
-                          : Theme.of(context)
+                          : Theme.of(
+                              context,
+                            )
                               .colorScheme
                               .onSurfaceVariant,
                     ),
-                    child: Text(label),
+                    child:
+                        Text(label),
                   ),
                 ],
               ),
