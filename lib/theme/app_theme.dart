@@ -13,7 +13,7 @@ enum AppThemeStyle {
   liquidGlassDark,
 }
 
-extension AppThemeColorSeed on AppThemeColor {
+extension AppThemeColorExtension on AppThemeColor {
   Color get seed {
     switch (this) {
       case AppThemeColor.purple:
@@ -48,25 +48,17 @@ class AppTheme {
   ) {
     switch (style) {
       case AppThemeStyle.normal:
-        return _material(color);
+        return _normal(color);
 
       case AppThemeStyle.liquidGlassLight:
-        return _glassLight(color);
+        return _liquidGlassLight(color);
 
       case AppThemeStyle.liquidGlassDark:
-        return _glassDark(color);
+        return _liquidGlassDark(color);
     }
   }
 
-  static ThemeData light(AppThemeColor color) {
-    return _material(color);
-  }
-
-  static ThemeData dark(AppThemeColor color) {
-    return _glassDark(color);
-  }
-
-  static ThemeData _material(
+  static ThemeData _normal(
     AppThemeColor color,
   ) {
     return ThemeData(
@@ -76,10 +68,12 @@ class AppTheme {
         seedColor: color.seed,
         brightness: Brightness.dark,
       ),
+      scaffoldBackgroundColor:
+          const Color(0xFF101010),
     );
   }
 
-  static ThemeData _glassLight(
+  static ThemeData _liquidGlassLight(
     AppThemeColor color,
   ) {
     final scheme =
@@ -94,11 +88,16 @@ class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor:
           Colors.white,
-      cardTheme: CardThemeData(
-        color:
-            Colors.white.withOpacity(0.72),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        shape: RoundedRectangleBorder(
+      ),
+      cardTheme: CardTheme(
+        color:
+            Colors.white.withOpacity(0.55),
+        elevation: 0,
+        shape:
+            RoundedRectangleBorder(
           borderRadius:
               BorderRadius.circular(20),
         ),
@@ -106,7 +105,7 @@ class AppTheme {
     );
   }
 
-  static ThemeData _glassDark(
+  static ThemeData _liquidGlassDark(
     AppThemeColor color,
   ) {
     final scheme =
@@ -121,11 +120,16 @@ class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor:
           Colors.black,
-      cardTheme: CardThemeData(
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      cardTheme: CardTheme(
         color:
             Colors.white.withOpacity(0.07),
         elevation: 0,
-        shape: RoundedRectangleBorder(
+        shape:
+            RoundedRectangleBorder(
           borderRadius:
               BorderRadius.circular(20),
         ),
@@ -133,20 +137,36 @@ class AppTheme {
     );
   }
 
-  static AppThemeColor fromString(
+  static AppThemeColor colorFromString(
     String value,
   ) {
     return AppThemeColor.values.firstWhere(
-      (theme) => theme.name == value,
+      (item) => item.name == value,
       orElse: () =>
           AppThemeColor.purple,
     );
   }
 
-  static String toStringValue(
+  static String colorToString(
     AppThemeColor color,
   ) {
     return color.name;
+  }
+
+  static AppThemeStyle styleFromString(
+    String value,
+  ) {
+    return AppThemeStyle.values.firstWhere(
+      (item) => item.name == value,
+      orElse: () =>
+          AppThemeStyle.normal,
+    );
+  }
+
+  static String styleToString(
+    AppThemeStyle style,
+  ) {
+    return style.name;
   }
 
   static Color colorOf(
@@ -167,10 +187,8 @@ class AppTheme {
     switch (style) {
       case AppThemeStyle.normal:
         return 'Material Design';
-
       case AppThemeStyle.liquidGlassLight:
         return 'Liquid Glass Light';
-
       case AppThemeStyle.liquidGlassDark:
         return 'Liquid Glass Dark';
     }
