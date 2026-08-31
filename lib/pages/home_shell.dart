@@ -6,18 +6,12 @@ import 'app_info_page.dart';
 import 'notes_page.dart';
 import 'system_info_page.dart';
 
-class HomeShell
-    extends StatefulWidget {
+class HomeShell extends StatefulWidget {
   final AppThemeColor selectedTheme;
   final AppThemeStyle selectedStyle;
 
-  final Future<void> Function(
-    AppThemeColor,
-  ) onThemeChanged;
-
-  final Future<void> Function(
-    AppThemeStyle,
-  ) onStyleChanged;
+  final Future<void> Function(AppThemeColor) onThemeChanged;
+  final Future<void> Function(AppThemeStyle) onStyleChanged;
 
   const HomeShell({
     super.key,
@@ -28,12 +22,10 @@ class HomeShell
   });
 
   @override
-  State<HomeShell> createState() =>
-      _HomeShellState();
+  State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState
-    extends State<HomeShell> {
+class _HomeShellState extends State<HomeShell> {
   int _currentIndex = 0;
 
   late List<Widget> _pages;
@@ -41,27 +33,17 @@ class _HomeShellState
   List<Widget> _buildPages() {
     return [
       SystemInfoPage(
-        selectedTheme:
-            widget.selectedTheme,
-        selectedStyle:
-            widget.selectedStyle,
-        onThemeChanged:
-            widget.onThemeChanged,
-        onStyleChanged:
-            widget.onStyleChanged,
+        selectedTheme: widget.selectedTheme,
+        selectedStyle: widget.selectedStyle,
+        onThemeChanged: widget.onThemeChanged,
+        onStyleChanged: widget.onStyleChanged,
       ),
-
       const NotesPage(),
-
       AppInfoPage(
-        selectedTheme:
-            widget.selectedTheme,
-        selectedStyle:
-            widget.selectedStyle,
-        onThemeChanged:
-            widget.onThemeChanged,
-        onStyleChanged:
-            widget.onStyleChanged,
+        selectedTheme: widget.selectedTheme,
+        selectedStyle: widget.selectedStyle,
+        onThemeChanged: widget.onThemeChanged,
+        onStyleChanged: widget.onStyleChanged,
       ),
     ];
   }
@@ -76,34 +58,25 @@ class _HomeShellState
   void didUpdateWidget(
     covariant HomeShell oldWidget,
   ) {
-    super.didUpdateWidget(
-      oldWidget,
-    );
+    super.didUpdateWidget(oldWidget);
 
-    if (oldWidget.selectedTheme !=
-            widget.selectedTheme ||
-        oldWidget.selectedStyle !=
-            widget.selectedStyle) {
+    if (oldWidget.selectedTheme != widget.selectedTheme ||
+        oldWidget.selectedStyle != widget.selectedStyle) {
       _pages = _buildPages();
     }
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
         children: _pages,
       ),
-
-      bottomNavigationBar:
-          BottomNavBar(
-        currentIndex:
-            _currentIndex,
-        onDestinationSelected:
-            (index) {
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentIndex,
+        selectedStyle: widget.selectedStyle,
+        onDestinationSelected: (index) {
           setState(() {
             _currentIndex = index;
           });
