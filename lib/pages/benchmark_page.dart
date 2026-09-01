@@ -110,7 +110,8 @@ class _BenchmarkPageState
     setState(() {
       _memoryScore = memoryScore;
       _progress = 0.65;
-      _status = 'Depolama testi çalışıyor...';
+      _status =
+          'Depolama okuma/yazma testi çalışıyor...';
     });
 
     final storageScore =
@@ -140,8 +141,7 @@ class _BenchmarkPageState
 
     double result = 0;
 
-    while (stopwatch.elapsedMilliseconds <
-        1800) {
+    while (stopwatch.elapsedMilliseconds < 1800) {
       for (var i = 1; i < 12000; i++) {
         result +=
             sqrt(i) *
@@ -233,50 +233,138 @@ class _BenchmarkPageState
   Future<int> _runStorageTest() async {
     final stopwatch = Stopwatch()..start();
 
-    try {
-      final directory =
-          Directory('/data/data');
+    File? testFile;
 
-      final files =
-          await directory
-              .list(
-                recursive: false,
-                followLinks: false,
-              )
-              .toList();
+    try {
+      /*
+       * Uygulamanın cache klasöründe
+       * geçici benchmark dosyası oluşturulur.
+       *
+       * Böylece depolama benchmark'ı için
+       * harici depolama izni gerekmez.
+       */
+
+      final directory =
+          await Directory.systemTemp.createTemp(
+        'thislinux_storage_benchmark_',
+      );
+
+      testFile = File(
+        '${directory.path}/storage_test.bin',
+      );
+
+      /*
+       * 8 MB test verisi.
+       *
+       * Büyük ama kısa süreli bir I/O testi
+       * oluşturmak için kullanılır.
+       */
+      const blockSize = 1024 * 1024;
+      const blockCount = 8;
+
+      final block = List<int>.generate(
+        blockSize,
+        (index) => index % 256,
+      );
+
+      /*
+       * YAZMA TESTİ
+       */
+      final writeStopwatch =
+          Stopwatch()..start();
+
+      final output =
+          testFile.openWrite();
+
+      for (var i = 0;
+          i < blockCount;
+          i++) {
+        output.add(block);
+      }
+
+      await output.flush();
+      await output.close();
+
+      writeStopwatch.stop();
+
+      /*
+       * OKUMA TESTİ
+       */
+      final readStopwatch =
+          Stopwatch()..start();
 
       var checksum = 0;
 
-      for (final file in files) {
-        checksum += file.path.length;
+      final input =
+          testFile.openRead();
+
+      await for (final chunk in input) {
+        for (
+          var i = 0;
+          i < chunk.length;
+          i += 4096
+        ) {
+          checksum += chunk[i];
+        }
       }
+
+      readStopwatch.stop();
 
       if (checksum == -1) {
         return 1;
       }
-    } catch (_) {
-      // Depolama erişimi kısıtlıysa test
-      // yine de tamamlanır.
-    }
 
-    stopwatch.stop();
+      stopwatch.stop();
 
-    final elapsed =
+      /*
+       * Toplam 8 MB yazıldı ve 8 MB okundu.
+       */
+      const totalMegabytes = 16.0;
+
+      final totalSeconds =
+          stopwatch.elapsedMicroseconds /
+              1000000.0;
+
+      final totalSpeed =
+          totalMegabytes /
+              max(
+                0.001,
+                totalSeconds,
+              );
+
+      /*
+       * Yaklaşık 50 MB/s ve üzerini
+       * 100 puan civarına yaklaştırır.
+       *
+       * Bu değer cihazlar arasında
+       * karşılaştırma yapılabilmesi için
+       * normalize edilir.
+       */
+      final score =
+          (totalSpeed * 2).round();
+
+      return min(
+        100,
         max(
           1,
-          stopwatch.elapsedMilliseconds,
-        );
+          score,
+        ),
+      );
+    } catch (_) {
+      return 1;
+    } finally {
+      try {
+        await testFile?.delete();
 
-    final score =
-        100 - elapsed;
+        final parent =
+            testFile?.parent;
 
-    return min(
-      100,
-      max(
-        1,
-        score,
-      ),
-    );
+        if (parent != null &&
+            await parent.exists()) {
+          await parent.delete();
+        }
+      } catch (_) {}
+    }
   }
 
   String _getRating(int score) {
@@ -337,7 +425,9 @@ class _BenchmarkPageState
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     final scheme =
         Theme.of(context)
             .colorScheme;
@@ -440,7 +530,8 @@ class _BenchmarkPageState
 
           SizedBox(
             height: 54,
-            child: FilledButton.icon(
+            child:
+                FilledButton.icon(
               onPressed:
                   _running
                       ? null
@@ -467,8 +558,8 @@ class _BenchmarkPageState
                 TextAlign.center,
             style: TextStyle(
               fontSize: 12,
-              color:
-                  scheme.onSurfaceVariant,
+              color: scheme
+                  .onSurfaceVariant,
             ),
           ),
         ],
@@ -476,4 +567,3 @@ class _BenchmarkPageState
     );
   }
 }
-
