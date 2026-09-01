@@ -61,23 +61,33 @@ class AppTheme {
   static ThemeData _normal(
     AppThemeColor color,
   ) {
+    final scheme = ColorScheme.fromSeed(
+      seedColor: color.seed,
+      brightness: Brightness.dark,
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: color.seed,
-        brightness: Brightness.dark,
-      ),
+      colorScheme: scheme,
       scaffoldBackgroundColor:
           const Color(0xFF101010),
+      appBarTheme: const AppBarTheme(
+        elevation: 0,
+      ),
+      cardTheme: CardTheme(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
     );
   }
 
   static ThemeData _liquidGlassLight(
     AppThemeColor color,
   ) {
-    final scheme =
-        ColorScheme.fromSeed(
+    final scheme = ColorScheme.fromSeed(
       seedColor: color.seed,
       brightness: Brightness.light,
     );
@@ -93,13 +103,10 @@ class AppTheme {
         elevation: 0,
       ),
       cardTheme: CardTheme(
-        color:
-            Colors.white.withOpacity(0.55),
+        color: Colors.white.withOpacity(0.55),
         elevation: 0,
-        shape:
-            RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.circular(20),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
     );
@@ -108,8 +115,7 @@ class AppTheme {
   static ThemeData _liquidGlassDark(
     AppThemeColor color,
   ) {
-    final scheme =
-        ColorScheme.fromSeed(
+    final scheme = ColorScheme.fromSeed(
       seedColor: color.seed,
       brightness: Brightness.dark,
     );
@@ -125,13 +131,10 @@ class AppTheme {
         elevation: 0,
       ),
       cardTheme: CardTheme(
-        color:
-            Colors.white.withOpacity(0.07),
+        color: Colors.white.withOpacity(0.07),
         elevation: 0,
-        shape:
-            RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.circular(20),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
     );
@@ -142,8 +145,7 @@ class AppTheme {
   ) {
     return AppThemeColor.values.firstWhere(
       (item) => item.name == value,
-      orElse: () =>
-          AppThemeColor.purple,
+      orElse: () => AppThemeColor.purple,
     );
   }
 
@@ -158,8 +160,7 @@ class AppTheme {
   ) {
     return AppThemeStyle.values.firstWhere(
       (item) => item.name == value,
-      orElse: () =>
-          AppThemeStyle.normal,
+      orElse: () => AppThemeStyle.normal,
     );
   }
 
