@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../services/update_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/update_button.dart';
 import 'home_shell.dart';
 
 class BootScreen extends StatefulWidget {
@@ -47,6 +49,7 @@ class _BootScreenState
 
   bool _showLogo = false;
   bool _finished = false;
+  bool _updateAvailable = false;
 
   int _currentLine = 0;
 
@@ -54,6 +57,33 @@ class _BootScreenState
   void initState() {
     super.initState();
     _startBootAnimation();
+    _checkUpdate();
+  }
+
+  Future<void> _checkUpdate() async {
+    final update =
+        await UpdateService.checkForUpdate();
+
+    if (!mounted || update == null) {
+      return;
+    }
+
+    final currentVersion =
+        await _getCurrentVersion();
+
+    if (!mounted) return;
+
+    setState(() {
+      _updateAvailable =
+          UpdateService.isNewerVersion(
+        currentVersion,
+        update.latestVersion,
+      );
+    });
+  }
+
+  Future<String> _getCurrentVersion() async {
+    return '2.2.0';
   }
 
   void _startBootAnimation() {
@@ -114,6 +144,64 @@ class _BootScreenState
     });
   }
 
+  void _showUpdateDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text(
+            'Yeni sürüm bulundu',
+          ),
+          content: const Text(
+            'ThisLinux için yeni bir sürüm mevcut. '
+            'Güncelleme ekranını açmak ister misiniz?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext)
+                    .pop();
+              },
+              child: const Text('Daha sonra'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext)
+                    .pop();
+
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        Scaffold(
+                      appBar: AppBar(
+                        title: const Text(
+                          'Güncelleme',
+                        ),
+                      ),
+                      body: ListView(
+                        padding:
+                            const EdgeInsets.all(
+                          20,
+                        ),
+                        children: const [
+                          UpdateButton(
+                            currentVersion:
+                                '2.2.0',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Aç'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -138,8 +226,7 @@ class _BootScreenState
     }
 
     return Scaffold(
-      backgroundColor:
-          Colors.black,
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Stack(
           children: [
@@ -190,8 +277,7 @@ class _BootScreenState
                   'assets/linux_logo.png',
                   width: 100,
                   height: 100,
-                  errorBuilder:
-                      (
+                  errorBuilder: (
                     context,
                     error,
                     stackTrace,
@@ -204,6 +290,32 @@ class _BootScreenState
                   },
                 ),
               ),
+            if (_updateAvailable)
+              Positioned(
+                right: 18,
+                bottom: 18,
+                child: FilledButton.icon(
+                  onPressed:
+                      _showUpdateDialog,
+                  icon: const Icon(
+                    Icons.system_update,
+                  ),
+                  label:
+                      const Text('UPDATE'),
+                ),
+              ),
+            const Positioned(
+              right: 18,
+              bottom: 4,
+              child: Text(
+                'v2.2.0',
+                style: TextStyle(
+                  color: Colors.white54,
+                  fontFamily: 'monospace',
+                  fontSize: 11,
+                ),
+              ),
+            ),
           ],
         ),
       ),
