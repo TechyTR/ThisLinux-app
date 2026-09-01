@@ -49,8 +49,7 @@ class _StorageManagerPageState
     double total = 0;
 
     try {
-      final root =
-          Directory('/storage/emulated/0');
+      final root = Directory('/storage/emulated/0');
 
       if (await root.exists()) {
         await _scanDirectory(
@@ -70,9 +69,7 @@ class _StorageManagerPageState
         ..clear()
         ..addAll(result);
 
-      _totalMb =
-          total / 1024 / 1024;
-
+      _totalMb = total / 1024 / 1024;
       _loading = false;
     });
   }
@@ -97,22 +94,16 @@ class _StorageManagerPageState
     for (final entity in entities) {
       try {
         if (entity is File) {
-          final size =
-              await entity.length();
+          final size = (await entity.length()).toDouble();
 
           addSize(size);
 
-          final category =
-              _categoryFor(entity.path);
+          final category = _categoryFor(entity.path);
 
           result[category] =
-              (result[category] ?? 0) +
-                  size;
+              (result[category] ?? 0) + size;
         } else if (entity is Directory) {
-          final name =
-              entity.path
-                  .split('/')
-                  .last;
+          final name = entity.path.split('/').last;
 
           if (_shouldSkipDirectory(
             entity.path,
@@ -135,15 +126,13 @@ class _StorageManagerPageState
     String path,
     String name,
   ) {
-    final lower =
-        name.toLowerCase();
+    final lower = name.toLowerCase();
 
     if (lower == 'android') {
       return true;
     }
 
-    if (lower == 'android' ||
-        lower == '.thumbnails' ||
+    if (lower == '.thumbnails' ||
         lower == '.trash') {
       return true;
     }
@@ -154,8 +143,7 @@ class _StorageManagerPageState
   }
 
   String _categoryFor(String path) {
-    final extension =
-        path.toLowerCase();
+    final extension = path.toLowerCase();
 
     if (RegExp(
       r'\.(jpg|jpeg|png|webp|gif|heic|heif|bmp)$',
@@ -204,8 +192,7 @@ class _StorageManagerPageState
       (sum, value) => sum + value,
     );
 
-    final values =
-        _categories.values.toList();
+    final values = _categories.values.toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -216,8 +203,7 @@ class _StorageManagerPageState
       ),
       body: _loading
           ? const Center(
-              child:
-                  CircularProgressIndicator(),
+              child: CircularProgressIndicator(),
             )
           : RefreshIndicator(
               onRefresh: _scanStorage,
@@ -262,16 +248,14 @@ class _StorageManagerPageState
                       ),
                     ),
                   ),
-
                   const SizedBox(
                     height: 24,
                   ),
-
                   ..._categories.entries.map(
                     (entry) {
                       final percentage =
                           totalBytes <= 0
-                              ? 0
+                              ? 0.0
                               : entry.value /
                                   totalBytes *
                                   100;
@@ -287,8 +271,7 @@ class _StorageManagerPageState
                               entry.key,
                             ),
                           ),
-                          title:
-                              Text(entry.key),
+                          title: Text(entry.key),
                           subtitle: Text(
                             _formatSize(
                               entry.value /
@@ -296,8 +279,7 @@ class _StorageManagerPageState
                                   1024,
                             ),
                           ),
-                          trailing:
-                              Text(
+                          trailing: Text(
                             '${percentage.toStringAsFixed(1)}%',
                             style:
                                 const TextStyle(
@@ -309,17 +291,14 @@ class _StorageManagerPageState
                       );
                     },
                   ),
-
                   const SizedBox(
                     height: 8,
                   ),
-
                   Text(
                     'Android sistem klasörleri '
                     'güvenlik nedeniyle taramaya '
                     'dahil edilmez.',
-                    textAlign:
-                        TextAlign.center,
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 12,
                       color:
@@ -382,13 +361,12 @@ class _StorageChartPainter
       size.height / 2,
     );
 
-    final radius =
-        min(
+    final radius = min(
           size.width,
           size.height,
         ) /
-            2 -
-            10;
+        2 -
+        10;
 
     final trackPaint = Paint()
       ..style = PaintingStyle.stroke
@@ -460,4 +438,3 @@ class _StorageChartPainter
             backgroundColor;
   }
 }
-
