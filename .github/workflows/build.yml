@@ -28,6 +28,16 @@ jobs:
           flutter-version: '3.24.0'
           channel: stable
 
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.3'
+
+      - name: Generate Gradle wrapper
+        run: |
+          cd android
+          gradle wrapper --gradle-version 8.3
+
       - name: Get dependencies
         run: flutter pub get
 
@@ -47,7 +57,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: v2.2.0
+          name: v2.3.0
           body: |
             ThisLinux güncel sürüm.
           files: build/app/outputs/flutter-apk/app-release.apk
