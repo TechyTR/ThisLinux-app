@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
@@ -12,7 +11,8 @@ class BenchmarkPage extends StatefulWidget {
       _BenchmarkPageState();
 }
 
-class _BenchmarkPageState extends State<BenchmarkPage> {
+class _BenchmarkPageState
+    extends State<BenchmarkPage> {
   bool _running = false;
   double _progress = 0;
 
@@ -21,7 +21,62 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
   int _storageScore = 0;
   int _totalScore = 0;
 
-  String _rating = 'Henüz test yapılmadı';
+  String _status = 'Henüz test yapılmadı';
+
+  Future<void> _startBenchmark() async {
+    if (_running) return;
+
+    final shouldContinue =
+        await _showWarningDialog();
+
+    if (!shouldContinue || !mounted) {
+      return;
+    }
+
+    await _runBenchmark();
+  }
+
+  Future<bool> _showWarningDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text(
+            'Performans Testi',
+          ),
+          content: const Text(
+            'Cihazınız performans testi sırasında '
+            'ısınabilir.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(
+                  dialogContext,
+                ).pop(false);
+              },
+              child: const Text(
+                'İptal',
+              ),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(
+                  dialogContext,
+                ).pop(true);
+              },
+              child: const Text(
+                'Devam Et',
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    return result ?? false;
+  }
 
   Future<void> _runBenchmark() async {
     if (_running) return;
@@ -33,30 +88,33 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
       _memoryScore = 0;
       _storageScore = 0;
       _totalScore = 0;
-      _rating = 'Test hazırlanıyor...';
+      _status = 'CPU testi çalışıyor...';
     });
 
-    final cpuScore = await _runCpuTest();
+    final cpuScore =
+        await _runCpuTest();
 
     if (!mounted) return;
 
     setState(() {
       _cpuScore = cpuScore;
       _progress = 0.35;
-      _rating = 'CPU testi tamamlandı';
+      _status = 'Bellek testi çalışıyor...';
     });
 
-    final memoryScore = await _runMemoryTest();
+    final memoryScore =
+        await _runMemoryTest();
 
     if (!mounted) return;
 
     setState(() {
       _memoryScore = memoryScore;
       _progress = 0.65;
-      _rating = 'Bellek testi tamamlandı';
+      _status = 'Depolama testi çalışıyor...';
     });
 
-    final storageScore = await _runStorageTest();
+    final storageScore =
+        await _runStorageTest();
 
     if (!mounted) return;
 
@@ -64,7 +122,7 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
       1,
       ((_cpuScore * 0.50) +
               (_memoryScore * 0.25) +
-              (_storageScore * 0.25))
+              (storageScore * 0.25))
           .round(),
     );
 
@@ -72,7 +130,7 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
       _storageScore = storageScore;
       _totalScore = total;
       _progress = 1;
-      _rating = _getRating(total);
+      _status = _getRating(total);
       _running = false;
     });
   }
@@ -82,23 +140,31 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
 
     double result = 0;
 
-    while (stopwatch.elapsedMilliseconds < 900) {
-      for (int i = 1; i < 10000; i++) {
-        result += sqrt(i) * sin(i);
+    while (stopwatch.elapsedMilliseconds <
+        1800) {
+      for (var i = 1; i < 12000; i++) {
+        result +=
+            sqrt(i) *
+            sin(i) *
+            cos(i);
       }
     }
 
     stopwatch.stop();
 
-    if (result == double.infinity) {
+    if (result.isNaN ||
+        result.isInfinite) {
       return 1;
     }
 
-    final operations =
-        900000000 ~/ max(
+    final elapsed =
+        max(
           1,
           stopwatch.elapsedMicroseconds,
         );
+
+    final operations =
+        2160000000 ~/ elapsed;
 
     return min(
       100,
@@ -112,10 +178,10 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
   Future<int> _runMemoryTest() async {
     final stopwatch = Stopwatch()..start();
 
-    final List<List<int>> blocks = [];
+    final blocks = <List<int>>[];
 
     try {
-      for (int i = 0; i < 8; i++) {
+      for (var i = 0; i < 12; i++) {
         blocks.add(
           List<int>.filled(
             250000,
@@ -125,12 +191,20 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
         );
       }
 
+      var checksum = 0;
+
       for (final block in blocks) {
-        for (int i = 0;
-            i < block.length;
-            i += 1000) {
-          block[i] = block[i] + 1;
+        for (
+          var i = 0;
+          i < block.length;
+          i += 256
+        ) {
+          checksum += block[i];
         }
+      }
+
+      if (checksum == -1) {
+        return 1;
       }
     } finally {
       blocks.clear();
@@ -138,9 +212,14 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
 
     stopwatch.stop();
 
+    final elapsed =
+        max(
+          1,
+          stopwatch.elapsedMilliseconds,
+        );
+
     final score =
-        100 -
-        (stopwatch.elapsedMilliseconds ~/ 20);
+        100 - (elapsed ~/ 12);
 
     return min(
       100,
@@ -152,20 +231,44 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
   }
 
   Future<int> _runStorageTest() async {
-    final directory =
-        Directory('/data/data');
-
     final stopwatch = Stopwatch()..start();
 
     try {
-      await directory.exists();
-    } catch (_) {}
+      final directory =
+          Directory('/data/data');
+
+      final files =
+          await directory
+              .list(
+                recursive: false,
+                followLinks: false,
+              )
+              .toList();
+
+      var checksum = 0;
+
+      for (final file in files) {
+        checksum += file.path.length;
+      }
+
+      if (checksum == -1) {
+        return 1;
+      }
+    } catch (_) {
+      // Depolama erişimi kısıtlıysa test
+      // yine de tamamlanır.
+    }
 
     stopwatch.stop();
 
+    final elapsed =
+        max(
+          1,
+          stopwatch.elapsedMilliseconds,
+        );
+
     final score =
-        100 -
-        stopwatch.elapsedMilliseconds;
+        100 - elapsed;
 
     return min(
       100,
@@ -206,10 +309,15 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
     IconData icon,
   ) {
     final color =
-        Theme.of(context).colorScheme.primary;
+        Theme.of(context)
+            .colorScheme
+            .primary;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin:
+          const EdgeInsets.only(
+        bottom: 12,
+      ),
       child: ListTile(
         leading: Icon(
           icon,
@@ -219,7 +327,8 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
         trailing: Text(
           '$score/100',
           style: const TextStyle(
-            fontWeight: FontWeight.bold,
+            fontWeight:
+                FontWeight.bold,
             fontSize: 16,
           ),
         ),
@@ -230,19 +339,24 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
   @override
   Widget build(BuildContext context) {
     final scheme =
-        Theme.of(context).colorScheme;
+        Theme.of(context)
+            .colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Benchmark'),
+        title: const Text(
+          'Benchmark',
+        ),
         centerTitle: true,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding:
+            const EdgeInsets.all(20),
         children: [
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding:
+                  const EdgeInsets.all(24),
               child: Column(
                 children: [
                   Text(
@@ -251,8 +365,10 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
                         : '$_totalScore',
                     style: TextStyle(
                       fontSize: 64,
-                      fontWeight: FontWeight.bold,
-                      color: scheme.primary,
+                      fontWeight:
+                          FontWeight.bold,
+                      color:
+                          scheme.primary,
                     ),
                   ),
                   const Text(
@@ -261,12 +377,18 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
                       fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(
+                    height: 8,
+                  ),
                   Text(
-                    _rating,
-                    style: const TextStyle(
+                    _status,
+                    textAlign:
+                        TextAlign.center,
+                    style:
+                        const TextStyle(
                       fontSize: 20,
-                      fontWeight: FontWeight.w700,
+                      fontWeight:
+                          FontWeight.w700,
                     ),
                   ),
                 ],
@@ -274,7 +396,9 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(
+            height: 16,
+          ),
 
           if (_running)
             Column(
@@ -282,9 +406,13 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
                 LinearProgressIndicator(
                   value: _progress,
                 ),
-                const SizedBox(height: 10),
-                Text(_rating),
-                const SizedBox(height: 16),
+                const SizedBox(
+                  height: 10,
+                ),
+                Text(_status),
+                const SizedBox(
+                  height: 16,
+                ),
               ],
             ),
 
@@ -306,13 +434,17 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
             Icons.storage,
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(
+            height: 12,
+          ),
 
           SizedBox(
             height: 54,
             child: FilledButton.icon(
               onPressed:
-                  _running ? null : _runBenchmark,
+                  _running
+                      ? null
+                      : _startBenchmark,
               icon: const Icon(
                 Icons.speed,
               ),
@@ -324,12 +456,15 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(
+            height: 16,
+          ),
 
           Text(
-            'Test sırasında cihazın normalden fazla işlem yapması '
-            've kısa süreli ısınması normaldir.',
-            textAlign: TextAlign.center,
+            'Performans testi cihazı kısa süreliğine '
+            'yüksek işlem altında çalıştırabilir.',
+            textAlign:
+                TextAlign.center,
             style: TextStyle(
               fontSize: 12,
               color:
@@ -341,3 +476,4 @@ class _BenchmarkPageState extends State<BenchmarkPage> {
     );
   }
 }
+
