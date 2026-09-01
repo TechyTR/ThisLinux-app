@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../services/update_service.dart';
 import '../theme/app_theme.dart';
@@ -51,13 +52,48 @@ class _BootScreenState
   bool _finished = false;
   bool _updateAvailable = false;
 
+  String _currentVersion = 'Yükleniyor...';
+
   int _currentLine = 0;
 
   @override
   void initState() {
     super.initState();
+
+    _loadVersion();
     _startBootAnimation();
     _checkUpdate();
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final packageInfo =
+          await PackageInfo.fromPlatform();
+
+      if (!mounted) return;
+
+      setState(() {
+        _currentVersion =
+            packageInfo.version;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _currentVersion = 'Bilinmiyor';
+      });
+    }
+  }
+
+  Future<String> _getCurrentVersion() async {
+    try {
+      final packageInfo =
+          await PackageInfo.fromPlatform();
+
+      return packageInfo.version;
+    } catch (_) {
+      return '0.0.0';
+    }
   }
 
   Future<void> _checkUpdate() async {
@@ -74,16 +110,15 @@ class _BootScreenState
     if (!mounted) return;
 
     setState(() {
+      _currentVersion =
+          currentVersion;
+
       _updateAvailable =
           UpdateService.isNewerVersion(
         currentVersion,
         update.latestVersion,
       );
     });
-  }
-
-  Future<String> _getCurrentVersion() async {
-    return '2.2.0';
   }
 
   void _startBootAnimation() {
@@ -152,27 +187,31 @@ class _BootScreenState
           title: const Text(
             'Yeni sürüm bulundu',
           ),
-          content: const Text(
-            'ThisLinux için yeni bir sürüm mevcut. '
+          content: Text(
+            'ThisLinux için yeni bir sürüm mevcut.\n\n'
+            'Mevcut sürüm: v$_currentVersion\n\n'
             'Güncelleme ekranını açmak ister misiniz?',
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(dialogContext)
-                    .pop();
+                Navigator.of(
+                  dialogContext,
+                ).pop();
               },
-              child: const Text('Daha sonra'),
+              child: const Text(
+                'Daha sonra',
+              ),
             ),
             FilledButton(
               onPressed: () {
-                Navigator.of(dialogContext)
-                    .pop();
+                Navigator.of(
+                  dialogContext,
+                ).pop();
 
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) =>
-                        Scaffold(
+                    builder: (_) => Scaffold(
                       appBar: AppBar(
                         title: const Text(
                           'Güncelleme',
@@ -183,10 +222,10 @@ class _BootScreenState
                             const EdgeInsets.all(
                           20,
                         ),
-                        children: const [
+                        children: [
                           UpdateButton(
                             currentVersion:
-                                '2.2.0',
+                                _currentVersion,
                           ),
                         ],
                       ),
@@ -300,16 +339,17 @@ class _BootScreenState
                   icon: const Icon(
                     Icons.system_update,
                   ),
-                  label:
-                      const Text('UPDATE'),
+                  label: const Text(
+                    'UPDATE',
+                  ),
                 ),
               ),
-            const Positioned(
+            Positioned(
               right: 18,
               bottom: 4,
               child: Text(
-                'v2.2.0',
-                style: TextStyle(
+                'v$_currentVersion',
+                style: const TextStyle(
                   color: Colors.white54,
                   fontFamily: 'monospace',
                   fontSize: 11,
