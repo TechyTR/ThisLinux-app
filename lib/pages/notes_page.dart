@@ -70,42 +70,11 @@ class _NotesPageState extends State<NotesPage> {
       return;
     }
 
-    final deletedNote = _notes[index];
-
     setState(() {
       _notes.removeAt(index);
     });
 
     await _saveNotes();
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context)
-        .hideCurrentSnackBar();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Not silindi.'),
-        action: SnackBarAction(
-          label: 'Geri Al',
-          onPressed: () async {
-            final insertIndex = index.clamp(
-              0,
-              _notes.length,
-            );
-
-            setState(() {
-              _notes.insert(
-                insertIndex,
-                deletedNote,
-              );
-            });
-
-            await _saveNotes();
-          },
-        ),
-      ),
-    );
   }
 
   Future<void> _showAddNoteDialog() async {
@@ -196,8 +165,7 @@ class _NotesPageState extends State<NotesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme =
-        Theme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -211,30 +179,26 @@ class _NotesPageState extends State<NotesPage> {
       body: _notes.isEmpty
           ? Center(
               child: Column(
-                mainAxisAlignment:
-                    MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
                     Icons.note_outlined,
                     size: 64,
-                    color:
-                        scheme.onSurfaceVariant,
+                    color: scheme.onSurfaceVariant,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'Henüz not yok.',
                     style: TextStyle(
                       fontSize: 18,
-                      color:
-                          scheme.onSurfaceVariant,
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ],
               ),
             )
           : ListView.builder(
-              padding:
-                  const EdgeInsets.fromLTRB(
+              padding: const EdgeInsets.fromLTRB(
                 16,
                 16,
                 16,
@@ -243,35 +207,25 @@ class _NotesPageState extends State<NotesPage> {
               itemCount: _notes.length,
               itemBuilder: (context, index) {
                 final note = _notes[index];
-                final parsed =
-                    _parseNote(note);
+                final parsed = _parseNote(note);
 
                 final title = parsed[0];
                 final content = parsed[1];
 
                 return Dismissible(
-                  key: ValueKey(
-                    '$note-$index',
-                  ),
-                  direction:
-                      DismissDirection.endToStart,
+                  key: ValueKey('$note-$index'),
+                  direction: DismissDirection.endToStart,
                   background: Container(
-                    margin:
-                        const EdgeInsets.only(
+                    margin: const EdgeInsets.only(
                       bottom: 12,
                     ),
-                    alignment:
-                        Alignment.centerRight,
-                    padding:
-                        const EdgeInsets.only(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(
                       right: 24,
                     ),
                     decoration: BoxDecoration(
                       color: scheme.error,
-                      borderRadius:
-                          BorderRadius.circular(
-                        18,
-                      ),
+                      borderRadius: BorderRadius.circular(18),
                     ),
                     child: const Icon(
                       Icons.delete,
@@ -282,17 +236,14 @@ class _NotesPageState extends State<NotesPage> {
                     _deleteNote(index);
                   },
                   child: Card(
-                    margin:
-                        const EdgeInsets.only(
+                    margin: const EdgeInsets.only(
                       bottom: 12,
                     ),
                     child: Padding(
-                      padding:
-                          const EdgeInsets.all(18),
+                      padding: const EdgeInsets.all(18),
                       child: Column(
                         crossAxisAlignment:
-                            CrossAxisAlignment
-                                .start,
+                            CrossAxisAlignment.start,
                         children: [
                           Text(
                             title.isEmpty
@@ -300,20 +251,17 @@ class _NotesPageState extends State<NotesPage> {
                                 : title,
                             style: const TextStyle(
                               fontSize: 19,
-                              fontWeight:
-                                  FontWeight.bold,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 8),
                           Divider(
-                            color: scheme
-                                .outlineVariant,
+                            color: scheme.outlineVariant,
                           ),
                           const SizedBox(height: 8),
                           Text(
                             content,
-                            style:
-                                const TextStyle(
+                            style: const TextStyle(
                               fontSize: 15,
                             ),
                           ),
@@ -327,3 +275,4 @@ class _NotesPageState extends State<NotesPage> {
     );
   }
 }
+
