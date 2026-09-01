@@ -7,18 +7,23 @@ class BatteryLabPage extends StatefulWidget {
   const BatteryLabPage({super.key});
 
   @override
-  State<BatteryLabPage> createState() => _BatteryLabPageState();
+  State<BatteryLabPage> createState() =>
+      _BatteryLabPageState();
 }
 
-class _BatteryLabPageState extends State<BatteryLabPage> {
+class _BatteryLabPageState
+    extends State<BatteryLabPage> {
   final Battery _battery = Battery();
 
   int _level = 0;
-  BatteryState _state = BatteryState.unknown;
+  BatteryState _state =
+      BatteryState.unknown;
 
-  StreamSubscription<BatteryState>? _stateSubscription;
+  StreamSubscription<BatteryState>?
+      _stateSubscription;
 
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -26,34 +31,51 @@ class _BatteryLabPageState extends State<BatteryLabPage> {
 
     _loadBattery();
 
-    _stateSubscription =
-        _battery.onBatteryStateChanged.listen((state) {
-      if (!mounted) return;
+    try {
+      _stateSubscription =
+          _battery.onBatteryStateChanged
+              .listen(
+        (state) {
+          if (!mounted) return;
 
-      setState(() {
-        _state = state;
-      });
+          setState(() {
+            _state = state;
+          });
 
-      _loadBatteryLevel();
-    });
+          _loadBatteryLevel();
+        },
+        onError: (_) {},
+      );
+    } catch (_) {}
   }
 
   Future<void> _loadBattery() async {
-    setState(() {
-      _loading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
 
     await _loadBatteryLevel();
 
     try {
-      final state = await _battery.batteryState;
+      final state =
+          await _battery.batteryState;
 
       if (!mounted) return;
 
       setState(() {
         _state = state;
       });
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error =
+              'Pil durumu okunamadı.';
+        });
+      }
+    }
 
     if (!mounted) return;
 
@@ -64,14 +86,23 @@ class _BatteryLabPageState extends State<BatteryLabPage> {
 
   Future<void> _loadBatteryLevel() async {
     try {
-      final level = await _battery.batteryLevel;
+      final level =
+          await _battery.batteryLevel;
 
       if (!mounted) return;
 
       setState(() {
-        _level = level.clamp(0, 100);
+        _level =
+            level.clamp(0, 100).toInt();
       });
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error =
+              'Pil seviyesi okunamadı.';
+        });
+      }
+    }
   }
 
   String _stateText() {
@@ -119,45 +150,63 @@ class _BatteryLabPageState extends State<BatteryLabPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+  Widget build(
+    BuildContext context,
+  ) {
+    final scheme =
+        Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Battery Lab'),
+        title:
+            const Text('Battery Lab'),
         centerTitle: true,
       ),
       body: RefreshIndicator(
         onRefresh: _loadBattery,
         child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
+          physics:
+              const AlwaysScrollableScrollPhysics(),
+          padding:
+              const EdgeInsets.all(20),
           children: [
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(22),
+                padding:
+                    const EdgeInsets.all(22),
                 child: Column(
                   children: [
                     Icon(
                       _stateIcon(),
                       size: 54,
-                      color: scheme.primary,
+                      color:
+                          scheme.primary,
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(
+                      height: 14,
+                    ),
                     Text(
                       '$_level%',
-                      style: Theme.of(context)
+                      style: Theme.of(
+                        context,
+                      )
                           .textTheme
                           .displayMedium
                           ?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: scheme.primary,
+                            fontWeight:
+                                FontWeight.bold,
+                            color:
+                                scheme.primary,
                           ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(
+                      height: 6,
+                    ),
                     Text(
                       _stateText(),
-                      style: Theme.of(context)
+                      style: Theme.of(
+                        context,
+                      )
                           .textTheme
                           .titleMedium,
                     ),
@@ -165,60 +214,115 @@ class _BatteryLabPageState extends State<BatteryLabPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+
+            const SizedBox(
+              height: 14,
+            ),
+
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(18),
+                padding:
+                    const EdgeInsets.all(18),
                 child: Column(
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.battery_6_bar),
-                        const SizedBox(width: 12),
+                        Icon(
+                          Icons
+                              .battery_6_bar,
+                          color:
+                              scheme.primary,
+                        ),
+                        const SizedBox(
+                          width: 12,
+                        ),
                         const Expanded(
-                          child: Text('Pil seviyesi'),
+                          child: Text(
+                            'Pil seviyesi',
+                          ),
                         ),
                         Text(
                           '$_level%',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
+                          style:
+                              const TextStyle(
+                            fontWeight:
+                                FontWeight.bold,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(
+                      height: 14,
+                    ),
                     LinearProgressIndicator(
-                      value: _level / 100,
+                      value:
+                          _level / 100,
                       minHeight: 8,
                       borderRadius:
-                          BorderRadius.circular(10),
+                          BorderRadius.circular(
+                        10,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+
+            const SizedBox(
+              height: 14,
+            ),
+
             Card(
               child: ListTile(
                 leading: Icon(
                   _stateIcon(),
-                  color: scheme.primary,
+                  color:
+                      scheme.primary,
                 ),
-                title: const Text('Pil durumu'),
-                subtitle: Text(_stateText()),
+                title: const Text(
+                  'Pil durumu',
+                ),
+                subtitle:
+                    Text(_stateText()),
               ),
             ),
-            const SizedBox(height: 20),
+
+            if (_error != null) ...[
+              const SizedBox(
+                height: 14,
+              ),
+              Card(
+                child: ListTile(
+                  leading: Icon(
+                    Icons.warning_amber,
+                    color:
+                        scheme.error,
+                  ),
+                  title: const Text(
+                    'Okuma uyarısı',
+                  ),
+                  subtitle:
+                      Text(_error!),
+                ),
+              ),
+            ],
+
+            const SizedBox(
+              height: 20,
+            ),
+
             if (_loading)
               const Center(
-                child: CircularProgressIndicator(),
+                child:
+                    CircularProgressIndicator(),
               )
             else
               Center(
                 child: Text(
                   'Yenilemek için aşağı çekin.',
                   style: TextStyle(
-                    color: scheme.onSurfaceVariant,
+                    color: scheme
+                        .onSurfaceVariant,
                     fontSize: 13,
                   ),
                 ),
@@ -229,3 +333,4 @@ class _BatteryLabPageState extends State<BatteryLabPage> {
     );
   }
 }
+
