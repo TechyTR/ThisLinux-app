@@ -14,6 +14,7 @@ class UpdateInfo {
 }
 
 class UpdateService {
+
   static const MethodChannel _channel =
       MethodChannel('thislinux/updater');
 
@@ -22,25 +23,34 @@ class UpdateService {
 
   static Future<UpdateInfo?> checkForUpdate() async {
     try {
-      final response = await http
-          .get(Uri.parse(versionUrl))
-          .timeout(
-        const Duration(seconds: 10),
-      );
+
+      final response =
+          await http
+              .get(
+                Uri.parse(versionUrl),
+              )
+              .timeout(
+                const Duration(
+                  seconds: 10,
+                ),
+              );
 
       if (response.statusCode != 200) {
         return null;
       }
 
       final data =
-          jsonDecode(response.body)
-              as Map<String, dynamic>;
+          jsonDecode(
+            response.body,
+          ) as Map<String, dynamic>;
 
       final latestVersion =
-          data['latest_version']?.toString();
+          data['latest_version']
+              ?.toString();
 
       final downloadUrl =
-          data['download_url']?.toString();
+          data['download_url']
+              ?.toString();
 
       if (latestVersion == null ||
           latestVersion.isEmpty ||
@@ -50,7 +60,9 @@ class UpdateService {
       }
 
       final parsedUrl =
-          Uri.tryParse(downloadUrl);
+          Uri.tryParse(
+            downloadUrl,
+          );
 
       if (parsedUrl == null ||
           !parsedUrl.hasScheme ||
@@ -59,9 +71,12 @@ class UpdateService {
       }
 
       return UpdateInfo(
-        latestVersion: latestVersion,
-        downloadUrl: downloadUrl,
+        latestVersion:
+            latestVersion,
+        downloadUrl:
+            downloadUrl,
       );
+
     } catch (_) {
       return null;
     }
@@ -71,20 +86,29 @@ class UpdateService {
     String currentVersion,
     String latestVersion,
   ) {
+
     final current =
-        _parseVersion(currentVersion);
+        _parseVersion(
+          currentVersion,
+        );
 
     final latest =
-        _parseVersion(latestVersion);
+        _parseVersion(
+          latestVersion,
+        );
 
     final maxLength =
-        current.length > latest.length
+        current.length >
+                latest.length
             ? current.length
             : latest.length;
 
-    for (var i = 0;
-        i < maxLength;
-        i++) {
+    for (
+      var i = 0;
+      i < maxLength;
+      i++
+    ) {
+
       final currentPart =
           i < current.length
               ? current[i]
@@ -95,11 +119,13 @@ class UpdateService {
               ? latest[i]
               : 0;
 
-      if (latestPart > currentPart) {
+      if (latestPart >
+          currentPart) {
         return true;
       }
 
-      if (latestPart < currentPart) {
+      if (latestPart <
+          currentPart) {
         return false;
       }
     }
@@ -110,6 +136,7 @@ class UpdateService {
   static List<int> _parseVersion(
     String version,
   ) {
+
     return version
         .trim()
         .replaceFirst(
@@ -117,45 +144,59 @@ class UpdateService {
           '',
         )
         .split('.')
-        .map((part) {
-          final match =
-              RegExp(r'\d+')
-                  .firstMatch(part);
+        .map(
+          (part) {
 
-          return int.tryParse(
-                match?.group(0) ?? '0',
-              ) ??
-              0;
-        })
+            final match =
+                RegExp(r'\d+')
+                    .firstMatch(part);
+
+            return int.tryParse(
+                  match?.group(0) ??
+                      '0',
+                ) ??
+                0;
+          },
+        )
         .toList();
   }
 
   static Future<void> downloadAndInstall(
     String downloadUrl,
   ) async {
+
     final uri =
-        Uri.tryParse(downloadUrl);
+        Uri.tryParse(
+          downloadUrl,
+        );
 
     if (uri == null ||
         uri.scheme != 'https') {
+
       throw PlatformException(
         code: 'INVALID_URL',
-        message: 'APK URL geçersiz.',
+        message:
+            'APK URL geçersiz.',
       );
     }
 
     try {
+
       await _channel.invokeMethod(
         'downloadAndInstall',
         {
           'url': downloadUrl,
         },
       );
+
     } on PlatformException {
       rethrow;
+
     } on MissingPluginException {
+
       throw PlatformException(
-        code: 'NATIVE_UPDATER_MISSING',
+        code:
+            'NATIVE_UPDATER_MISSING',
         message:
             'Android güncelleme bileşeni bulunamadı.',
       );
