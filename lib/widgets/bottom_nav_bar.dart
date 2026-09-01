@@ -91,7 +91,7 @@ class BottomNavBar extends StatelessWidget {
               border: Border.all(
                 color: isLight
                     ? Colors.white
-                        .withOpacity(0.75)
+                        .withOpacity(0.82)
                     : Colors.white
                         .withOpacity(0.18),
               ),
@@ -113,14 +113,15 @@ class BottomNavBar extends StatelessWidget {
                           Curves.easeOutCubic,
                       left:
                           itemWidth *
-                              currentIndex +
-                          6,
+                                  currentIndex +
+                              6,
                       top: 6,
                       width:
                           itemWidth - 12,
                       height: 60,
                       child: IgnorePointer(
-                        child: AnimatedContainer(
+                        child:
+                            AnimatedContainer(
                           duration:
                               const Duration(
                             milliseconds: 430,
@@ -131,7 +132,7 @@ class BottomNavBar extends StatelessWidget {
                                 .primary
                                 .withOpacity(
                               isLight
-                                  ? 0.17
+                                  ? 0.28
                                   : 0.28,
                             ),
                             borderRadius:
@@ -141,29 +142,45 @@ class BottomNavBar extends StatelessWidget {
                             ),
                             border:
                                 Border.all(
-                              color: Colors
-                                  .white
-                                  .withOpacity(
-                                isLight
-                                    ? 0.72
-                                    : 0.22,
-                              ),
+                              color: isLight
+                                  ? scheme
+                                      .primary
+                                      .withOpacity(
+                                      0.42,
+                                    )
+                                  : Colors.white
+                                      .withOpacity(
+                                      0.22,
+                                    ),
+                              width:
+                                  isLight
+                                      ? 1.2
+                                      : 1.0,
                             ),
                             boxShadow: [
                               BoxShadow(
                                 color: scheme
                                     .primary
                                     .withOpacity(
-                                  0.22,
+                                  isLight
+                                      ? 0.34
+                                      : 0.22,
                                 ),
-                                blurRadius: 18,
-                                spreadRadius: 1,
+                                blurRadius:
+                                    isLight
+                                        ? 20
+                                        : 18,
+                                spreadRadius:
+                                    isLight
+                                        ? 1.5
+                                        : 1,
                               ),
                             ],
                           ),
                         ),
                       ),
                     ),
+
                     Row(
                       children: [
                         _item(
@@ -262,9 +279,11 @@ class BottomNavBar extends StatelessWidget {
                     ),
                   ),
                 ),
+
                 const SizedBox(
                   height: 3,
                 ),
+
                 AnimatedDefaultTextStyle(
                   duration:
                       const Duration(
