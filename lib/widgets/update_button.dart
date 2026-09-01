@@ -21,7 +21,9 @@ class _UpdateButtonState
   bool _installing = false;
 
   Future<void> _checkForUpdate() async {
-    if (_checking || _installing) return;
+    if (_checking || _installing) {
+      return;
+    }
 
     setState(() {
       _checking = true;
@@ -30,7 +32,9 @@ class _UpdateButtonState
     final update =
         await UpdateService.checkForUpdate();
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
       _checking = false;
@@ -45,6 +49,7 @@ class _UpdateButtonState
           ),
         ),
       );
+
       return;
     }
 
@@ -63,6 +68,7 @@ class _UpdateButtonState
           ),
         ),
       );
+
       return;
     }
 
@@ -75,6 +81,7 @@ class _UpdateButtonState
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
+
         return AlertDialog(
           title: const Text(
             'Güncelleme mevcut',
@@ -85,6 +92,7 @@ class _UpdateButtonState
             'Yeni APK indirilecek ve Android kurulum ekranı açılacak.',
           ),
           actions: [
+
             TextButton(
               onPressed: () {
                 Navigator.of(
@@ -95,6 +103,7 @@ class _UpdateButtonState
                 'İptal',
               ),
             ),
+
             FilledButton(
               onPressed: () {
                 Navigator.of(
@@ -116,18 +125,25 @@ class _UpdateButtonState
   Future<void> _installUpdate(
     UpdateInfo update,
   ) async {
-    if (_installing) return;
+    if (_installing) {
+      return;
+    }
 
     setState(() {
       _installing = true;
     });
 
     try {
+
       await UpdateService.downloadAndInstall(
         update.downloadUrl,
       );
+
     } on Exception catch (error) {
-      if (!mounted) return;
+
+      if (!mounted) {
+        return;
+      }
 
       ScaffoldMessenger.of(context)
           .showSnackBar(
@@ -137,7 +153,9 @@ class _UpdateButtonState
           ),
         ),
       );
+
     } finally {
+
       if (mounted) {
         setState(() {
           _installing = false;
@@ -155,15 +173,20 @@ class _UpdateButtonState
 
     return Card(
       margin:
-          const EdgeInsets.only(bottom: 10),
+          const EdgeInsets.only(
+        bottom: 10,
+      ),
       child: ListTile(
+
         leading: Icon(
           Icons.system_update_outlined,
           color: scheme.primary,
         ),
+
         title: const Text(
           'Güncellemeleri kontrol et',
         ),
+
         subtitle: Text(
           _installing
               ? 'APK indiriliyor...'
@@ -171,6 +194,7 @@ class _UpdateButtonState
                   ? 'Güncellemeler kontrol ediliyor...'
                   : 'Mevcut sürüm: v${widget.currentVersion}',
         ),
+
         trailing:
             _checking || _installing
                 ? const SizedBox(
@@ -184,6 +208,7 @@ class _UpdateButtonState
                 : const Icon(
                     Icons.chevron_right,
                   ),
+
         onTap:
             _checking || _installing
                 ? null
