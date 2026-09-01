@@ -12,11 +12,8 @@ class AppInfoPage extends StatefulWidget {
   final AppThemeColor selectedTheme;
   final AppThemeStyle selectedStyle;
 
-  final Future<void> Function(AppThemeColor)
-      onThemeChanged;
-
-  final Future<void> Function(AppThemeStyle)
-      onStyleChanged;
+  final Future<void> Function(AppThemeColor) onThemeChanged;
+  final Future<void> Function(AppThemeStyle) onStyleChanged;
 
   const AppInfoPage({
     super.key,
@@ -27,12 +24,10 @@ class AppInfoPage extends StatefulWidget {
   });
 
   @override
-  State<AppInfoPage> createState() =>
-      _AppInfoPageState();
+  State<AppInfoPage> createState() => _AppInfoPageState();
 }
 
-class _AppInfoPageState
-    extends State<AppInfoPage> {
+class _AppInfoPageState extends State<AppInfoPage> {
   String currentVersion = 'Yükleniyor...';
 
   @override
@@ -114,8 +109,7 @@ class _AppInfoPageState
             color: isSelected
                 ? Colors.black
                 : color,
-            fontWeight:
-                FontWeight.bold,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),
@@ -123,37 +117,21 @@ class _AppInfoPageState
   }
 
   Widget _styleButton(
-    BuildContext context,
     AppThemeStyle style,
+    IconData icon,
+    String title,
   ) {
     final isSelected =
         widget.selectedStyle == style;
 
-    final isLight =
-        style ==
-            AppThemeStyle
-                .liquidGlassLight;
-
     return Card(
       margin:
-          const EdgeInsets.only(
-        bottom: 10,
-      ),
+          const EdgeInsets.only(bottom: 10),
       child: ListTile(
-        leading: Icon(
-          isLight
-              ? Icons.light_mode
-              : Icons.dark_mode,
-        ),
-        title: Text(
-          isLight
-              ? 'Liquid Glass Light'
-              : 'Liquid Glass Dark',
-        ),
+        leading: Icon(icon),
+        title: Text(title),
         trailing: isSelected
-            ? const Icon(
-                Icons.check_circle,
-              )
+            ? const Icon(Icons.check_circle)
             : null,
         onTap: () {
           widget.onStyleChanged(style);
@@ -170,17 +148,13 @@ class _AppInfoPageState
   }) {
     return Card(
       margin:
-          const EdgeInsets.only(
-        bottom: 10,
-      ),
+          const EdgeInsets.only(bottom: 10),
       child: ListTile(
         leading: Icon(icon),
         title: Text(title),
         subtitle: Text(subtitle),
         trailing:
-            const Icon(
-          Icons.chevron_right,
-        ),
+            const Icon(Icons.chevron_right),
         onTap: onTap,
       ),
     );
@@ -195,16 +169,13 @@ class _AppInfoPageState
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     final scheme =
         Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title:
-            const Text('Uygulama'),
+        title: const Text('Uygulama'),
         centerTitle: true,
       ),
       body: ListView(
@@ -215,15 +186,10 @@ class _AppInfoPageState
             'ThisLinux',
             style: TextStyle(
               fontSize: 32,
-              fontWeight:
-                  FontWeight.bold,
+              fontWeight: FontWeight.bold,
             ),
           ),
-
-          const SizedBox(
-            height: 8,
-          ),
-
+          const SizedBox(height: 8),
           Text(
             'Sistem yardımcı uygulaması',
             style: TextStyle(
@@ -231,25 +197,16 @@ class _AppInfoPageState
                   scheme.onSurfaceVariant,
             ),
           ),
-
-          const SizedBox(
-            height: 28,
-          ),
-
+          const SizedBox(height: 28),
           Text(
             'Tema',
             style: TextStyle(
-              fontWeight:
-                  FontWeight.w600,
+              fontWeight: FontWeight.w600,
               color:
                   scheme.onSurfaceVariant,
             ),
           ),
-
-          const SizedBox(
-            height: 12,
-          ),
-
+          const SizedBox(height: 12),
           Wrap(
             children:
                 AppThemeColor.values
@@ -261,56 +218,41 @@ class _AppInfoPageState
                       ),
                     )
                     .toList(),
-          ),
-
-          const SizedBox(
-            height: 12,
-          ),
-
+          ),          const SizedBox(height: 12),
           Text(
             'Görünüm',
             style: TextStyle(
-              fontWeight:
-                  FontWeight.w600,
+              fontWeight: FontWeight.w600,
               color:
                   scheme.onSurfaceVariant,
             ),
           ),
-
-          const SizedBox(
-            height: 12,
-          ),
-
+          const SizedBox(height: 12),
           _styleButton(
-            context,
-            AppThemeStyle
-                .liquidGlassLight,
+            AppThemeStyle.normal,
+            Icons.palette_outlined,
+            'Material Design',
           ),
-
           _styleButton(
-            context,
-            AppThemeStyle
-                .liquidGlassDark,
+            AppThemeStyle.liquidGlassLight,
+            Icons.light_mode,
+            'Liquid Glass Light',
           ),
-
-          const SizedBox(
-            height: 12,
+          _styleButton(
+            AppThemeStyle.liquidGlassDark,
+            Icons.dark_mode,
+            'Liquid Glass Dark',
           ),
-
+          const SizedBox(height: 12),
           Text(
             'Araçlar',
             style: TextStyle(
-              fontWeight:
-                  FontWeight.w600,
+              fontWeight: FontWeight.w600,
               color:
                   scheme.onSurfaceVariant,
             ),
           ),
-
-          const SizedBox(
-            height: 12,
-          ),
-
+          const SizedBox(height: 12),
           _toolButton(
             icon: Icons.speed,
             title: 'Benchmark',
@@ -322,11 +264,9 @@ class _AppInfoPageState
               );
             },
           ),
-
           _toolButton(
             icon: Icons.storage,
-            title:
-                'Storage Manager',
+            title: 'Storage Manager',
             subtitle:
                 'Depolama kullanımını incele',
             onTap: () {
@@ -335,7 +275,6 @@ class _AppInfoPageState
               );
             },
           ),
-
           _toolButton(
             icon: Icons.sensors,
             title: 'SensorLab',
@@ -347,10 +286,8 @@ class _AppInfoPageState
               );
             },
           ),
-
           _toolButton(
-            icon:
-                Icons.network_check,
+            icon: Icons.network_check,
             title: 'Network Lab',
             subtitle:
                 'Ağ bağlantısını incele',
@@ -360,10 +297,8 @@ class _AppInfoPageState
               );
             },
           ),
-
           _toolButton(
-            icon:
-                Icons.battery_full,
+            icon: Icons.battery_full,
             title: 'Battery Lab',
             subtitle:
                 'Pil durumunu incele',
@@ -373,11 +308,7 @@ class _AppInfoPageState
               );
             },
           ),
-
-          const SizedBox(
-            height: 24,
-          ),
-
+          const SizedBox(height: 24),
           Center(
             child: Text(
               'ThisLinux v$currentVersion',
