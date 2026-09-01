@@ -33,6 +33,10 @@ jobs:
         with:
           gradle-version: '8.3'
 
+      - name: Create Flutter local.properties
+        run: |
+          echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
+
       - name: Generate Gradle wrapper
         run: |
           cd android
