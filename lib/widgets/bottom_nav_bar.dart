@@ -23,7 +23,8 @@ class BottomNavBar extends StatelessWidget {
     if (selectedStyle == AppThemeStyle.normal) {
       return NavigationBar(
         selectedIndex: currentIndex,
-        onDestinationSelected: onDestinationSelected,
+        onDestinationSelected:
+            onDestinationSelected,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.memory_outlined),
@@ -45,7 +46,8 @@ class BottomNavBar extends StatelessWidget {
     }
 
     final isLight =
-        selectedStyle == AppThemeStyle.liquidGlassLight;
+        selectedStyle ==
+            AppThemeStyle.liquidGlassLight;
 
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(
@@ -55,7 +57,8 @@ class BottomNavBar extends StatelessWidget {
         12,
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius:
+            BorderRadius.circular(28),
         child: BackdropFilter(
           filter: ImageFilter.blur(
             sigmaX: 22,
@@ -67,7 +70,8 @@ class BottomNavBar extends StatelessWidget {
               color: isLight
                   ? Colors.white.withOpacity(0.50)
                   : Colors.black.withOpacity(0.55),
-              borderRadius: BorderRadius.circular(28),
+              borderRadius:
+                  BorderRadius.circular(28),
               border: Border.all(
                 color: isLight
                     ? Colors.white.withOpacity(0.82)
@@ -76,7 +80,8 @@ class BottomNavBar extends StatelessWidget {
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final itemWidth = constraints.maxWidth / 3;
+                final itemWidth =
+                    constraints.maxWidth / 3;
 
                 return Stack(
                   children: [
@@ -84,37 +89,60 @@ class BottomNavBar extends StatelessWidget {
                       duration: const Duration(
                         milliseconds: 430,
                       ),
-                      curve: Curves.easeOutCubic,
-                      left: itemWidth * currentIndex + 6,
+                      curve:
+                          Curves.easeOutCubic,
+                      left:
+                          itemWidth *
+                              currentIndex +
+                          6,
                       top: 6,
                       width: itemWidth - 12,
                       height: 60,
                       child: IgnorePointer(
                         child: AnimatedContainer(
-                          duration: const Duration(
+                          duration:
+                              const Duration(
                             milliseconds: 430,
                           ),
-                          decoration: BoxDecoration(
+                          decoration:
+                              BoxDecoration(
                             color: isLight
-                                ? scheme.primary.withOpacity(0.34)
-                                : scheme.primary.withOpacity(0.28),
+                                ? scheme.primary
+                                    .withOpacity(0.34)
+                                : scheme.primary
+                                    .withOpacity(0.28),
                             borderRadius:
-                                BorderRadius.circular(22),
+                                BorderRadius.circular(
+                              22,
+                            ),
                             border: Border.all(
                               color: isLight
                                   ? scheme.primary
                                       .withOpacity(0.58)
                                   : Colors.white
                                       .withOpacity(0.22),
-                              width: isLight ? 1.3 : 1.0,
+                              width:
+                                  isLight
+                                      ? 1.3
+                                      : 1.0,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: scheme.primary.withOpacity(
-                                  isLight ? 0.38 : 0.22,
+                                color: scheme
+                                    .primary
+                                    .withOpacity(
+                                  isLight
+                                      ? 0.38
+                                      : 0.22,
                                 ),
-                                blurRadius: isLight ? 20 : 18,
-                                spreadRadius: isLight ? 1.5 : 1,
+                                blurRadius:
+                                    isLight
+                                        ? 20
+                                        : 18,
+                                spreadRadius:
+                                    isLight
+                                        ? 1.5
+                                        : 1,
                               ),
                             ],
                           ),
@@ -167,14 +195,18 @@ class BottomNavBar extends StatelessWidget {
     int index,
     Color accent,
   ) {
-    final selected = currentIndex == index;
+    final selected =
+        currentIndex == index;
 
     final mutedColor =
-        Theme.of(context).colorScheme.onSurfaceVariant;
+        Theme.of(context)
+            .colorScheme
+            .onSurfaceVariant;
 
     return Expanded(
       child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+        behavior:
+            HitTestBehavior.opaque,
         onTap: () {
           onDestinationSelected(index);
         },
@@ -182,20 +214,28 @@ class BottomNavBar extends StatelessWidget {
           height: 72,
           child: Center(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment:
+                  MainAxisAlignment.center,
               children: [
                 AnimatedScale(
-                  scale: selected ? 1.08 : 1.0,
-                  duration: const Duration(
+                  scale:
+                      selected ? 1.08 : 1.0,
+                  duration:
+                      const Duration(
                     milliseconds: 300,
                   ),
-                  curve: Curves.easeOutCubic,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(
+                  curve:
+                      Curves.easeOutCubic,
+                  child:
+                      AnimatedSwitcher(
+                    duration:
+                        const Duration(
                       milliseconds: 220,
                     ),
                     child: Icon(
-                      selected ? selectedIcon : icon,
+                      selected
+                          ? selectedIcon
+                          : icon,
                       key: ValueKey(
                         '$index-$selected',
                       ),
@@ -207,11 +247,13 @@ class BottomNavBar extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 AnimatedDefaultTextStyle(
-                  duration: const Duration(
+                  duration:
+                      const Duration(
                     milliseconds: 220,
                   ),
                   style: TextStyle(
-                    fontSize: selected ? 12 : 11,
+                    fontSize:
+                        selected ? 12 : 11,
                     fontWeight: selected
                         ? FontWeight.w600
                         : FontWeight.normal,
@@ -229,4 +271,3 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 }
-
