@@ -37,7 +37,8 @@ class _UpdateButtonState
     });
 
     if (update == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         const SnackBar(
           content: Text(
             'Güncelleme kontrolü başarısız.',
@@ -54,7 +55,8 @@ class _UpdateButtonState
     );
 
     if (!isNewer) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(
             'ThisLinux v${widget.currentVersion} güncel.',
@@ -67,7 +69,9 @@ class _UpdateButtonState
     _showUpdateDialog(update);
   }
 
-  void _showUpdateDialog(UpdateInfo update) {
+  void _showUpdateDialog(
+    UpdateInfo update,
+  ) {
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -83,16 +87,25 @@ class _UpdateButtonState
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(dialogContext).pop();
+                Navigator.of(
+                  dialogContext,
+                ).pop();
               },
-              child: const Text('İptal'),
+              child: const Text(
+                'İptal',
+              ),
             ),
             FilledButton(
               onPressed: () {
-                Navigator.of(dialogContext).pop();
+                Navigator.of(
+                  dialogContext,
+                ).pop();
+
                 _installUpdate(update);
               },
-              child: const Text('Güncelle'),
+              child: const Text(
+                'Güncelle',
+              ),
             ),
           ],
         );
@@ -116,7 +129,8 @@ class _UpdateButtonState
     } on Exception catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(
             'Güncelleme başlatılamadı: $error',
@@ -133,7 +147,9 @@ class _UpdateButtonState
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     final scheme =
         Theme.of(context).colorScheme;
 
@@ -155,21 +171,23 @@ class _UpdateButtonState
                   ? 'Güncellemeler kontrol ediliyor...'
                   : 'Mevcut sürüm: v${widget.currentVersion}',
         ),
-        trailing: _checking || _installing
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child:
-                    CircularProgressIndicator(
-                  strokeWidth: 2,
-                ),
-              )
-            : const Icon(
-                Icons.chevron_right,
-              ),
-        onTap: _checking || _installing
-            ? null
-            : _checkForUpdate,
+        trailing:
+            _checking || _installing
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child:
+                        CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Icon(
+                    Icons.chevron_right,
+                  ),
+        onTap:
+            _checking || _installing
+                ? null
+                : _checkForUpdate,
       ),
     );
   }
