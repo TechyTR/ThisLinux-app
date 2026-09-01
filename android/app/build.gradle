@@ -6,8 +6,10 @@ plugins {
 
 android {
     namespace = "org.test.thislinux"
+
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+
+    ndkVersion = "26.1.10909125"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -20,8 +22,11 @@ android {
 
     defaultConfig {
         applicationId = "org.test.thislinux"
+
         minSdk = 23
+
         targetSdk = flutter.targetSdkVersion
+
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
