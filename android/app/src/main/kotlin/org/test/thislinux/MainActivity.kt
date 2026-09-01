@@ -1,10 +1,12 @@
 package org.test.thislinux
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Bundle
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -15,19 +17,31 @@ import java.net.URL
 
 class MainActivity : FlutterActivity() {
 
-    private val channelName = "thislinux/updater"
+    private val channelName =
+        "thislinux/updater"
 
-    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        super.configureFlutterEngine(flutterEngine)
+    override fun configureFlutterEngine(
+        flutterEngine: FlutterEngine
+    ) {
+        super.configureFlutterEngine(
+            flutterEngine
+        )
 
         MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
+            flutterEngine
+                .dartExecutor
+                .binaryMessenger,
             channelName
-        ).setMethodCallHandler { call, result ->
+        ).setMethodCallHandler {
+                call,
+                result ->
 
             when (call.method) {
                 "downloadAndInstall" -> {
-                    val url = call.argument<String>("url")
+                    val url =
+                        call.argument<String>(
+                            "url"
+                        )
 
                     if (url.isNullOrBlank()) {
                         result.error(
@@ -38,7 +52,10 @@ class MainActivity : FlutterActivity() {
                         return@setMethodCallHandler
                     }
 
-                    downloadAndInstall(url, result)
+                    downloadAndInstall(
+                        url,
+                        result
+                    )
                 }
 
                 else -> {
@@ -53,12 +70,16 @@ class MainActivity : FlutterActivity() {
         result: MethodChannel.Result
     ) {
         Thread {
-            var connection: HttpURLConnection? = null
+            var connection:
+                HttpURLConnection? = null
 
             try {
                 val url = URL(apkUrl)
 
-                connection = url.openConnection() as HttpURLConnection
+                connection =
+                    url.openConnection()
+                        as HttpURLConnection
+
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 15000
                 connection.readTimeout = 30000
@@ -71,19 +92,21 @@ class MainActivity : FlutterActivity() {
                     )
                 }
 
-                val updateDirectory = File(
-                    cacheDir,
-                    "updates"
-                )
+                val updateDirectory =
+                    File(
+                        cacheDir,
+                        "updates"
+                    )
 
                 if (!updateDirectory.exists()) {
                     updateDirectory.mkdirs()
                 }
 
-                val apkFile = File(
-                    updateDirectory,
-                    "thislinux-update.apk"
-                )
+                val apkFile =
+                    File(
+                        updateDirectory,
+                        "thislinux-update.apk"
+                    )
 
                 if (apkFile.exists()) {
                     apkFile.delete()
@@ -91,32 +114,72 @@ class MainActivity : FlutterActivity() {
 
                 connection.inputStream.use { input ->
                     apkFile.outputStream().use { output ->
-                        val buffer = ByteArray(8192)
+
+                        val buffer =
+                            ByteArray(8192)
 
                         while (true) {
-                            val count = input.read(buffer)
+                            val count =
+                                input.read(buffer)
 
                             if (count == -1) {
                                 break
                             }
 
-                            output.write(buffer, 0, count)
+                            output.write(
+                                buffer,
+                                0,
+                                count
+                            )
                         }
 
                         output.flush()
                     }
                 }
 
-                Handler(Looper.getMainLooper()).post {
+                if (!apkFile.exists() ||
+                    apkFile.length() <= 0
+                ) {
+                    throw Exception(
+                        "İndirilen APK geçersiz."
+                    )
+                }
+
+                Handler(
+                    Looper.getMainLooper()
+                ).post {
+
+                    if (
+                        Build.VERSION.SDK_INT >=
+                        Build.VERSION_CODES.O
+                    ) {
+                        if (
+                            !packageManager
+                                .canRequestPackageInstalls()
+                        ) {
+                            openInstallPermissionSettings()
+
+                            result.success(
+                                "permission_required"
+                            )
+
+                            return@post
+                        }
+                    }
+
                     installApk(apkFile)
+
                     result.success(true)
                 }
 
             } catch (e: Exception) {
-                Handler(Looper.getMainLooper()).post {
+                Handler(
+                    Looper.getMainLooper()
+                ).post {
                     result.error(
                         "UPDATE_FAILED",
-                        e.message ?: "APK güncellemesi başarısız.",
+                        e.message
+                            ?: "APK güncellemesi başarısız.",
                         null
                     )
                 }
@@ -126,22 +189,48 @@ class MainActivity : FlutterActivity() {
         }.start()
     }
 
-    private fun installApk(apkFile: File) {
-        val apkUri: Uri = FileProvider.getUriForFile(
-            this,
-            "${applicationContext.packageName}.fileprovider",
-            apkFile
-        )
+    private fun openInstallPermissionSettings() {
+        if (Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.O
+        ) {
+            val intent =
+                Intent(
+                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES
+                ).apply {
+                    data = Uri.parse(
+                        "package:$packageName"
+                    )
+                }
 
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(
-                apkUri,
-                "application/vnd.android.package-archive"
+            startActivity(intent)
+        }
+    }
+
+    private fun installApk(
+        apkFile: File
+    ) {
+        val apkUri: Uri =
+            FileProvider.getUriForFile(
+                this,
+                "${applicationContext.packageName}.fileprovider",
+                apkFile
             )
 
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
+        val intent =
+            Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(
+                    apkUri,
+                    "application/vnd.android.package-archive"
+                )
+
+                addFlags(
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                )
+            }
 
         startActivity(intent)
     }
