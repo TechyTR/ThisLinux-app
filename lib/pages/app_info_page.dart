@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../theme/app_theme.dart';
+import 'battery_lab_page.dart';
+import 'benchmark_page.dart';
+import 'network_lab_page.dart';
+import 'sensor_lab_page.dart';
+import 'storage_manager_page.dart';
 
 class AppInfoPage extends StatefulWidget {
   final AppThemeColor selectedTheme;
@@ -44,15 +49,13 @@ class _AppInfoPageState
       if (!mounted) return;
 
       setState(() {
-        currentVersion =
-            packageInfo.version;
+        currentVersion = packageInfo.version;
       });
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
-        currentVersion =
-            'Bilinmiyor';
+        currentVersion = 'Bilinmiyor';
       });
     }
   }
@@ -73,9 +76,7 @@ class _AppInfoPageState
       },
       child: AnimatedContainer(
         duration:
-            const Duration(
-          milliseconds: 200,
-        ),
+            const Duration(milliseconds: 200),
         margin:
             const EdgeInsets.only(
           right: 12,
@@ -86,8 +87,7 @@ class _AppInfoPageState
           horizontal: 18,
           vertical: 12,
         ),
-        decoration:
-            BoxDecoration(
+        decoration: BoxDecoration(
           color: isSelected
               ? color
               : Colors.transparent,
@@ -97,6 +97,16 @@ class _AppInfoPageState
           ),
           borderRadius:
               BorderRadius.circular(30),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color:
+                        color.withOpacity(0.30),
+                    blurRadius: 14,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
         ),
         child: Text(
           AppTheme.labelOf(theme),
@@ -119,6 +129,11 @@ class _AppInfoPageState
     final isSelected =
         widget.selectedStyle == style;
 
+    final isLight =
+        style ==
+            AppThemeStyle
+                .liquidGlassLight;
+
     return Card(
       margin:
           const EdgeInsets.only(
@@ -126,16 +141,12 @@ class _AppInfoPageState
       ),
       child: ListTile(
         leading: Icon(
-          style ==
-                  AppThemeStyle
-                      .liquidGlassLight
+          isLight
               ? Icons.light_mode
               : Icons.dark_mode,
         ),
         title: Text(
-          style ==
-                  AppThemeStyle
-                      .liquidGlassLight
+          isLight
               ? 'Liquid Glass Light'
               : 'Liquid Glass Dark',
         ),
@@ -175,13 +186,20 @@ class _AppInfoPageState
     );
   }
 
+  void _openPage(Widget page) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => page,
+      ),
+    );
+  }
+
   @override
   Widget build(
     BuildContext context,
   ) {
     final scheme =
-        Theme.of(context)
-            .colorScheme;
+        Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -299,9 +317,9 @@ class _AppInfoPageState
             subtitle:
                 'Cihaz performansını test et',
             onTap: () {
-              // Benchmark bağlantısı
-              // mevcut sayfa yapısına
-              // göre ayrıca bağlanacak.
+              _openPage(
+                const BenchmarkPage(),
+              );
             },
           ),
 
@@ -311,7 +329,11 @@ class _AppInfoPageState
                 'Storage Manager',
             subtitle:
                 'Depolama kullanımını incele',
-            onTap: () {},
+            onTap: () {
+              _openPage(
+                const StorageManagerPage(),
+              );
+            },
           ),
 
           _toolButton(
@@ -319,7 +341,11 @@ class _AppInfoPageState
             title: 'SensorLab',
             subtitle:
                 'Sensör bilgilerini incele',
-            onTap: () {},
+            onTap: () {
+              _openPage(
+                const SensorLabPage(),
+              );
+            },
           ),
 
           _toolButton(
@@ -328,7 +354,11 @@ class _AppInfoPageState
             title: 'Network Lab',
             subtitle:
                 'Ağ bağlantısını incele',
-            onTap: () {},
+            onTap: () {
+              _openPage(
+                const NetworkLabPage(),
+              );
+            },
           ),
 
           _toolButton(
@@ -337,7 +367,11 @@ class _AppInfoPageState
             title: 'Battery Lab',
             subtitle:
                 'Pil durumunu incele',
-            onTap: () {},
+            onTap: () {
+              _openPage(
+                const BatteryLabPage(),
+              );
+            },
           ),
 
           const SizedBox(
