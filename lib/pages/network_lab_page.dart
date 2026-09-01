@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -32,25 +30,25 @@ class _NetworkLabPageState
       _testing = true;
       _latency = null;
       _statusCode = null;
-      _status = 'Bağlantı test ediliyor...';
+      _status =
+          'Bağlantı test ediliyor...';
     });
 
-    final stopwatch = Stopwatch()
-      ..start();
+    final stopwatch =
+        Stopwatch()..start();
 
     try {
-      final response =
-          await http
-              .get(
-                Uri.parse(
-                  'https://www.google.com/generate_204',
-                ),
-              )
-              .timeout(
-                const Duration(
-                  seconds: 5,
-                ),
-              );
+      final response = await http
+          .get(
+            Uri.parse(
+              'https://www.google.com/generate_204',
+            ),
+          )
+          .timeout(
+            const Duration(
+              seconds: 5,
+            ),
+          );
 
       stopwatch.stop();
 
@@ -59,12 +57,15 @@ class _NetworkLabPageState
       setState(() {
         _latency =
             stopwatch.elapsedMilliseconds;
+
         _statusCode =
             response.statusCode;
+
         _status =
             response.statusCode == 204
                 ? 'Bağlantı başarılı'
                 : 'Sunucu yanıt verdi';
+
         _lastTest = DateTime.now();
         _testing = false;
       });
@@ -76,8 +77,10 @@ class _NetworkLabPageState
       setState(() {
         _latency =
             stopwatch.elapsedMilliseconds;
+
         _status =
             'Bağlantı başarısız';
+
         _lastTest = DateTime.now();
         _testing = false;
       });
@@ -105,7 +108,8 @@ class _NetworkLabPageState
         title: Text(title),
         trailing: Text(
           value,
-          style: const TextStyle(
+          style:
+              const TextStyle(
             fontWeight:
                 FontWeight.w700,
           ),
@@ -151,6 +155,30 @@ class _NetworkLabPageState
             .padLeft(2, '0');
 
     return '$hour:$minute:$second';
+  }
+
+  String _latencyQuality() {
+    if (_latency == null) {
+      return 'Ölçüm yok';
+    }
+
+    if (_latency! < 40) {
+      return 'Çok iyi';
+    }
+
+    if (_latency! < 80) {
+      return 'İyi';
+    }
+
+    if (_latency! < 150) {
+      return 'Orta';
+    }
+
+    if (_latency! < 300) {
+      return 'Yüksek gecikme';
+    }
+
+    return 'Çok yüksek';
   }
 
   @override
@@ -200,8 +228,8 @@ class _NetworkLabPageState
                     height: 8,
                   ),
                   Text(
-                    'Google bağlantısı üzerinden '
-                    'gerçek ağ testi',
+                    'Gerçek internet bağlantısı '
+                    'üzerinden gecikme testi',
                     textAlign:
                         TextAlign.center,
                     style: TextStyle(
@@ -226,15 +254,24 @@ class _NetworkLabPageState
           ),
 
           _infoCard(
+            icon: Icons.analytics_outlined,
+            title: 'Gecikme Kalitesi',
+            value:
+                _latencyQuality(),
+          ),
+
+          _infoCard(
             icon: Icons.http,
             title: 'HTTP Durumu',
-            value: _statusCodeText(),
+            value:
+                _statusCodeText(),
           ),
 
           _infoCard(
             icon: Icons.schedule,
             title: 'Son Test',
-            value: _lastTestText(),
+            value:
+                _lastTestText(),
           ),
 
           const SizedBox(
@@ -279,3 +316,4 @@ class _NetworkLabPageState
     );
   }
 }
+
