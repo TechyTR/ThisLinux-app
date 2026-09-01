@@ -1,7 +1,6 @@
 package org.test.thislinux
 
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -17,31 +16,23 @@ import java.net.URL
 
 class MainActivity : FlutterActivity() {
 
-    private val channelName =
-        "thislinux/updater"
+    private val channelName = "thislinux/updater"
 
     override fun configureFlutterEngine(
         flutterEngine: FlutterEngine
     ) {
-        super.configureFlutterEngine(
-            flutterEngine
-        )
+        super.configureFlutterEngine(flutterEngine)
 
         MethodChannel(
-            flutterEngine
-                .dartExecutor
-                .binaryMessenger,
+            flutterEngine.dartExecutor.binaryMessenger,
             channelName
-        ).setMethodCallHandler {
-                call,
-                result ->
+        ).setMethodCallHandler { call, result ->
 
             when (call.method) {
+
                 "downloadAndInstall" -> {
                     val url =
-                        call.argument<String>(
-                            "url"
-                        )
+                        call.argument<String>("url")
 
                     if (url.isNullOrBlank()) {
                         result.error(
@@ -70,11 +61,18 @@ class MainActivity : FlutterActivity() {
         result: MethodChannel.Result
     ) {
         Thread {
+
             var connection:
                 HttpURLConnection? = null
 
             try {
                 val url = URL(apkUrl)
+
+                if (url.protocol != "https") {
+                    throw Exception(
+                        "Sadece HTTPS adresleri kullanılabilir."
+                    )
+                }
 
                 connection =
                     url.openConnection()
@@ -84,6 +82,7 @@ class MainActivity : FlutterActivity() {
                 connection.connectTimeout = 15000
                 connection.readTimeout = 30000
                 connection.instanceFollowRedirects = true
+
                 connection.connect()
 
                 if (connection.responseCode !in 200..299) {
@@ -113,12 +112,14 @@ class MainActivity : FlutterActivity() {
                 }
 
                 connection.inputStream.use { input ->
+
                     apkFile.outputStream().use { output ->
 
                         val buffer =
                             ByteArray(8192)
 
                         while (true) {
+
                             val count =
                                 input.read(buffer)
 
@@ -153,10 +154,12 @@ class MainActivity : FlutterActivity() {
                         Build.VERSION.SDK_INT >=
                         Build.VERSION_CODES.O
                     ) {
+
                         if (
                             !packageManager
                                 .canRequestPackageInstalls()
                         ) {
+
                             openInstallPermissionSettings()
 
                             result.success(
@@ -173,9 +176,11 @@ class MainActivity : FlutterActivity() {
                 }
 
             } catch (e: Exception) {
+
                 Handler(
                     Looper.getMainLooper()
                 ).post {
+
                     result.error(
                         "UPDATE_FAILED",
                         e.message
@@ -183,20 +188,26 @@ class MainActivity : FlutterActivity() {
                         null
                     )
                 }
+
             } finally {
                 connection?.disconnect()
             }
+
         }.start()
     }
 
     private fun openInstallPermissionSettings() {
-        if (Build.VERSION.SDK_INT >=
+
+        if (
+            Build.VERSION.SDK_INT >=
             Build.VERSION_CODES.O
         ) {
+
             val intent =
                 Intent(
                     Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES
                 ).apply {
+
                     data = Uri.parse(
                         "package:$packageName"
                     )
@@ -209,7 +220,8 @@ class MainActivity : FlutterActivity() {
     private fun installApk(
         apkFile: File
     ) {
-        val apkUri: Uri =
+
+        val apkUri =
             FileProvider.getUriForFile(
                 this,
                 "${applicationContext.packageName}.fileprovider",
@@ -218,6 +230,7 @@ class MainActivity : FlutterActivity() {
 
         val intent =
             Intent(Intent.ACTION_VIEW).apply {
+
                 setDataAndType(
                     apkUri,
                     "application/vnd.android.package-archive"
