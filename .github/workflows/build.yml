@@ -28,25 +28,152 @@ jobs:
           flutter-version: '3.24.0'
           channel: stable
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.3'
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Backup custom Android files
+        run: |
+          mkdir -p /tmp/thislinux_backup
+
+          cp android/app/src/main/kotlin/org/test/thislinux/MainActivity.kt \
+            /tmp/thislinux_backup/MainActivity.kt
+
+          cp android/app/src/main/res/xml/file_paths.xml \
+            /tmp/thislinux_backup/file_paths.xml
+
+          cp android/app/src/main/res/values/styles.xml \
+            /tmp/thislinux_backup/styles.xml
+
+      - name: Recreate Android platform
+        run: |
+          rm -rf android
+          flutter create --platforms=android .
+
+      - name: Restore custom Android files
+        run: |
+          mkdir -p android/app/src/main/kotlin/org/test/thislinux
+          mkdir -p android/app/src/main/res/xml
+          mkdir -p android/app/src/main/res/values
+
+          cp /tmp/thislinux_backup/MainActivity.kt \
+            android/app/src/main/kotlin/org/test/thislinux/MainActivity.kt
+
+          cp /tmp/thislinux_backup/file_paths.xml \
+            android/app/src/main/res/xml/file_paths.xml
+
+          cp /tmp/thislinux_backup/styles.xml \
+            android/app/src/main/res/values/styles.xml
+
+      - name: Configure Android project
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          manifest = Path(
+              "android/app/src/main/AndroidManifest.xml"
+          )
+
+          text = manifest.read_text()
+
+          text = text.replace(
+              '<uses-permission android:name="android.permission.INTERNET"/>',
+              '<uses-permission android:name="android.permission.INTERNET"/>\n'
+              '    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>'
+          )
+
+          if "REQUEST_INSTALL_PACKAGES" not in text:
+              text = text.replace(
+                  '<application',
+                  '<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>\n\n'
+                  '    <application',
+                  1
+              )
+
+          provider = '''
+              <provider
+                  android:name="androidx.core.content.FileProvider"
+                  android:authorities="${applicationId}.fileprovider"
+                  android:exported="false"
+                  android:grantUriPermissions="true">
+
+                  <meta-data
+                      android:name="android.support.FILE_PROVIDER_PATHS"
+                      android:resource="@xml/file_paths" />
+
+              </provider>
+          '''
+
+          if "androidx.core.content.FileProvider" not in text:
+              text = text.replace(
+                  "</application>",
+                  provider + "\n\n    </application>"
+              )
+
+          if 'android:name="${applicationName}"' not in text:
+              text = text.replace(
+                  '<application',
+                  '<application android:name="${applicationName}"',
+                  1
+              )
+
+          if 'android:name="flutterEmbedding"' not in text:
+              text = text.replace(
+                  "</application>",
+                  '''    <meta-data
+                      android:name="flutterEmbedding"
+                      android:value="2" />
+
+              </application>'''
+              )
+
+          manifest.write_text(text)
+          PY
+
+      - name: Configure Gradle
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          gradle = Path("android/app/build.gradle")
+
+          text = gradle.read_text()
+
+          text = text.replace(
+              "minSdk = flutter.minSdkVersion",
+              "minSdk = 23"
+          )
+
+          if "minSdk = 23" not in text:
+              text = text.replace(
+                  "defaultConfig {",
+                  "defaultConfig {\n        minSdk = 23",
+                  1
+              )
+
+          gradle.write_text(text)
+          PY
 
       - name: Create Flutter local.properties
         run: |
           echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
 
-      - name: Generate Gradle wrapper
-        run: |
-          cd android
-          gradle wrapper --gradle-version 8.3
-
-      - name: Get dependencies
-        run: flutter pub get
-
       - name: Generate app icon
         run: dart run flutter_launcher_icons
+
+      - name: Verify Android embedding
+        run: |
+          echo "=== AndroidManifest.xml ==="
+          cat android/app/src/main/AndroidManifest.xml
+
+          echo "=== V1 embedding references ==="
+          if grep -RniE \
+            'io\.flutter\.app\.|flutterEmbedding.*1|io\.flutter\.view\.' \
+            android/app/src/main; then
+            echo "ERROR: Android V1 embedding reference detected."
+            exit 1
+          fi
+
+          echo "Android V2 embedding check passed."
 
       - name: Build APK
         run: flutter build apk --release
