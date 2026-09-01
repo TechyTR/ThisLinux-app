@@ -28,211 +28,26 @@ jobs:
           flutter-version: '3.24.0'
           channel: stable
 
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Backup custom Android files
-        run: |
-          mkdir -p /tmp/thislinux_backup
-
-          cp android/app/src/main/kotlin/org/test/thislinux/MainActivity.kt \
-            /tmp/thislinux_backup/MainActivity.kt
-
-          cp android/app/src/main/res/xml/file_paths.xml \
-            /tmp/thislinux_backup/file_paths.xml
-
-          cp android/app/src/main/res/values/styles.xml \
-            /tmp/thislinux_backup/styles.xml
-
-      - name: Recreate Android platform
-        run: |
-          rm -rf android
-          flutter create \
-            --platforms=android \
-            --project-name thislinux \
-            .
-
-      - name: Configure Gradle
-        run: |
-          cat > android/settings.gradle <<'EOF'
-          pluginManagement {
-              def flutterSdkPath = {
-                  def properties = new Properties()
-                  file("local.properties").withInputStream {
-                      properties.load(it)
-                  }
-
-                  def flutterSdkPath =
-                      properties.getProperty("flutter.sdk")
-
-                  assert flutterSdkPath != null
-
-                  return flutterSdkPath
-              }()
-
-              includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
-
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
-
-          plugins {
-              id "dev.flutter.flutter-plugin-loader" version "1.0.0"
-              id "com.android.application" version "8.5.2" apply false
-              id "org.jetbrains.kotlin.android" version "2.1.21" apply false
-          }
-
-          include ":app"
-          EOF
-
-          cat > android/app/build.gradle <<'EOF'
-          plugins {
-              id "com.android.application"
-              id "org.jetbrains.kotlin.android"
-              id "dev.flutter.flutter-gradle-plugin"
-          }
-
-          android {
-              namespace = "org.test.thislinux"
-              compileSdk = flutter.compileSdkVersion
-              ndkVersion = flutter.ndkVersion
-
-              compileOptions {
-                  sourceCompatibility = JavaVersion.VERSION_17
-                  targetCompatibility = JavaVersion.VERSION_17
-              }
-
-              kotlinOptions {
-                  jvmTarget = "17"
-              }
-
-              defaultConfig {
-                  applicationId = "org.test.thislinux"
-                  minSdk = 23
-                  targetSdk = flutter.targetSdkVersion
-                  versionCode = flutter.versionCode
-                  versionName = flutter.versionName
-              }
-
-              buildTypes {
-                  release {
-                      signingConfig = signingConfigs.debug
-                  }
-              }
-          }
-
-          flutter {
-              source = "../.."
-          }
-          EOF
-
-          cat > android/gradle/wrapper/gradle-wrapper.properties <<'EOF'
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-bin.zip
-          networkTimeout=10000
-          validateDistributionUrl=true
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
-          EOF
-
-      - name: Restore custom Android files
-        run: |
-          mkdir -p android/app/src/main/kotlin/org/test/thislinux
-          mkdir -p android/app/src/main/res/xml
-          mkdir -p android/app/src/main/res/values
-
-          cp /tmp/thislinux_backup/MainActivity.kt \
-            android/app/src/main/kotlin/org/test/thislinux/MainActivity.kt
-
-          cp /tmp/thislinux_backup/file_paths.xml \
-            android/app/src/main/res/xml/file_paths.xml
-
-          cp /tmp/thislinux_backup/styles.xml \
-            android/app/src/main/res/values/styles.xml
-
-      - name: Configure Android Manifest
-        run: |
-          cat > android/app/src/main/AndroidManifest.xml <<'EOF'
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-              <uses-permission
-                  android:name="android.permission.INTERNET" />
-
-              <uses-permission
-                  android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-
-              <application
-                  android:label="This Linux"
-                  android:name="${applicationName}"
-                  android:icon="@mipmap/ic_launcher"
-                  android:allowBackup="false"
-                  android:supportsRtl="true">
-
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:launchMode="singleTop"
-                      android:theme="@style/LaunchTheme"
-                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-                      android:hardwareAccelerated="true"
-                      android:windowSoftInputMode="adjustResize">
-
-                      <meta-data
-                          android:name="io.flutter.embedding.android.NormalTheme"
-                          android:resource="@style/NormalTheme" />
-
-                      <intent-filter>
-                          <action
-                              android:name="android.intent.action.MAIN" />
-
-                          <category
-                              android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-
-                  </activity>
-
-                  <provider
-                      android:name="androidx.core.content.FileProvider"
-                      android:authorities="${applicationId}.fileprovider"
-                      android:exported="false"
-                      android:grantUriPermissions="true">
-
-                      <meta-data
-                          android:name="android.support.FILE_PROVIDER_PATHS"
-                          android:resource="@xml/file_paths" />
-
-                  </provider>
-
-                  <meta-data
-                      name="flutterEmbedding"
-                      android:value="2" />
-
-              </application>
-
-          </manifest>
-          EOF
-
       - name: Create Flutter local.properties
         run: |
           echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
 
-      - name: Generate app icon
-        run: dart run flutter_launcher_icons
+      - name: Get dependencies
+        run: |
+          flutter pub get
 
       - name: Verify Android configuration
         run: |
-          echo "=== Kotlin / AGP ==="
-          grep -E \
-            'com.android.application|org.jetbrains.kotlin.android' \
-            android/settings.gradle
+          echo "=== Android settings.gradle ==="
+          cat android/settings.gradle
 
           echo ""
-          echo "=== Gradle ==="
-          cat android/gradle/wrapper/gradle-wrapper.properties
+          echo "=== Android app/build.gradle ==="
+          cat android/app/build.gradle
+
+          echo ""
+          echo "=== Android Manifest ==="
+          cat android/app/src/main/AndroidManifest.xml
 
           echo ""
           echo "=== Android embedding check ==="
@@ -247,8 +62,20 @@ jobs:
 
           echo "Android V2 embedding confirmed."
 
+      - name: Generate app icon
+        run: |
+          dart run flutter_launcher_icons
+
       - name: Build APK
-        run: flutter build apk --release
+        run: |
+          flutter clean
+          flutter pub get
+          flutter build apk --release
+
+      - name: Verify APK
+        run: |
+          test -f build/app/outputs/flutter-apk/app-release.apk
+          ls -lh build/app/outputs/flutter-apk/app-release.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
