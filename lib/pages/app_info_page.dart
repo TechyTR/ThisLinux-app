@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../theme/app_theme.dart';
+import '../widgets/update_button.dart';
 import 'battery_lab_page.dart';
 import 'benchmark_page.dart';
 import 'network_lab_page.dart';
@@ -12,8 +13,11 @@ class AppInfoPage extends StatefulWidget {
   final AppThemeColor selectedTheme;
   final AppThemeStyle selectedStyle;
 
-  final Future<void> Function(AppThemeColor) onThemeChanged;
-  final Future<void> Function(AppThemeStyle) onStyleChanged;
+  final Future<void> Function(AppThemeColor)
+      onThemeChanged;
+
+  final Future<void> Function(AppThemeStyle)
+      onStyleChanged;
 
   const AppInfoPage({
     super.key,
@@ -24,10 +28,12 @@ class AppInfoPage extends StatefulWidget {
   });
 
   @override
-  State<AppInfoPage> createState() => _AppInfoPageState();
+  State<AppInfoPage> createState() =>
+      _AppInfoPageState();
 }
 
-class _AppInfoPageState extends State<AppInfoPage> {
+class _AppInfoPageState
+    extends State<AppInfoPage> {
   String currentVersion = 'Yükleniyor...';
 
   @override
@@ -131,7 +137,9 @@ class _AppInfoPageState extends State<AppInfoPage> {
         leading: Icon(icon),
         title: Text(title),
         trailing: isSelected
-            ? const Icon(Icons.check_circle)
+            ? const Icon(
+                Icons.check_circle,
+              )
             : null,
         onTap: () {
           widget.onStyleChanged(style);
@@ -218,7 +226,8 @@ class _AppInfoPageState extends State<AppInfoPage> {
                       ),
                     )
                     .toList(),
-          ),          const SizedBox(height: 12),
+          ),
+          const SizedBox(height: 12),
           Text(
             'Görünüm',
             style: TextStyle(
@@ -308,7 +317,20 @@ class _AppInfoPageState extends State<AppInfoPage> {
               );
             },
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
+          Text(
+            'Güncelleme',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color:
+                  scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          UpdateButton(
+            currentVersion: currentVersion,
+          ),
+          const SizedBox(height: 14),
           Center(
             child: Text(
               'ThisLinux v$currentVersion',
