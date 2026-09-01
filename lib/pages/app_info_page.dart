@@ -50,7 +50,8 @@ class _AppInfoPageState
       if (!mounted) return;
 
       setState(() {
-        currentVersion = packageInfo.version;
+        currentVersion =
+            packageInfo.version;
       });
     } catch (_) {
       if (!mounted) return;
@@ -71,6 +72,14 @@ class _AppInfoPageState
     final color =
         AppTheme.colorOf(theme);
 
+    final textColor =
+        ThemeData.estimateBrightnessForColor(
+              color,
+            ) ==
+            Brightness.dark
+        ? Colors.white
+        : Colors.black;
+
     return GestureDetector(
       onTap: () {
         widget.onThemeChanged(theme);
@@ -78,8 +87,7 @@ class _AppInfoPageState
       child: AnimatedContainer(
         duration:
             const Duration(milliseconds: 200),
-        margin:
-            const EdgeInsets.only(
+        margin: const EdgeInsets.only(
           right: 12,
           bottom: 12,
         ),
@@ -113,9 +121,10 @@ class _AppInfoPageState
           AppTheme.labelOf(theme),
           style: TextStyle(
             color: isSelected
-                ? Colors.black
+                ? textColor
                 : color,
-            fontWeight: FontWeight.bold,
+            fontWeight:
+                FontWeight.bold,
           ),
         ),
       ),
@@ -194,7 +203,8 @@ class _AppInfoPageState
             'ThisLinux',
             style: TextStyle(
               fontSize: 32,
-              fontWeight: FontWeight.bold,
+              fontWeight:
+                  FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
@@ -209,7 +219,8 @@ class _AppInfoPageState
           Text(
             'Tema',
             style: TextStyle(
-              fontWeight: FontWeight.w600,
+              fontWeight:
+                  FontWeight.w600,
               color:
                   scheme.onSurfaceVariant,
             ),
@@ -231,7 +242,8 @@ class _AppInfoPageState
           Text(
             'Görünüm',
             style: TextStyle(
-              fontWeight: FontWeight.w600,
+              fontWeight:
+                  FontWeight.w600,
               color:
                   scheme.onSurfaceVariant,
             ),
@@ -243,12 +255,14 @@ class _AppInfoPageState
             'Material Design',
           ),
           _styleButton(
-            AppThemeStyle.liquidGlassLight,
+            AppThemeStyle
+                .liquidGlassLight,
             Icons.light_mode,
             'Liquid Glass Light',
           ),
           _styleButton(
-            AppThemeStyle.liquidGlassDark,
+            AppThemeStyle
+                .liquidGlassDark,
             Icons.dark_mode,
             'Liquid Glass Dark',
           ),
@@ -256,7 +270,8 @@ class _AppInfoPageState
           Text(
             'Araçlar',
             style: TextStyle(
-              fontWeight: FontWeight.w600,
+              fontWeight:
+                  FontWeight.w600,
               color:
                   scheme.onSurfaceVariant,
             ),
@@ -321,14 +336,16 @@ class _AppInfoPageState
           Text(
             'Güncelleme',
             style: TextStyle(
-              fontWeight: FontWeight.w600,
+              fontWeight:
+                  FontWeight.w600,
               color:
                   scheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 12),
           UpdateButton(
-            currentVersion: currentVersion,
+            currentVersion:
+                currentVersion,
           ),
           const SizedBox(height: 14),
           Center(
