@@ -32,9 +32,11 @@ class _StorageManagerPageState
   }
 
   Future<void> _scanStorage() async {
-    setState(() {
-      _loading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _loading = true;
+      });
+    }
 
     final result = <String, double>{
       'Görseller': 0,
@@ -54,8 +56,8 @@ class _StorageManagerPageState
         await _scanDirectory(
           root,
           result,
-          (value) {
-            total += value;
+          (size) {
+            total += size;
           },
         );
       }
@@ -68,7 +70,9 @@ class _StorageManagerPageState
         ..clear()
         ..addAll(result);
 
-      _totalMb = total / 1024 / 1024;
+      _totalMb =
+          total / 1024 / 1024;
+
       _loading = false;
     });
   }
@@ -81,10 +85,11 @@ class _StorageManagerPageState
     List<FileSystemEntity> entities;
 
     try {
-      entities =
-          await directory.list(
-        followLinks: false,
-      ).toList();
+      entities = await directory
+          .list(
+            followLinks: false,
+          )
+          .toList();
     } catch (_) {
       return;
     }
@@ -98,18 +103,21 @@ class _StorageManagerPageState
           addSize(size);
 
           final category =
-              _categoryFor(
-            entity.path,
-          );
+              _categoryFor(entity.path);
 
           result[category] =
               (result[category] ?? 0) +
                   size;
         } else if (entity is Directory) {
           final name =
-              entity.path.split('/').last;
+              entity.path
+                  .split('/')
+                  .last;
 
-          if (name == 'Android') {
+          if (_shouldSkipDirectory(
+            entity.path,
+            name,
+          )) {
             continue;
           }
 
@@ -123,30 +131,52 @@ class _StorageManagerPageState
     }
   }
 
+  bool _shouldSkipDirectory(
+    String path,
+    String name,
+  ) {
+    final lower =
+        name.toLowerCase();
+
+    if (lower == 'android') {
+      return true;
+    }
+
+    if (lower == 'android' ||
+        lower == '.thumbnails' ||
+        lower == '.trash') {
+      return true;
+    }
+
+    return path
+        .toLowerCase()
+        .contains('/android/');
+  }
+
   String _categoryFor(String path) {
     final extension =
         path.toLowerCase();
 
     if (RegExp(
-      r'\.(jpg|jpeg|png|webp|gif|heic)$',
+      r'\.(jpg|jpeg|png|webp|gif|heic|heif|bmp)$',
     ).hasMatch(extension)) {
       return 'Görseller';
     }
 
     if (RegExp(
-      r'\.(mp4|mkv|avi|mov|webm)$',
+      r'\.(mp4|mkv|avi|mov|webm|3gp|m4v)$',
     ).hasMatch(extension)) {
       return 'Videolar';
     }
 
     if (RegExp(
-      r'\.(mp3|wav|ogg|flac|m4a)$',
+      r'\.(mp3|wav|ogg|flac|m4a|aac|opus)$',
     ).hasMatch(extension)) {
       return 'Ses';
     }
 
     if (RegExp(
-      r'\.(pdf|doc|docx|txt|xls|xlsx|ppt|pptx|zip|rar)$',
+      r'\.(pdf|doc|docx|txt|xls|xlsx|ppt|pptx|csv|zip|rar|7z)$',
     ).hasMatch(extension)) {
       return 'Belgeler';
     }
@@ -157,6 +187,10 @@ class _StorageManagerPageState
   String _formatSize(double mb) {
     if (mb >= 1024) {
       return '${(mb / 1024).toStringAsFixed(2)} GB';
+    }
+
+    if (mb < 1) {
+      return '${(mb * 1024).toStringAsFixed(1)} KB';
     }
 
     return '${mb.toStringAsFixed(1)} MB';
@@ -171,9 +205,7 @@ class _StorageManagerPageState
     );
 
     final values =
-        _categories.values
-            .map((value) => value)
-            .toList();
+        _categories.values.toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -184,7 +216,8 @@ class _StorageManagerPageState
       ),
       body: _loading
           ? const Center(
-              child: CircularProgressIndicator(),
+              child:
+                  CircularProgressIndicator(),
             )
           : RefreshIndicator(
               onRefresh: _scanStorage,
@@ -200,6 +233,10 @@ class _StorageManagerPageState
                       painter:
                           _StorageChartPainter(
                         values: values,
+                        backgroundColor:
+                            Theme.of(context)
+                                .colorScheme
+                                .surface,
                       ),
                       child: Center(
                         child: Column(
@@ -245,6 +282,11 @@ class _StorageManagerPageState
                           bottom: 10,
                         ),
                         child: ListTile(
+                          leading: Icon(
+                            _categoryIcon(
+                              entry.key,
+                            ),
+                          ),
                           title:
                               Text(entry.key),
                           subtitle: Text(
@@ -254,7 +296,8 @@ class _StorageManagerPageState
                                   1024,
                             ),
                           ),
-                          trailing: Text(
+                          trailing:
+                              Text(
                             '${percentage.toStringAsFixed(1)}%',
                             style:
                                 const TextStyle(
@@ -266,19 +309,61 @@ class _StorageManagerPageState
                       );
                     },
                   ),
+
+                  const SizedBox(
+                    height: 8,
+                  ),
+
+                  Text(
+                    'Android sistem klasörleri '
+                    'güvenlik nedeniyle taramaya '
+                    'dahil edilmez.',
+                    textAlign:
+                        TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color:
+                          Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant,
+                    ),
+                  ),
                 ],
               ),
             ),
     );
+  }
+
+  IconData _categoryIcon(
+    String category,
+  ) {
+    switch (category) {
+      case 'Görseller':
+        return Icons.image_outlined;
+
+      case 'Videolar':
+        return Icons.video_library_outlined;
+
+      case 'Ses':
+        return Icons.audiotrack_outlined;
+
+      case 'Belgeler':
+        return Icons.description_outlined;
+
+      default:
+        return Icons.folder_outlined;
+    }
   }
 }
 
 class _StorageChartPainter
     extends CustomPainter {
   final List<double> values;
+  final Color backgroundColor;
 
   _StorageChartPainter({
     required this.values,
+    required this.backgroundColor,
   });
 
   @override
@@ -292,12 +377,7 @@ class _StorageChartPainter
       (sum, value) => sum + value,
     );
 
-    if (total <= 0) {
-      return;
-    }
-
-    final center =
-        Offset(
+    final center = Offset(
       size.width / 2,
       size.height / 2,
     );
@@ -310,6 +390,22 @@ class _StorageChartPainter
             2 -
             10;
 
+    final trackPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 32
+      ..strokeCap = StrokeCap.butt
+      ..color = backgroundColor;
+
+    canvas.drawCircle(
+      center,
+      radius,
+      trackPaint,
+    );
+
+    if (total <= 0) {
+      return;
+    }
+
     const colors = [
       Color(0xFF7E57C2),
       Color(0xFF42A5F5),
@@ -318,10 +414,9 @@ class _StorageChartPainter
       Color(0xFF78909C),
     ];
 
-    double startAngle =
-        -pi / 2;
+    double startAngle = -pi / 2;
 
-    for (int i = 0;
+    for (var i = 0;
         i < values.length;
         i++) {
       final sweep =
@@ -330,8 +425,14 @@ class _StorageChartPainter
               2 *
               pi;
 
+      if (sweep <= 0) {
+        continue;
+      }
+
       final paint = Paint()
-        ..style = PaintingStyle.fill
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 32
+        ..strokeCap = StrokeCap.butt
         ..color =
             colors[i % colors.length];
 
@@ -342,28 +443,21 @@ class _StorageChartPainter
         ),
         startAngle,
         sweep,
-        true,
+        false,
         paint,
       );
 
       startAngle += sweep;
     }
-
-    final holePaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = Colors.transparent;
-
-    canvas.drawCircle(
-      center,
-      radius * 0.55,
-      holePaint,
-    );
   }
 
   @override
   bool shouldRepaint(
     covariant _StorageChartPainter oldDelegate,
   ) {
-    return oldDelegate.values != values;
+    return oldDelegate.values != values ||
+        oldDelegate.backgroundColor !=
+            backgroundColor;
   }
 }
+
