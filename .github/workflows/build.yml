@@ -22,23 +22,6 @@ jobs:
           flutter-version: '3.24.0'
           channel: stable
 
-      - name: Create Android platform
-        run: |
-          flutter create --platforms=android --org org.test temp_scaffold
-          cp -r temp_scaffold/android .
-          rm -rf temp_scaffold
-
-      - name: Set application name
-        run: |
-          sed -i 's/android:label="temp_scaffold"/android:label="This Linux"/' \
-          android/app/src/main/AndroidManifest.xml
-
-      - name: Fix Kotlin version
-        run: |
-          sed -i -E \
-          "s/(id[[:space:]]*['\"]org\.jetbrains\.kotlin\.android['\"][[:space:]]*version[[:space:]]*['\"])[^'\"]+(['\"])/\11.9.24\2/" \
-          android/settings.gradle
-
       - name: Get dependencies
         run: flutter pub get
 
