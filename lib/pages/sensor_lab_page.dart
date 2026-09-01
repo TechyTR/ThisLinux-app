@@ -33,6 +33,12 @@ class _SensorLabPageState
   UserAccelerometerEvent?
       _userAccelerometer;
 
+  bool _accelerometerAvailable = true;
+  bool _gyroscopeAvailable = true;
+  bool _magnetometerAvailable = true;
+  bool _userAccelerometerAvailable =
+      true;
+
   @override
   void initState() {
     super.initState();
@@ -40,61 +46,117 @@ class _SensorLabPageState
   }
 
   void _startSensors() {
-    _accelerometerSubscription =
-        accelerometerEventStream().listen(
-      (event) {
-        if (!mounted) return;
+    try {
+      _accelerometerSubscription =
+          accelerometerEventStream()
+              .listen(
+        (event) {
+          if (!mounted) return;
 
-        setState(() {
-          _accelerometer = event;
-        });
-      },
-      onError: (_) {},
-    );
+          setState(() {
+            _accelerometer = event;
+          });
+        },
+        onError: (_) {
+          if (!mounted) return;
 
-    _gyroscopeSubscription =
-        gyroscopeEventStream().listen(
-      (event) {
-        if (!mounted) return;
+          setState(() {
+            _accelerometerAvailable =
+                false;
+          });
+        },
+      );
+    } catch (_) {
+      _accelerometerAvailable = false;
+    }
 
-        setState(() {
-          _gyroscope = event;
-        });
-      },
-      onError: (_) {},
-    );
+    try {
+      _gyroscopeSubscription =
+          gyroscopeEventStream()
+              .listen(
+        (event) {
+          if (!mounted) return;
 
-    _magnetometerSubscription =
-        magnetometerEventStream().listen(
-      (event) {
-        if (!mounted) return;
+          setState(() {
+            _gyroscope = event;
+          });
+        },
+        onError: (_) {
+          if (!mounted) return;
 
-        setState(() {
-          _magnetometer = event;
-        });
-      },
-      onError: (_) {},
-    );
+          setState(() {
+            _gyroscopeAvailable =
+                false;
+          });
+        },
+      );
+    } catch (_) {
+      _gyroscopeAvailable = false;
+    }
 
-    _userAccelerometerSubscription =
-        userAccelerometerEventStream().listen(
-      (event) {
-        if (!mounted) return;
+    try {
+      _magnetometerSubscription =
+          magnetometerEventStream()
+              .listen(
+        (event) {
+          if (!mounted) return;
 
-        setState(() {
-          _userAccelerometer = event;
-        });
-      },
-      onError: (_) {},
-    );
+          setState(() {
+            _magnetometer = event;
+          });
+        },
+        onError: (_) {
+          if (!mounted) return;
+
+          setState(() {
+            _magnetometerAvailable =
+                false;
+          });
+        },
+      );
+    } catch (_) {
+      _magnetometerAvailable = false;
+    }
+
+    try {
+      _userAccelerometerSubscription =
+          userAccelerometerEventStream()
+              .listen(
+        (event) {
+          if (!mounted) return;
+
+          setState(() {
+            _userAccelerometer = event;
+          });
+        },
+        onError: (_) {
+          if (!mounted) return;
+
+          setState(() {
+            _userAccelerometerAvailable =
+                false;
+          });
+        },
+      );
+    } catch (_) {
+      _userAccelerometerAvailable =
+          false;
+    }
   }
 
   @override
   void dispose() {
-    _accelerometerSubscription?.cancel();
-    _gyroscopeSubscription?.cancel();
-    _magnetometerSubscription?.cancel();
-    _userAccelerometerSubscription?.cancel();
+    _accelerometerSubscription
+        ?.cancel();
+
+    _gyroscopeSubscription
+        ?.cancel();
+
+    _magnetometerSubscription
+        ?.cancel();
+
+    _userAccelerometerSubscription
+        ?.cancel();
 
     super.dispose();
   }
@@ -112,6 +174,7 @@ class _SensorLabPageState
     required String title,
     required String subtitle,
     required List<String> values,
+    required bool available,
   }) {
     final scheme =
         Theme.of(context).colorScheme;
@@ -132,7 +195,11 @@ class _SensorLabPageState
               children: [
                 Icon(
                   icon,
-                  color: scheme.primary,
+                  color:
+                      available
+                          ? scheme.primary
+                          : scheme
+                              .onSurfaceVariant,
                 ),
                 const SizedBox(
                   width: 12,
@@ -140,7 +207,8 @@ class _SensorLabPageState
                 Expanded(
                   child: Column(
                     crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                        CrossAxisAlignment
+                            .start,
                     children: [
                       Text(
                         title,
@@ -152,7 +220,10 @@ class _SensorLabPageState
                         ),
                       ),
                       Text(
-                        subtitle,
+                        available
+                            ? subtitle
+                            : 'Bu sensör cihazda '
+                                'bulunamadı.',
                         style: TextStyle(
                           fontSize: 12,
                           color: scheme
@@ -247,6 +318,8 @@ class _SensorLabPageState
             title: 'Accelerometer',
             subtitle:
                 'Cihazın ivme değerleri',
+            available:
+                _accelerometerAvailable,
             values: [
               _value(
                 _accelerometer?.x,
@@ -261,10 +334,13 @@ class _SensorLabPageState
           ),
 
           _sensorCard(
-            icon: Icons.screen_rotation,
+            icon:
+                Icons.screen_rotation,
             title: 'Gyroscope',
             subtitle:
                 'Dönüş hızı değerleri',
+            available:
+                _gyroscopeAvailable,
             values: [
               _value(
                 _gyroscope?.x,
@@ -279,10 +355,13 @@ class _SensorLabPageState
           ),
 
           _sensorCard(
-            icon: Icons.explore_outlined,
+            icon:
+                Icons.explore_outlined,
             title: 'Magnetometer',
             subtitle:
                 'Manyetik alan değerleri',
+            available:
+                _magnetometerAvailable,
             values: [
               _value(
                 _magnetometer?.x,
@@ -298,9 +377,12 @@ class _SensorLabPageState
 
           _sensorCard(
             icon: Icons.vibration,
-            title: 'User Accelerometer',
+            title:
+                'User Accelerometer',
             subtitle:
                 'Yerçekimi çıkarılmış ivme',
+            available:
+                _userAccelerometerAvailable,
             values: [
               _value(
                 _userAccelerometer?.x,
@@ -320,7 +402,9 @@ class _SensorLabPageState
 
           Text(
             'Değerler gerçek zamanlı olarak '
-            'sensörlerden okunur.',
+            'sensörlerden okunur. Cihazınızda '
+            'bulunmayan sensörler -- olarak '
+            'gösterilir.',
             textAlign:
                 TextAlign.center,
             style: TextStyle(
@@ -335,3 +419,4 @@ class _SensorLabPageState
     );
   }
 }
+
