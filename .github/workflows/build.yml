@@ -16,6 +16,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -24,6 +30,11 @@ jobs:
 
       - name: Get dependencies
         run: flutter pub get
+
+      - name: Generate Gradle wrapper
+        run: |
+          cd android
+          gradle wrapper --gradle-version 8.3
 
       - name: Generate app icon
         run: dart run flutter_launcher_icons
