@@ -1,250 +1,103 @@
 package org.test.thislinux
 
-import android.content.Intent
-import android.net.Uri
-import android.os.Build
-import android.os.Handler
-import android.os.Looper
-import android.provider.Settings
-import androidx.core.content.FileProvider
+import androidx.annotation.NonNull
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import android.os.Build
+import android.os.Process
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 
-class MainActivity : FlutterActivity() {
+class MainActivity: FlutterActivity() {
+    private val CHANNEL = "org.test.thislinux/native"
 
-    private val channelName = "thislinux/updater"
-
-    override fun configureFlutterEngine(
-        flutterEngine: FlutterEngine
-    ) {
+    override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-
-        MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            channelName
-        ).setMethodCallHandler { call, result ->
-
+        
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
-
-                "downloadAndInstall" -> {
-                    val url =
-                        call.argument<String>("url")
-
-                    if (url.isNullOrBlank()) {
-                        result.error(
-                            "INVALID_URL",
-                            "APK URL geçersiz.",
-                            null
-                        )
-                        return@setMethodCallHandler
+                "getDeviceInfo" -> {
+                    val info = mapOf(
+                        "device" to Build.DEVICE,
+                        "model" to Build.MODEL,
+                        "product" to Build.PRODUCT,
+                        "brand" to Build.BRAND,
+                        "display" to Build.DISPLAY,
+                        "hardware" to Build.HARDWARE,
+                        "manufacturer" to Build.MANUFACTURER,
+                        "board" to Build.BOARD,
+                        "bootloader" to Build.BOOTLOADER,
+                        "fingerprint" to Build.FINGERPRINT,
+                        "host" to Build.HOST,
+                        "id" to Build.ID,
+                        "tags" to Build.TAGS,
+                        "type" to Build.TYPE,
+                        "user" to Build.USER,
+                        "cpu_abi" to Build.CPU_ABI,
+                        "sdk_int" to Build.VERSION.SDK_INT.toString(),
+                        "release" to Build.VERSION.RELEASE,
+                        "incremental" to Build.VERSION.INCREMENTAL,
+                        "security_patch" to if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Build.VERSION.SECURITY_PATCH else "N/A"
+                    )
+                    result.success(info)
+                }
+                "getBatteryStatus" -> {
+                    val batteryIntent = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+                    val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+                    val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+                    val batteryPct = if (level != -1 && scale != -1) (level / scale.toFloat() * 100).toInt() else -1
+                    
+                    val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+                    val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+                    
+                    val plugged = batteryIntent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1) ?: -1
+                    val chargePlug = when (plugged) {
+                        BatteryManager.BATTERY_PLUGGED_USB -> "USB"
+                        BatteryManager.BATTERY_PLUGGED_AC -> "AC"
+                        BatteryManager.BATTERY_PLUGGED_WIRELESS -> "Wireless"
+                        else -> "None"
                     }
 
-                    downloadAndInstall(
-                        url,
-                        result
+                    val info = mapOf(
+                        "level" to batteryPct,
+                        "isCharging" to isCharging,
+                        "plugSource" to chargePlug
                     )
+                    result.success(info)
                 }
-
+                "checkRoot" -> {
+                    val paths = arrayOf(
+                        "/system/app/Superuser.apk",
+                        "/sbin/su",
+                        "/system/bin/su",
+                        "/system/xbin/su",
+                        "/data/local/xbin/su",
+                        "/data/local/bin/su",
+                        "/system/sd/xbin/su",
+                        "/system/bin/failsafe/su",
+                        "/data/local/su"
+                    )
+                    var isRooted = false
+                    for (path in paths) {
+                        if (File(path).exists()) {
+                            isRooted = true
+                            break
+                        }
+                    }
+                    result.success(isRooted)
+                }
+                "getUptime" -> {
+                    val uptimeMs = android.os.SystemClock.elapsedRealtime()
+                    result.success(uptimeMs)
+                }
                 else -> {
                     result.notImplemented()
                 }
             }
         }
-    }
-
-    private fun downloadAndInstall(
-        apkUrl: String,
-        result: MethodChannel.Result
-    ) {
-        Thread {
-
-            var connection:
-                HttpURLConnection? = null
-
-            try {
-                val url = URL(apkUrl)
-
-                if (url.protocol != "https") {
-                    throw Exception(
-                        "Sadece HTTPS adresleri kullanılabilir."
-                    )
-                }
-
-                connection =
-                    url.openConnection()
-                        as HttpURLConnection
-
-                connection.requestMethod = "GET"
-                connection.connectTimeout = 15000
-                connection.readTimeout = 30000
-                connection.instanceFollowRedirects = true
-
-                connection.connect()
-
-                if (connection.responseCode !in 200..299) {
-                    throw Exception(
-                        "APK indirilemedi. HTTP ${connection.responseCode}"
-                    )
-                }
-
-                val updateDirectory =
-                    File(
-                        cacheDir,
-                        "updates"
-                    )
-
-                if (!updateDirectory.exists()) {
-                    updateDirectory.mkdirs()
-                }
-
-                val apkFile =
-                    File(
-                        updateDirectory,
-                        "thislinux-update.apk"
-                    )
-
-                if (apkFile.exists()) {
-                    apkFile.delete()
-                }
-
-                connection.inputStream.use { input ->
-
-                    apkFile.outputStream().use { output ->
-
-                        val buffer =
-                            ByteArray(8192)
-
-                        while (true) {
-
-                            val count =
-                                input.read(buffer)
-
-                            if (count == -1) {
-                                break
-                            }
-
-                            output.write(
-                                buffer,
-                                0,
-                                count
-                            )
-                        }
-
-                        output.flush()
-                    }
-                }
-
-                if (!apkFile.exists() ||
-                    apkFile.length() <= 0
-                ) {
-                    throw Exception(
-                        "İndirilen APK geçersiz."
-                    )
-                }
-
-                Handler(
-                    Looper.getMainLooper()
-                ).post {
-
-                    if (
-                        Build.VERSION.SDK_INT >=
-                        Build.VERSION_CODES.O
-                    ) {
-
-                        if (
-                            !packageManager
-                                .canRequestPackageInstalls()
-                        ) {
-
-                            openInstallPermissionSettings()
-
-                            result.success(
-                                "permission_required"
-                            )
-
-                            return@post
-                        }
-                    }
-
-                    installApk(apkFile)
-
-                    result.success(true)
-                }
-
-            } catch (e: Exception) {
-
-                Handler(
-                    Looper.getMainLooper()
-                ).post {
-
-                    result.error(
-                        "UPDATE_FAILED",
-                        e.message
-                            ?: "APK güncellemesi başarısız.",
-                        null
-                    )
-                }
-
-            } finally {
-                connection?.disconnect()
-            }
-
-        }.start()
-    }
-
-    private fun openInstallPermissionSettings() {
-
-        if (
-            Build.VERSION.SDK_INT >=
-            Build.VERSION_CODES.O
-        ) {
-
-            val intent =
-                Intent(
-                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES
-                ).apply {
-
-                    data = Uri.parse(
-                        "package:$packageName"
-                    )
-                }
-
-            startActivity(intent)
-        }
-    }
-
-    private fun installApk(
-        apkFile: File
-    ) {
-
-        val apkUri =
-            FileProvider.getUriForFile(
-                this,
-                "${applicationContext.packageName}.fileprovider",
-                apkFile
-            )
-
-        val intent =
-            Intent(Intent.ACTION_VIEW).apply {
-
-                setDataAndType(
-                    apkUri,
-                    "application/vnd.android.package-archive"
-                )
-
-                addFlags(
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
-
-                addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK
-                )
-            }
-
-        startActivity(intent)
     }
 }
