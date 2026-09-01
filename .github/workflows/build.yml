@@ -47,7 +47,97 @@ jobs:
       - name: Recreate Android platform
         run: |
           rm -rf android
-          flutter create --platforms=android --project-name thislinux .
+          flutter create \
+            --platforms=android \
+            --project-name thislinux \
+            .
+
+      - name: Configure Gradle
+        run: |
+          cat > android/settings.gradle <<'EOF'
+          pluginManagement {
+              def flutterSdkPath = {
+                  def properties = new Properties()
+                  file("local.properties").withInputStream {
+                      properties.load(it)
+                  }
+
+                  def flutterSdkPath =
+                      properties.getProperty("flutter.sdk")
+
+                  assert flutterSdkPath != null
+
+                  return flutterSdkPath
+              }()
+
+              includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+
+          plugins {
+              id "dev.flutter.flutter-plugin-loader" version "1.0.0"
+              id "com.android.application" version "8.5.2" apply false
+              id "org.jetbrains.kotlin.android" version "2.1.21" apply false
+          }
+
+          include ":app"
+          EOF
+
+          cat > android/app/build.gradle <<'EOF'
+          plugins {
+              id "com.android.application"
+              id "org.jetbrains.kotlin.android"
+              id "dev.flutter.flutter-gradle-plugin"
+          }
+
+          android {
+              namespace = "org.test.thislinux"
+              compileSdk = flutter.compileSdkVersion
+              ndkVersion = flutter.ndkVersion
+
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+
+              defaultConfig {
+                  applicationId = "org.test.thislinux"
+                  minSdk = 23
+                  targetSdk = flutter.targetSdkVersion
+                  versionCode = flutter.versionCode
+                  versionName = flutter.versionName
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig = signingConfigs.debug
+                  }
+              }
+          }
+
+          flutter {
+              source = "../.."
+          }
+          EOF
+
+          cat > android/gradle/wrapper/gradle-wrapper.properties <<'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-bin.zip
+          networkTimeout=10000
+          validateDistributionUrl=true
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          EOF
 
       - name: Restore custom Android files
         run: |
@@ -66,27 +156,45 @@ jobs:
 
       - name: Configure Android Manifest
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path("android/app/src/main/AndroidManifest.xml")
-          text = path.read_text()
-
-          if "REQUEST_INSTALL_PACKAGES" not in text:
-              text = text.replace(
-                  '<manifest xmlns:android="http://schemas.android.com/apk/res/android">',
-                  '''<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+          cat > android/app/src/main/AndroidManifest.xml <<'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
               <uses-permission
                   android:name="android.permission.INTERNET" />
 
               <uses-permission
-                  android:name="android.permission.REQUEST_INSTALL_PACKAGES" />''',
-                  1
-              )
+                  android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
-          if "androidx.core.content.FileProvider" not in text:
-              provider = '''
+              <application
+                  android:label="This Linux"
+                  android:name="${applicationName}"
+                  android:icon="@mipmap/ic_launcher"
+                  android:allowBackup="false"
+                  android:supportsRtl="true">
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:launchMode="singleTop"
+                      android:theme="@style/LaunchTheme"
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+                      android:hardwareAccelerated="true"
+                      android:windowSoftInputMode="adjustResize">
+
+                      <meta-data
+                          android:name="io.flutter.embedding.android.NormalTheme"
+                          android:resource="@style/NormalTheme" />
+
+                      <intent-filter>
+                          <action
+                              android:name="android.intent.action.MAIN" />
+
+                          <category
+                              android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+
+                  </activity>
+
                   <provider
                       android:name="androidx.core.content.FileProvider"
                       android:authorities="${applicationId}.fileprovider"
@@ -98,50 +206,15 @@ jobs:
                           android:resource="@xml/file_paths" />
 
                   </provider>
-              '''
 
-              text = text.replace(
-                  "</application>",
-                  provider + "\n        </application>",
-                  1
-              )
-
-          if 'android:name="flutterEmbedding"' not in text:
-              text = text.replace(
-                  "</application>",
-                  '''<meta-data
-                      android:name="flutterEmbedding"
+                  <meta-data
+                      name="flutterEmbedding"
                       android:value="2" />
 
-                  </application>''',
-                  1
-              )
+              </application>
 
-          path.write_text(text)
-          PY
-
-      - name: Configure Android Gradle
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path("android/app/build.gradle")
-          text = path.read_text()
-
-          text = text.replace(
-              "minSdk = flutter.minSdkVersion",
-              "minSdk = 23"
-          )
-
-          if "minSdk = 23" not in text:
-              text = text.replace(
-                  "defaultConfig {",
-                  "defaultConfig {\n        minSdk = 23",
-                  1
-              )
-
-          path.write_text(text)
-          PY
+          </manifest>
+          EOF
 
       - name: Create Flutter local.properties
         run: |
@@ -150,25 +223,29 @@ jobs:
       - name: Generate app icon
         run: dart run flutter_launcher_icons
 
-      - name: Verify Android embedding
+      - name: Verify Android configuration
         run: |
-          echo "=== Android Manifest ==="
-          cat android/app/src/main/AndroidManifest.xml
+          echo "=== Kotlin / AGP ==="
+          grep -E \
+            'com.android.application|org.jetbrains.kotlin.android' \
+            android/settings.gradle
 
           echo ""
-          echo "=== Checking for Android V1 embedding ==="
+          echo "=== Gradle ==="
+          cat android/gradle/wrapper/gradle-wrapper.properties
+
+          echo ""
+          echo "=== Android embedding check ==="
 
           if grep -RniE \
-            'io\.flutter\.app\.|flutterEmbedding.*1|io\.flutter\.view\.' \
+            'io\.flutter\.app\.|io\.flutter\.view\.|flutterEmbedding.*1' \
             android/app/src/main; then
 
-            echo ""
-            echo "ERROR: Android V1 embedding reference detected."
+            echo "ERROR: Android V1 embedding detected."
             exit 1
           fi
 
-          echo ""
-          echo "Android V2 embedding check passed."
+          echo "Android V2 embedding confirmed."
 
       - name: Build APK
         run: flutter build apk --release
