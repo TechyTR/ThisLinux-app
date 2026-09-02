@@ -1,21 +1,25 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../theme/app_theme.dart';
+
 class SystemMonitorPage extends StatefulWidget {
-  final dynamic selectedTheme;
-  final dynamic selectedStyle;
-  final ValueChanged<dynamic>? onThemeChanged;
-  final ValueChanged<dynamic>? onStyleChanged;
+  final AppThemeColor selectedTheme;
+  final AppThemeStyle selectedStyle;
+
+  final Future<void> Function(AppThemeColor) onThemeChanged;
+  final Future<void> Function(AppThemeStyle) onStyleChanged;
 
   const SystemMonitorPage({
     super.key,
-    this.selectedTheme,
-    this.selectedStyle,
-    this.onThemeChanged,
-    this.onStyleChanged,
+    required this.selectedTheme,
+    required this.selectedStyle,
+    required this.onThemeChanged,
+    required this.onStyleChanged,
   });
 
   @override
@@ -29,35 +33,44 @@ class _SystemMonitorPageState extends State<SystemMonitorPage> {
   Timer? _timer;
 
   double _cpuUsage = 0;
-  int _ramTotal = 0;
-  int _ramAvailable = 0;
+  int _onlineCpuCount = 0;
+  int _totalCpuCount = 0;
+
+  List<String> _onlineCpus = [];
+  List<double> _cpuFrequencies = [];
+
+  double _ramTotal = 0;
+  double _ramAvailable = 0;
+  double _ramUsed = 0;
 
   int _batteryLevel = -1;
-  bool _isCharging = false;
-  String _plugSource = 'None';
-  double _batteryTemperature = -1;
+  String _batteryState = 'Bilinmiyor';
+  String _batterySource = 'Bilinmiyor';
+  double? _batteryTemperature;
 
-  int _cpuCount = 0;
-  int _onlineCpuCount = 0;
-  String _onlineCpuList = 'Unknown';
+  Map<String, double> _thermalZones = {};
 
-  List<double> _cpuFrequencies = [];
-  List<Map<String, dynamic>> _thermalZones = [];
-
-  int? _previousTotal;
-  int? _previousIdle;
+  int _previousTotal = 0;
+  int _previousIdle = 0;
 
   bool _loading = true;
+
+  bool get _isGlass =>
+      widget.selectedStyle == AppThemeStyle.liquidGlassLight ||
+      widget.selectedStyle == AppThemeStyle.liquidGlassDark;
+
+  bool get _isLightGlass =>
+      widget.selectedStyle == AppThemeStyle.liquidGlassLight;
 
   @override
   void initState() {
     super.initState();
 
-    _refresh();
+    _loadData();
 
     _timer = Timer.periodic(
       const Duration(seconds: 1),
-      (_) => _refresh(),
+      (_) => _loadData(),
     );
   }
 
@@ -67,12 +80,11 @@ class _SystemMonitorPageState extends State<SystemMonitorPage> {
     super.dispose();
   }
 
-  Future<void> _refresh() async {
+  Future<void> _loadData() async {
     await Future.wait([
-      _readCpu(),
-      _readMemory(),
-      _readBattery(),
-      _readDetails(),
+      _loadCpuUsage(),
+      _loadRam(),
+      _loadNativeDetails(),
     ]);
 
     if (!mounted) return;
@@ -82,7 +94,7 @@ class _SystemMonitorPageState extends State<SystemMonitorPage> {
     });
   }
 
-  Future<void> _readCpu() async {
+  Future<void> _loadCpuUsage() async {
     try {
       final file = File('/proc/stat');
 
@@ -97,50 +109,81 @@ class _SystemMonitorPageState extends State<SystemMonitorPage> {
 
       if (cpuLine.isEmpty) return;
 
-      final values = cpuLine
+      final parts = cpuLine
           .trim()
-          .split(RegExp(r'\s+'))
-          .skip(1)
+          .split(RegExp(r'\s+'));
+
+      if (parts.length < 5) return;
+
+      final values = parts
+          .sublist(1)
+          .take(8)
           .map((e) => int.tryParse(e) ?? 0)
           .toList();
 
-      if (values.length < 5) return;
+      if (values.length < 4) return;
 
+      final user = values[0];
+      final nice = values[1];
+      final system = values[2];
       final idle = values[3];
-      final iowait = values[4];
 
-      final total = values.fold<int>(
-        0,
-        (sum, value) => sum + value,
-      );
+      final iowait = values.length > 4 ? values[4] : 0;
+      final irq = values.length > 5 ? values[5] : 0;
+      final softirq = values.length > 6 ? values[6] : 0;
+      final steal = values.length > 7 ? values[7] : 0;
 
-      final idleTotal = idle + iowait;
+      final idleTime = idle + iowait;
 
-      if (_previousTotal != null &&
-          _previousIdle != null) {
+      final totalTime =
+          user +
+          nice +
+          system +
+          idle +
+          iowait +
+          irq +
+          softirq +
+          steal;
+
+      if (_previousTotal != 0) {
         final totalDelta =
-            total - _previousTotal!;
+            totalTime - _previousTotal;
 
         final idleDelta =
-            idleTotal - _previousIdle!;
+            idleTime - _previousIdle;
 
         if (totalDelta > 0) {
           final usage =
-              ((totalDelta - idleDelta) /
-                      totalDelta) *
-                  100;
+              1 - (idleDelta / totalDelta);
 
-          _cpuUsage =
-              usage.clamp(0, 100).toDouble();
+          if (mounted) {
+            setState(() {
+              _cpuUsage =
+                  (usage * 100).clamp(0, 100);
+            });
+          }
         }
       }
 
-      _previousTotal = total;
-      _previousIdle = idleTotal;
+      _previousTotal = totalTime;
+      _previousIdle = idleTime;
+
+      final cpuCount = lines
+          .where(
+            (line) =>
+                RegExp(r'^cpu\d+\s').hasMatch(line),
+          )
+          .length;
+
+      if (mounted) {
+        setState(() {
+          _totalCpuCount = cpuCount;
+        });
+      }
     } catch (_) {}
   }
 
-  Future<void> _readMemory() async {
+  Future<void> _loadRam() async {
     try {
       final file = File('/proc/meminfo');
 
@@ -148,694 +191,1080 @@ class _SystemMonitorPageState extends State<SystemMonitorPage> {
 
       final lines = await file.readAsLines();
 
-      int readValue(String key) {
-        final line = lines.firstWhere(
-          (line) => line.startsWith(key),
-          orElse: () => '',
-        );
+      int? totalKb;
+      int? availableKb;
 
-        if (line.isEmpty) return 0;
+      for (final line in lines) {
+        if (line.startsWith('MemTotal:')) {
+          totalKb = int.tryParse(
+            line.replaceAll(RegExp(r'[^0-9]'), ''),
+          );
+        }
 
-        final match =
-            RegExp(r'(\d+)').firstMatch(line);
-
-        if (match == null) return 0;
-
-        return int.tryParse(
-              match.group(1)!,
-            ) ??
-            0;
+        if (line.startsWith('MemAvailable:')) {
+          availableKb = int.tryParse(
+            line.replaceAll(RegExp(r'[^0-9]'), ''),
+          );
+        }
       }
 
-      _ramTotal = readValue('MemTotal:');
-      _ramAvailable =
-          readValue('MemAvailable:');
+      if (totalKb == null || availableKb == null) {
+        return;
+      }
+
+      final total =
+          totalKb / (1024 * 1024);
+
+      final available =
+          availableKb / (1024 * 1024);
+
+      final used =
+          (total - available).clamp(0, total);
+
+      if (!mounted) return;
+
+      setState(() {
+        _ramTotal = total;
+        _ramAvailable = available;
+        _ramUsed = used;
+      });
     } catch (_) {}
   }
 
-  Future<void> _readBattery() async {
+  Future<void> _loadNativeDetails() async {
     try {
       final result =
-          await _channel.invokeMethod<dynamic>(
-        'getBatteryStatus',
-      );
-
-      if (result is! Map) return;
-
-      _batteryLevel =
-          (result['level'] as num?)
-                  ?.toInt() ??
-              -1;
-
-      _isCharging =
-          result['isCharging'] == true;
-
-      _plugSource =
-          result['plugSource']?.toString() ??
-              'None';
-
-      _batteryTemperature =
-          (result['temperature'] as num?)
-                  ?.toDouble() ??
-              -1;
-    } catch (_) {}
-  }
-
-  Future<void> _readDetails() async {
-    try {
-      final result =
-          await _channel.invokeMethod<dynamic>(
+          await _channel.invokeMethod<Map<dynamic, dynamic>>(
         'getSystemMonitorDetails',
       );
 
-      if (result is! Map) return;
+      if (result == null || !mounted) return;
 
-      _cpuCount =
-          (result['cpu_count'] as num?)
-                  ?.toInt() ??
-              0;
+      final data = result.map(
+        (key, value) => MapEntry(
+          key.toString(),
+          value,
+        ),
+      );
 
-      _onlineCpuCount =
-          (result['online_cpu_count'] as num?)
-                  ?.toInt() ??
-              0;
+      final frequenciesRaw =
+          data['cpu_frequencies'];
 
-      _onlineCpuList =
-          result['online_cpu_list']?.toString() ??
-              'Unknown';
+      final frequencies = <double>[];
 
-      final frequencies =
-          result['cpu_frequencies'];
+      if (frequenciesRaw is List) {
+        for (final value in frequenciesRaw) {
+          final number = double.tryParse(
+            value.toString(),
+          );
 
-      if (frequencies is List) {
-        _cpuFrequencies = frequencies
-            .map(
-              (value) =>
-                  (value as num?)
-                      ?.toDouble() ??
-                  -1,
-            )
-            .toList();
+          if (number != null) {
+            frequencies.add(number);
+          }
+        }
       }
 
-      final thermal =
-          result['thermal_zones'];
+      final onlineRaw =
+          data['online_cpus'];
 
-      if (thermal is List) {
-        _thermalZones = thermal
-            .whereType<Map>()
-            .map(
-              (zone) =>
-                  Map<String, dynamic>.from(zone),
-            )
-            .toList();
+      final online = <String>[];
+
+      if (onlineRaw is List) {
+        for (final value in onlineRaw) {
+          online.add(value.toString());
+        }
+      } else if (onlineRaw != null) {
+        online.addAll(
+          onlineRaw
+              .toString()
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty),
+        );
       }
-    } catch (_) {}
+
+      final thermalRaw =
+          data['thermal_zones'];
+
+      final thermal = <String, double>{};
+
+      if (thermalRaw is Map) {
+        thermalRaw.forEach(
+          (key, value) {
+            final number = double.tryParse(
+              value.toString(),
+            );
+
+            if (number != null) {
+              thermal[key.toString()] = number;
+            }
+          },
+        );
+      }
+
+      final batteryLevelRaw =
+          data['battery_level'];
+
+      final batteryLevel =
+          batteryLevelRaw is num
+              ? batteryLevelRaw.toInt()
+              : int.tryParse(
+                    batteryLevelRaw?.toString() ?? '',
+                  ) ??
+                  _batteryLevel;
+
+      final batteryTempRaw =
+          data['battery_temperature'];
+
+      final batteryTemperature =
+          batteryTempRaw is num
+              ? batteryTempRaw.toDouble()
+              : double.tryParse(
+                  batteryTempRaw?.toString() ?? '',
+                );
+
+      setState(() {
+        _onlineCpus = online;
+
+        _onlineCpuCount =
+            online.isNotEmpty
+                ? online.length
+                : _totalCpuCount;
+
+        _cpuFrequencies = frequencies;
+
+        _batteryLevel = batteryLevel;
+
+        _batteryState =
+            data['battery_state']?.toString() ??
+            _batteryState;
+
+        _batterySource =
+            data['battery_source']?.toString() ??
+            _batterySource;
+
+        _batteryTemperature =
+            batteryTemperature;
+
+        _thermalZones = thermal;
+      });
+    } catch (_) {
+      try {
+        final result =
+            await _channel.invokeMethod<Map<dynamic, dynamic>>(
+          'getBatteryStatus',
+        );
+
+        if (result == null || !mounted) return;
+
+        setState(() {
+          _batteryLevel =
+              result['level'] is num
+                  ? (result['level'] as num).toInt()
+                  : _batteryLevel;
+
+          _batteryState =
+              result['state']?.toString() ??
+              _batteryState;
+
+          _batterySource =
+              result['source']?.toString() ??
+              _batterySource;
+
+          final temperature =
+              result['temperature'];
+
+          if (temperature is num) {
+            _batteryTemperature =
+                temperature.toDouble();
+          }
+        });
+      } catch (_) {}
+    }
   }
 
-  String _formatRam(int kb) {
-    if (kb <= 0) return 'N/A';
+  Future<void> _refresh() async {
+    _previousTotal = 0;
+    _previousIdle = 0;
 
-    final gb =
-        kb / 1024 / 1024;
+    await _loadData();
+  }
 
-    if (gb >= 1) {
-      return '${gb.toStringAsFixed(2)} GB';
-    }
+  String _formatRam(double value) {
+    if (value <= 0) return '--';
 
-    return '${(kb / 1024).toStringAsFixed(0)} MB';
+    return '${value.toStringAsFixed(1)} GB';
   }
 
   String _formatFrequency(double value) {
-    if (value <= 0) return 'N/A';
+    if (value <= 0) return '--';
+
+    if (value >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(2)} GHz';
+    }
 
     if (value >= 1000) {
-      return '${(value / 1000).toStringAsFixed(2)} GHz';
+      return '${(value / 1000).toStringAsFixed(0)} MHz';
     }
 
-    return '${value.toStringAsFixed(0)} MHz';
+    return '${value.toStringAsFixed(0)} kHz';
   }
 
-  Color _statusColor(double percentage) {
-    if (percentage >= 85) {
-      return Colors.red;
+  String _formatTemperature(double? value) {
+    if (value == null) return '--';
+
+    return '${value.toStringAsFixed(1)} °C';
+  }
+
+  Color _usageColor(
+    BuildContext context,
+    double value,
+  ) {
+    final scheme =
+        Theme.of(context).colorScheme;
+
+    if (value >= 90) {
+      return scheme.error;
     }
 
-    if (percentage >= 65) {
+    if (value >= 70) {
       return Colors.orange;
     }
 
-    return Colors.green;
+    return scheme.primary;
   }
 
-  Color _temperatureColor(double temperature) {
-    if (temperature >= 70) {
-      return Colors.red;
-    }
-
-    if (temperature >= 55) {
-      return Colors.orange;
-    }
-
-    return Colors.green;
-  }
-
-  Widget _sectionCard({
-    required IconData icon,
-    required String title,
+  Widget _glassCard({
     required Widget child,
+    EdgeInsetsGeometry padding =
+        const EdgeInsets.all(18),
+    double radius = 24,
   }) {
-    return Card(
-      margin: const EdgeInsets.only(
-        bottom: 14,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
-          children: [
-            Row(
+    if (!_isGlass) {
+      return Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: padding,
+          child: child,
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ClipRRect(
+        borderRadius:
+            BorderRadius.circular(radius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: 25,
+            sigmaY: 25,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius:
+                  BorderRadius.circular(radius),
+              color: Colors.white.withOpacity(
+                _isLightGlass ? 0.15 : 0.065,
+              ),
+              border: Border.all(
+                color: Colors.white.withOpacity(
+                  _isLightGlass ? 0.58 : 0.20,
+                ),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(
+                    _isLightGlass ? 0.06 : 0.18,
+                  ),
+                  blurRadius: 26,
+                  spreadRadius: -8,
+                  offset: const Offset(0, 9),
+                ),
+              ],
+            ),
+            child: Stack(
               children: [
-                Icon(icon),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight:
-                          FontWeight.bold,
+                Padding(
+                  padding: padding,
+                  child: child,
+                ),
+                Positioned(
+                  left: 15,
+                  right: 15,
+                  top: 0,
+                  height: 1.4,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.transparent,
+                            Colors.white.withOpacity(
+                              _isLightGlass
+                                  ? 0.78
+                                  : 0.36,
+                            ),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius:
+                            BorderRadius.circular(
+                          radius,
+                        ),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withOpacity(
+                              _isLightGlass
+                                  ? 0.075
+                                  : 0.03,
+                            ),
+                            Colors.transparent,
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            child,
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _progressBar({
-    required double value,
-    required Color color,
-  }) {
-    return ClipRRect(
-      borderRadius:
-          BorderRadius.circular(8),
-      child: LinearProgressIndicator(
-        minHeight: 9,
-        value: value.clamp(0, 1),
-        color: color,
-        backgroundColor:
-            Theme.of(context)
-                .colorScheme
-                .surfaceContainerHighest,
+  Widget _sectionTitle(String title) {
+    final scheme =
+        Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(
+        left: 4,
+        top: 12,
+        bottom: 9,
+      ),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          color: scheme.onSurfaceVariant,
+        ),
       ),
     );
   }
 
-  Widget _metricRow(
-    String title,
-    String value,
-  ) {
-    return Padding(
-      padding:
-          const EdgeInsets.symmetric(
-        vertical: 4,
-      ),
-      child: Row(
+  Widget _usageCard() {
+    final scheme =
+        Theme.of(context).colorScheme;
+
+    final usageColor =
+        _usageColor(context, _cpuUsage);
+
+    return _glassCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(title),
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: usageColor.withOpacity(
+                    _isGlass ? 0.10 : 0.13,
+                  ),
+                  borderRadius:
+                      BorderRadius.circular(15),
+                ),
+                child: Icon(
+                  Icons.speed_rounded,
+                  color: usageColor,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'CPU kullanımı',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Gerçek zamanlı işlemci kullanımı',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color:
+                            scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '${_cpuUsage.toStringAsFixed(1)}%',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: usageColor,
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 17),
+          ClipRRect(
+            borderRadius:
+                BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: _cpuUsage / 100,
+              minHeight: 10,
+              backgroundColor:
+                  scheme.onSurface.withOpacity(
+                _isGlass ? 0.06 : 0.10,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Icon(
+                Icons.memory_rounded,
+                size: 17,
+                color: scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 7),
+              Text(
+                '$_onlineCpuCount / $_totalCpuCount çekirdek aktif',
+                style: TextStyle(
+                  fontSize: 12,
+                  color:
+                      scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _ramCard() {
+    final scheme =
+        Theme.of(context).colorScheme;
+
+    final percentage =
+        _ramTotal <= 0
+            ? 0.0
+            : (_ramUsed / _ramTotal)
+                .clamp(0.0, 1.0);
+
+    return _glassCard(
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 45,
+                height: 45,
+                decoration: BoxDecoration(
+                  color: scheme.primary
+                      .withOpacity(
+                    _isGlass ? 0.09 : 0.12,
+                  ),
+                  borderRadius:
+                      BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  Icons.memory_outlined,
+                  color: scheme.primary,
+                ),
+              ),
+              const SizedBox(width: 13),
+              const Expanded(
+                child: Text(
+                  'RAM',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                '${(_ramUsed / (_ramTotal <= 0 ? 1 : _ramTotal) * 100).toStringAsFixed(1)}%',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: scheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius:
+                BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: percentage,
+              minHeight: 9,
+            ),
+          ),
+          const SizedBox(height: 13),
+          Row(
+            mainAxisAlignment:
+                MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${_formatRam(_ramUsed)} kullanılıyor',
+                style: TextStyle(
+                  fontSize: 12,
+                  color:
+                      scheme.onSurfaceVariant,
+                ),
+              ),
+              Text(
+                '${_formatRam(_ramAvailable)} boş',
+                style: TextStyle(
+                  fontSize: 12,
+                  color:
+                      scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
           Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
+            '${_formatRam(_ramTotal)} toplam',
+            style: TextStyle(
+              fontSize: 12,
+              color:
+                  scheme.onSurfaceVariant,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _batteryCard() {
+    final scheme =
+        Theme.of(context).colorScheme;
+
+    final level =
+        _batteryLevel.clamp(0, 100);
+
+    return _glassCard(
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 45,
+                height: 45,
+                decoration: BoxDecoration(
+                  color: scheme.primary
+                      .withOpacity(
+                    _isGlass ? 0.09 : 0.12,
+                  ),
+                  borderRadius:
+                      BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  _batteryState
+                          .toLowerCase()
+                          .contains('charg')
+                      ? Icons
+                          .battery_charging_full_rounded
+                      : Icons.battery_full_rounded,
+                  color: scheme.primary,
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Pil',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      _batteryState,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color:
+                            scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                _batteryLevel < 0
+                    ? '--'
+                    : '$level%',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: scheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          ClipRRect(
+            borderRadius:
+                BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value:
+                  _batteryLevel < 0
+                      ? 0
+                      : level / 100,
+              minHeight: 9,
+            ),
+          ),
+          const SizedBox(height: 13),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Kaynak: $_batterySource',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color:
+                        scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              if (_batteryTemperature != null)
+                Text(
+                  _formatTemperature(
+                    _batteryTemperature,
+                  ),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight:
+                        FontWeight.w600,
+                    color:
+                        scheme.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cpuDetailsCard() {
+    final scheme =
+        Theme.of(context).colorScheme;
+
+    return _glassCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.memory_rounded,
+                color: scheme.primary,
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Çekirdekler',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (_cpuFrequencies.isEmpty)
+            Text(
+              'Frekans bilgisi alınamadı.',
+              style: TextStyle(
+                color:
+                    scheme.onSurfaceVariant,
+                fontSize: 12,
+              ),
+            )
+          else
+            ...List.generate(
+              _cpuFrequencies.length,
+              (index) {
+                final active =
+                    index < _onlineCpuCount;
+
+                return Padding(
+                  padding:
+                      const EdgeInsets.only(
+                    bottom: 9,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        alignment:
+                            Alignment.center,
+                        decoration: BoxDecoration(
+                          color: active
+                              ? scheme.primary
+                                  .withOpacity(
+                                  _isGlass
+                                      ? 0.10
+                                      : 0.12,
+                                )
+                              : scheme
+                                  .onSurface
+                                  .withOpacity(
+                                  0.05,
+                                ),
+                          borderRadius:
+                              BorderRadius.circular(
+                            10,
+                          ),
+                        ),
+                        child: Text(
+                          '$index',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight:
+                                FontWeight.w700,
+                            color: active
+                                ? scheme.primary
+                                : scheme
+                                    .onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          active
+                              ? 'CPU $index • Aktif'
+                              : 'CPU $index • Çevrimdışı',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: active
+                                ? scheme.onSurface
+                                : scheme
+                                    .onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        _formatFrequency(
+                          _cpuFrequencies[index],
+                        ),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight:
+                              FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _thermalCard() {
+    final scheme =
+        Theme.of(context).colorScheme;
+
+    return _glassCard(
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.thermostat_rounded,
+                color: scheme.primary,
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Sıcaklıklar',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (_thermalZones.isEmpty)
+            Text(
+              'Termal bölge bilgisi alınamadı.',
+              style: TextStyle(
+                fontSize: 12,
+                color:
+                    scheme.onSurfaceVariant,
+              ),
+            )
+          else
+            ..._thermalZones.entries.map(
+              (entry) {
+                final temperature =
+                    entry.value;
+
+                return Padding(
+                  padding:
+                      const EdgeInsets.only(
+                    bottom: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: scheme.primary
+                              .withOpacity(
+                            _isGlass
+                                ? 0.08
+                                : 0.11,
+                          ),
+                          borderRadius:
+                              BorderRadius.circular(
+                            10,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons
+                              .device_thermostat_rounded,
+                          size: 18,
+                          color:
+                              scheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          entry.key,
+                          maxLines: 1,
+                          overflow:
+                              TextOverflow.ellipsis,
+                          style:
+                              const TextStyle(
+                            fontSize: 12,
+                            fontWeight:
+                                FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${temperature.toStringAsFixed(1)} °C',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight:
+                              FontWeight.w700,
+                          color:
+                              temperature >= 60
+                                  ? scheme.error
+                                  : scheme
+                                      .onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _backgroundGlow(
+    Alignment alignment,
+    double size,
+    double opacity,
+  ) {
+    final scheme =
+        Theme.of(context).colorScheme;
+
+    return Align(
+      alignment: alignment,
+      child: ImageFiltered(
+        imageFilter: ImageFilter.blur(
+          sigmaX: 65,
+          sigmaY: 65,
+        ),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: scheme.primary
+                .withOpacity(opacity),
+          ),
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final ramUsed =
-        _ramTotal > 0
-            ? (_ramTotal - _ramAvailable)
-                .clamp(0, _ramTotal)
-            : 0;
-
-    final ramUsage =
-        _ramTotal > 0
-            ? ramUsed / _ramTotal
-            : 0.0;
-
-    final batteryProgress =
-        _batteryLevel >= 0
-            ? _batteryLevel / 100
-            : 0.0;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Sistem İzleme',
+          'Sistem Monitörü',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+          ),
         ),
         actions: [
           IconButton(
             tooltip: 'Yenile',
             onPressed: _refresh,
             icon: const Icon(
-              Icons.refresh,
+              Icons.refresh_rounded,
             ),
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: ListView(
-          physics:
-              const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          children: [
-
-            _sectionCard(
-              icon: Icons.speed,
-              title: 'CPU',
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Anlık kullanım',
-                            ),
-                            const SizedBox(
-                              height: 4,
-                            ),
-                            Text(
-                              '${_cpuUsage.toStringAsFixed(1)}%',
-                              style:
-                                  const TextStyle(
-                                fontSize: 28,
-                                fontWeight:
-                                    FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.memory,
-                        size: 38,
-                        color: _statusColor(
-                          _cpuUsage,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  _progressBar(
-                    value: _cpuUsage / 100,
-                    color: _statusColor(
-                      _cpuUsage,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _metricRow(
-                    'Toplam çekirdek',
-                    '$_cpuCount',
-                  ),
-                  _metricRow(
-                    'Aktif çekirdek',
-                    '$_onlineCpuCount',
-                  ),
-                  _metricRow(
-                    'Online CPU',
-                    _onlineCpuList,
-                  ),
-                ],
-              ),
-            ),
-
-            _sectionCard(
-              icon: Icons.memory,
-              title: 'RAM',
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Kullanım',
-                            ),
-                            const SizedBox(
-                              height: 4,
-                            ),
-                            Text(
-                              '${(ramUsage * 100).toStringAsFixed(1)}%',
-                              style:
-                                  const TextStyle(
-                                fontSize: 28,
-                                fontWeight:
-                                    FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(
-                        Icons.memory,
-                        size: 38,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  _progressBar(
-                    value: ramUsage,
-                    color: _statusColor(
-                      ramUsage * 100,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _metricRow(
-                    'Kullanılan',
-                    _formatRam(ramUsed),
-                  ),
-                  _metricRow(
-                    'Boş',
-                    _formatRam(
-                      _ramAvailable,
-                    ),
-                  ),
-                  _metricRow(
-                    'Toplam',
-                    _formatRam(
-                      _ramTotal,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            _sectionCard(
-              icon: Icons.developer_board,
-              title: 'CPU Çekirdekleri',
-              child: _cpuFrequencies.isEmpty
-                  ? const Text(
-                      'Çekirdek frekansı '
-                      'bu cihaz tarafından '
-                      'erişilebilir değil.',
-                    )
-                  : Column(
-                      children: List.generate(
-                        _cpuFrequencies.length,
-                        (index) {
-                          final frequency =
-                              _cpuFrequencies[index];
-
-                          final active =
-                              index <
-                                  _onlineCpuCount;
-
-                          return Container(
-                            margin:
-                                const EdgeInsets.only(
-                              bottom: 8,
-                            ),
-                            padding:
-                                const EdgeInsets.all(
-                              12,
-                            ),
-                            decoration:
-                                BoxDecoration(
-                              borderRadius:
-                                  BorderRadius.circular(
-                                12,
-                              ),
-                              color: Theme.of(
-                                context,
-                              )
-                                  .colorScheme
-                                  .surfaceContainerHighest,
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 38,
-                                  height: 38,
-                                  decoration:
-                                      BoxDecoration(
-                                    shape:
-                                        BoxShape.circle,
-                                    color: active
-                                        ? Theme.of(
-                                            context,
-                                          )
-                                            .colorScheme
-                                            .primary
-                                        : Theme.of(
-                                            context,
-                                          )
-                                            .colorScheme
-                                            .outline,
-                                  ),
-                                  child: Icon(
-                                    active
-                                        ? Icons.bolt
-                                        : Icons.power_off,
-                                    size: 20,
-                                    color: Theme.of(
-                                      context,
-                                    )
-                                        .colorScheme
-                                        .onPrimary,
-                                  ),
-                                ),
-                                const SizedBox(
-                                  width: 12,
-                                ),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment
-                                            .start,
-                                    children: [
-                                      Text(
-                                        'CPU $index',
-                                        style:
-                                            const TextStyle(
-                                          fontWeight:
-                                              FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(
-                                        active
-                                            ? 'Aktif'
-                                            : 'Pasif',
-                                        style:
-                                            Theme.of(
-                                          context,
-                                        )
-                                                .textTheme
-                                                .bodySmall,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Text(
-                                  _formatFrequency(
-                                    frequency,
-                                  ),
-                                  style:
-                                      const TextStyle(
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-            ),
-
-            _sectionCard(
-              icon: Icons.battery_full,
-              title: 'Batarya',
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _batteryLevel >= 0
-                              ? '$_batteryLevel%'
-                              : 'N/A',
-                          style:
-                              const TextStyle(
-                            fontSize: 28,
-                            fontWeight:
-                                FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        _isCharging
-                            ? Icons.bolt
-                            : Icons.battery_std,
-                        size: 38,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  _progressBar(
-                    value: batteryProgress,
-                    color:
-                        _batteryLevel >= 0 &&
-                                _batteryLevel <= 20
-                            ? Colors.red
-                            : Colors.green,
-                  ),
-                  const SizedBox(height: 16),
-                  _metricRow(
-                    'Durum',
-                    _isCharging
-                        ? 'Şarj oluyor'
-                        : 'Şarj olmuyor',
-                  ),
-                  _metricRow(
-                    'Kaynak',
-                    _plugSource,
-                  ),
-                  if (_batteryTemperature >= 0)
-                    _metricRow(
-                      'Sıcaklık',
-                      '${_batteryTemperature.toStringAsFixed(1)} °C',
-                    ),
-                ],
-              ),
-            ),
-
-            _sectionCard(
-              icon: Icons.thermostat,
-              title: 'Termal Sensörler',
-              child: _thermalZones.isEmpty
-                  ? const Text(
-                      'Termal sensör bilgisi '
-                      'bu cihazda erişilebilir değil.',
-                    )
-                  : Column(
-                      children:
-                          _thermalZones.map(
-                        (zone) {
-                          final type =
-                              zone['type']
-                                  ?.toString() ??
-                                  'Thermal zone';
-
-                          final temperature =
-                              (zone['temperature']
-                                      as num?)
-                                  ?.toDouble();
-
-                          final temp =
-                              temperature ?? -1;
-
-                          return Container(
-                            margin:
-                                const EdgeInsets.only(
-                              bottom: 8,
-                            ),
-                            padding:
-                                const EdgeInsets.all(
-                              12,
-                            ),
-                            decoration:
-                                BoxDecoration(
-                              borderRadius:
-                                  BorderRadius.circular(
-                                12,
-                              ),
-                              color: Theme.of(
-                                context,
-                              )
-                                  .colorScheme
-                                  .surfaceContainerHighest,
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.thermostat,
-                                  color:
-                                      temp >= 0
-                                          ? _temperatureColor(
-                                              temp,
-                                            )
-                                          : null,
-                                ),
-                                const SizedBox(
-                                  width: 12,
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    type,
-                                    overflow:
-                                        TextOverflow
-                                            .ellipsis,
-                                  ),
-                                ),
-                                Text(
-                                  temp >= 0
-                                      ? '${temp.toStringAsFixed(1)} °C'
-                                      : 'N/A',
-                                  style:
-                                      const TextStyle(
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ).toList(),
-                    ),
-            ),
-
-            if (_loading)
-              const Padding(
-                padding:
-                    EdgeInsets.symmetric(
-                  vertical: 20,
-                ),
-                child: Center(
-                  child:
-                      CircularProgressIndicator(),
+      body: Stack(
+        children: [
+          if (_isGlass) ...[
+            Positioned.fill(
+              child: IgnorePointer(
+                child: _backgroundGlow(
+                  const Alignment(-1.15, -0.85),
+                  250,
+                  _isLightGlass
+                      ? 0.10
+                      : 0.075,
                 ),
               ),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: _backgroundGlow(
+                  const Alignment(1.15, 0.0),
+                  260,
+                  _isLightGlass
+                      ? 0.075
+                      : 0.055,
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: _backgroundGlow(
+                  const Alignment(0.25, 1.15),
+                  230,
+                  _isLightGlass
+                      ? 0.06
+                      : 0.045,
+                ),
+              ),
+            ),
           ],
-        ),
+
+          RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              physics:
+                  const AlwaysScrollableScrollPhysics(),
+              padding:
+                  const EdgeInsets.fromLTRB(
+                16,
+                8,
+                16,
+                30,
+              ),
+              children: [
+                _usageCard(),
+
+                _sectionTitle(
+                  'Bellek',
+                ),
+
+                _ramCard(),
+
+                _sectionTitle(
+                  'Pil',
+                ),
+
+                _batteryCard(),
+
+                _sectionTitle(
+                  'İşlemci detayları',
+                ),
+
+                _cpuDetailsCard(),
+
+                _sectionTitle(
+                  'Termal bölgeler',
+                ),
+
+                _thermalCard(),
+
+                const SizedBox(height: 8),
+
+                Center(
+                  child: Text(
+                    'Gerçek zamanlı sistem verileri',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(
+                        context,
+                      )
+                          .colorScheme
+                          .onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          if (_loading)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: LinearProgressIndicator(
+                minHeight: 2,
+              ),
+            ),
+        ],
       ),
     );
   }
