@@ -79,43 +79,24 @@ class MainActivity : FlutterActivity() {
                     val info = mutableMapOf<String, Any>(
 
                         "device" to Build.DEVICE,
-
                         "model" to Build.MODEL,
-
                         "product" to Build.PRODUCT,
-
                         "brand" to Build.BRAND,
-
                         "manufacturer" to Build.MANUFACTURER,
-
                         "hardware" to Build.HARDWARE,
-
                         "board" to Build.BOARD,
-
                         "bootloader" to Build.BOOTLOADER,
-
                         "display" to Build.DISPLAY,
-
                         "fingerprint" to Build.FINGERPRINT,
-
                         "host" to Build.HOST,
-
                         "id" to Build.ID,
-
                         "type" to Build.TYPE,
-
                         "user" to Build.USER,
-
                         "cpu_abi" to Build.CPU_ABI,
-
                         "supported_abis" to supportedAbis,
-
                         "cpu_count" to cpuCount,
-
                         "sdk_int" to Build.VERSION.SDK_INT,
-
                         "release" to Build.VERSION.RELEASE,
-
                         "incremental" to Build.VERSION.INCREMENTAL,
 
                         "security_patch" to
@@ -129,11 +110,8 @@ class MainActivity : FlutterActivity() {
                                 },
 
                         "total_ram" to totalRam,
-
                         "available_ram" to availableRam,
-
                         "total_storage" to totalStorage,
-
                         "available_storage" to availableStorage,
 
                         "screen_width" to
@@ -187,9 +165,11 @@ class MainActivity : FlutterActivity() {
                             level != -1 &&
                             scale != -1
                         ) {
-                            (level /
+                            (
+                                level /
                                     scale.toFloat() *
-                                    100).toInt()
+                                    100
+                            ).toInt()
                         } else {
                             -1
                         }
@@ -252,26 +232,229 @@ class MainActivity : FlutterActivity() {
                     result.success(info)
                 }
 
+                "getSystemMonitorDetails" -> {
+
+                    val cpuCount =
+                        Runtime.getRuntime().availableProcessors()
+
+                    val frequencies =
+                        mutableListOf<Double>()
+
+                    for (i in 0 until cpuCount) {
+
+                        val possiblePaths = listOf(
+                            "/sys/devices/system/cpu/cpu$i/cpufreq/scaling_cur_freq",
+                            "/sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_cur_freq"
+                        )
+
+                        var frequencyMHz = -1.0
+
+                        for (path in possiblePaths) {
+
+                            try {
+
+                                val file = File(path)
+
+                                if (file.exists() && file.canRead()) {
+
+                                    val value =
+                                        file.readText().trim().toLongOrNull()
+
+                                    if (value != null && value > 0) {
+
+                                        frequencyMHz =
+                                            if (value > 100000) {
+                                                value / 1000.0
+                                            } else {
+                                                value.toDouble()
+                                            }
+
+                                        break
+                                    }
+                                }
+
+                            } catch (_: Exception) {
+                            }
+                        }
+
+                        frequencies.add(frequencyMHz)
+                    }
+
+                    val onlineCpuList =
+                        try {
+
+                            val onlineFile =
+                                File(
+                                    "/sys/devices/system/cpu/online"
+                                )
+
+                            if (
+                                onlineFile.exists() &&
+                                onlineFile.canRead()
+                            ) {
+                                onlineFile.readText().trim()
+                            } else {
+                                "0-${
+                                    cpuCount - 1
+                                }"
+                            }
+
+                        } catch (_: Exception) {
+                            "Unknown"
+                        }
+
+                    var onlineCpuCount = 0
+
+                    if (onlineCpuList != "Unknown") {
+
+                        try {
+
+                            for (part in onlineCpuList.split(",")) {
+
+                                val trimmed =
+                                    part.trim()
+
+                                if (trimmed.contains("-")) {
+
+                                    val values =
+                                        trimmed.split("-")
+
+                                    val start =
+                                        values[0].toInt()
+
+                                    val end =
+                                        values[1].toInt()
+
+                                    if (end >= start) {
+                                        onlineCpuCount +=
+                                            end - start + 1
+                                    }
+
+                                } else {
+
+                                    trimmed.toIntOrNull()?.let {
+                                        onlineCpuCount++
+                                    }
+                                }
+                            }
+
+                        } catch (_: Exception) {
+                            onlineCpuCount = cpuCount
+                        }
+                    }
+
+                    if (onlineCpuCount <= 0) {
+                        onlineCpuCount = cpuCount
+                    }
+
+                    val thermalZones =
+                        mutableListOf<Map<String, Any>>()
+
+                    try {
+
+                        val thermalDirectory =
+                            File("/sys/class/thermal")
+
+                        if (
+                            thermalDirectory.exists() &&
+                            thermalDirectory.isDirectory
+                        ) {
+
+                            val zones =
+                                thermalDirectory
+                                    .listFiles()
+                                    ?.filter {
+                                        it.name.startsWith("thermal_zone")
+                                    }
+                                    ?.sortedBy {
+                                        it.name
+                                    }
+                                    ?: emptyList()
+
+                            for (zone in zones) {
+
+                                try {
+
+                                    val tempFile =
+                                        File(zone, "temp")
+
+                                    if (
+                                        !tempFile.exists() ||
+                                        !tempFile.canRead()
+                                    ) {
+                                        continue
+                                    }
+
+                                    val raw =
+                                        tempFile
+                                            .readText()
+                                            .trim()
+                                            .toLongOrNull()
+                                            ?: continue
+
+                                    var temperature =
+                                        raw / 1000.0
+
+                                    if (
+                                        temperature < -40 ||
+                                        temperature > 150
+                                    ) {
+                                        continue
+                                    }
+
+                                    var type =
+                                        try {
+                                            File(
+                                                zone,
+                                                "type"
+                                            ).readText().trim()
+                                        } catch (_: Exception) {
+                                            "Thermal zone"
+                                        }
+
+                                    if (type.isBlank()) {
+                                        type = zone.name
+                                    }
+
+                                    thermalZones.add(
+                                        mapOf(
+                                            "name" to zone.name,
+                                            "type" to type,
+                                            "temperature" to temperature
+                                        )
+                                    )
+
+                                } catch (_: Exception) {
+                                }
+                            }
+                        }
+
+                    } catch (_: Exception) {
+                    }
+
+                    result.success(
+                        mapOf(
+                            "cpu_count" to cpuCount,
+                            "online_cpu_count" to onlineCpuCount,
+                            "online_cpu_list" to onlineCpuList,
+                            "cpu_frequencies" to frequencies,
+                            "thermal_zones" to thermalZones
+                        )
+                    )
+                }
+
                 "checkRoot" -> {
 
                     val paths = arrayOf(
 
                         "/system/app/Superuser.apk",
-
                         "/sbin/su",
-
                         "/system/bin/su",
-
                         "/system/xbin/su",
-
                         "/data/local/xbin/su",
-
                         "/data/local/bin/su",
-
                         "/system/sd/xbin/su",
-
                         "/system/bin/failsafe/su",
-
                         "/data/local/su"
                     )
 
@@ -381,7 +564,6 @@ class MainActivity : FlutterActivity() {
                 }
 
                 else -> {
-
                     result.notImplemented()
                 }
             }
@@ -397,13 +579,9 @@ class MainActivity : FlutterActivity() {
                 "downloadAndInstall" -> {
 
                     val downloadUrl =
-                        call.argument<String>(
-                            "url"
-                        )
+                        call.argument<String>("url")
 
-                    if (
-                        downloadUrl.isNullOrBlank()
-                    ) {
+                    if (downloadUrl.isNullOrBlank()) {
 
                         result.error(
                             "INVALID_URL",
@@ -423,17 +601,10 @@ class MainActivity : FlutterActivity() {
                                     .openConnection()
                                     as HttpURLConnection
 
-                            connection.requestMethod =
-                                "GET"
-
-                            connection.connectTimeout =
-                                15000
-
-                            connection.readTimeout =
-                                30000
-
-                            connection.instanceFollowRedirects =
-                                true
+                            connection.requestMethod = "GET"
+                            connection.connectTimeout = 15000
+                            connection.readTimeout = 30000
+                            connection.instanceFollowRedirects = true
 
                             connection.connect()
 
@@ -530,7 +701,6 @@ class MainActivity : FlutterActivity() {
                 }
 
                 else -> {
-
                     result.notImplemented()
                 }
             }
