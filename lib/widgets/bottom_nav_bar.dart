@@ -6,7 +6,8 @@ import '../theme/app_theme.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
-  final ValueChanged<int> onDestinationSelected;
+  final ValueChanged<int>
+      onDestinationSelected;
   final AppThemeStyle selectedStyle;
 
   const BottomNavBar({
@@ -17,28 +18,38 @@ class BottomNavBar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+  Widget build(
+    BuildContext context,
+  ) {
+    final scheme =
+        Theme.of(context).colorScheme;
 
-    if (selectedStyle == AppThemeStyle.normal) {
+    if (selectedStyle ==
+        AppThemeStyle.normal) {
       return NavigationBar(
         selectedIndex: currentIndex,
         onDestinationSelected:
             onDestinationSelected,
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.memory_outlined),
-            selectedIcon: Icon(Icons.memory),
+            icon:
+                Icon(Icons.memory_outlined),
+            selectedIcon:
+                Icon(Icons.memory),
             label: 'System',
           ),
           NavigationDestination(
-            icon: Icon(Icons.note_outlined),
-            selectedIcon: Icon(Icons.note),
+            icon:
+                Icon(Icons.note_outlined),
+            selectedIcon:
+                Icon(Icons.note),
             label: 'Notes',
           ),
           NavigationDestination(
-            icon: Icon(Icons.info_outline),
-            selectedIcon: Icon(Icons.info),
+            icon:
+                Icon(Icons.info_outline),
+            selectedIcon:
+                Icon(Icons.info),
             label: 'App',
           ),
         ],
@@ -47,14 +58,16 @@ class BottomNavBar extends StatelessWidget {
 
     final isLight =
         selectedStyle ==
-            AppThemeStyle.liquidGlassLight;
+            AppThemeStyle
+                .liquidGlassLight;
 
     return SafeArea(
-      minimum: const EdgeInsets.fromLTRB(
+      minimum:
+          const EdgeInsets.fromLTRB(
         16,
         8,
         16,
-        12,
+        10,
       ),
       child: ClipRRect(
         borderRadius:
@@ -65,28 +78,41 @@ class BottomNavBar extends StatelessWidget {
             sigmaY: 22,
           ),
           child: Container(
-            height: 72,
-            decoration: BoxDecoration(
+            height: 64,
+            decoration:
+                BoxDecoration(
               color: isLight
-                  ? Colors.white.withOpacity(0.50)
-                  : Colors.black.withOpacity(0.55),
+                  ? Colors.white
+                      .withOpacity(0.50)
+                  : Colors.black
+                      .withOpacity(0.55),
               borderRadius:
                   BorderRadius.circular(28),
               border: Border.all(
                 color: isLight
-                    ? Colors.white.withOpacity(0.82)
-                    : Colors.white.withOpacity(0.18),
+                    ? Colors.white
+                        .withOpacity(0.82)
+                    : Colors.white
+                        .withOpacity(0.18),
               ),
             ),
             child: LayoutBuilder(
-              builder: (context, constraints) {
+              builder:
+                  (
+                context,
+                constraints,
+              ) {
                 final itemWidth =
-                    constraints.maxWidth / 3;
+                    constraints.maxWidth /
+                        3;
 
                 return Stack(
+                  alignment:
+                      Alignment.center,
                   children: [
                     AnimatedPositioned(
-                      duration: const Duration(
+                      duration:
+                          const Duration(
                         milliseconds: 430,
                       ),
                       curve:
@@ -94,12 +120,16 @@ class BottomNavBar extends StatelessWidget {
                       left:
                           itemWidth *
                               currentIndex +
-                          6,
-                      top: 6,
-                      width: itemWidth - 12,
-                      height: 60,
-                      child: IgnorePointer(
-                        child: AnimatedContainer(
+                          (itemWidth -
+                                  48) /
+                              2,
+                      top: 10,
+                      width: 48,
+                      height: 44,
+                      child:
+                          IgnorePointer(
+                        child:
+                            AnimatedContainer(
                           duration:
                               const Duration(
                             milliseconds: 430,
@@ -108,24 +138,29 @@ class BottomNavBar extends StatelessWidget {
                               BoxDecoration(
                             color: isLight
                                 ? scheme.primary
-                                    .withOpacity(0.34)
+                                    .withOpacity(
+                                    0.34,
+                                  )
                                 : scheme.primary
-                                    .withOpacity(0.28),
+                                    .withOpacity(
+                                    0.28,
+                                  ),
                             borderRadius:
                                 BorderRadius.circular(
-                              22,
+                              15,
                             ),
-                            border: Border.all(
+                            border:
+                                Border.all(
                               color: isLight
                                   ? scheme.primary
-                                      .withOpacity(0.58)
+                                      .withOpacity(
+                                      0.58,
+                                    )
                                   : Colors.white
-                                      .withOpacity(0.22),
-                              width:
-                                  isLight
-                                      ? 1.3
-                                      : 1.0,
-                            ),
+                                      .withOpacity(
+                                      0.22,
+                                    ),
+                              ),
                             boxShadow: [
                               BoxShadow(
                                 color: scheme
@@ -137,12 +172,10 @@ class BottomNavBar extends StatelessWidget {
                                 ),
                                 blurRadius:
                                     isLight
-                                        ? 20
-                                        : 18,
+                                        ? 18
+                                        : 16,
                                 spreadRadius:
-                                    isLight
-                                        ? 1.5
-                                        : 1,
+                                    1,
                               ),
                             ],
                           ),
@@ -153,7 +186,8 @@ class BottomNavBar extends StatelessWidget {
                       children: [
                         _item(
                           context,
-                          Icons.memory_outlined,
+                          Icons
+                              .memory_outlined,
                           Icons.memory,
                           'System',
                           0,
@@ -161,7 +195,8 @@ class BottomNavBar extends StatelessWidget {
                         ),
                         _item(
                           context,
-                          Icons.note_outlined,
+                          Icons
+                              .note_outlined,
                           Icons.note,
                           'Notes',
                           1,
@@ -169,7 +204,8 @@ class BottomNavBar extends StatelessWidget {
                         ),
                         _item(
                           context,
-                          Icons.info_outline,
+                          Icons
+                              .info_outline,
                           Icons.info,
                           'App',
                           2,
@@ -208,10 +244,12 @@ class BottomNavBar extends StatelessWidget {
         behavior:
             HitTestBehavior.opaque,
         onTap: () {
-          onDestinationSelected(index);
+          onDestinationSelected(
+            index,
+          );
         },
         child: SizedBox(
-          height: 72,
+          height: 64,
           child: Center(
             child: Column(
               mainAxisAlignment:
@@ -222,7 +260,7 @@ class BottomNavBar extends StatelessWidget {
                       selected ? 1.08 : 1.0,
                   duration:
                       const Duration(
-                    milliseconds: 300,
+                    milliseconds: 250,
                   ),
                   curve:
                       Curves.easeOutCubic,
@@ -230,7 +268,7 @@ class BottomNavBar extends StatelessWidget {
                       AnimatedSwitcher(
                     duration:
                         const Duration(
-                      milliseconds: 220,
+                      milliseconds: 180,
                     ),
                     child: Icon(
                       selected
@@ -242,18 +280,19 @@ class BottomNavBar extends StatelessWidget {
                       color: selected
                           ? accent
                           : mutedColor,
+                      size: 22,
                     ),
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
                 AnimatedDefaultTextStyle(
                   duration:
                       const Duration(
-                    milliseconds: 220,
+                    milliseconds: 180,
                   ),
                   style: TextStyle(
                     fontSize:
-                        selected ? 12 : 11,
+                        selected ? 11 : 10,
                     fontWeight: selected
                         ? FontWeight.w600
                         : FontWeight.normal,
