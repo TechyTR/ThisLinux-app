@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 
+import '../services/app_version.dart';
 import '../services/update_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/update_button.dart';
@@ -52,8 +52,8 @@ class _BootScreenState
   bool _finished = false;
   bool _updateAvailable = false;
 
-  String _currentVersion =
-      'Yükleniyor...';
+  String get _currentVersion =>
+      AppVersion.current;
 
   int _currentLine = 0;
 
@@ -61,41 +61,8 @@ class _BootScreenState
   void initState() {
     super.initState();
 
-    _loadVersion();
     _startBootAnimation();
     _checkUpdate();
-  }
-
-  Future<void> _loadVersion() async {
-    try {
-      final packageInfo =
-          await PackageInfo.fromPlatform();
-
-      if (!mounted) return;
-
-      setState(() {
-        _currentVersion =
-            packageInfo.version;
-      });
-    } catch (_) {
-      if (!mounted) return;
-
-      setState(() {
-        _currentVersion =
-            'Bilinmiyor';
-      });
-    }
-  }
-
-  Future<String> _getCurrentVersion() async {
-    try {
-      final packageInfo =
-          await PackageInfo.fromPlatform();
-
-      return packageInfo.version;
-    } catch (_) {
-      return '0.0';
-    }
   }
 
   Future<void> _checkUpdate() async {
@@ -106,18 +73,10 @@ class _BootScreenState
       return;
     }
 
-    final currentVersion =
-        await _getCurrentVersion();
-
-    if (!mounted) return;
-
     setState(() {
-      _currentVersion =
-          currentVersion;
-
       _updateAvailable =
           UpdateService.isNewerVersion(
-        currentVersion,
+        AppVersion.current,
         update.latestVersion,
       );
     });
@@ -228,9 +187,9 @@ class _BootScreenState
                           20,
                         ),
                         children: [
-                          UpdateButton(
+                          const UpdateButton(
                             currentVersion:
-                                _currentVersion,
+                                AppVersion.current,
                           ),
                         ],
                       ),
@@ -323,8 +282,7 @@ class _BootScreenState
                   'assets/icon.png',
                   width: 110,
                   height: 110,
-                  errorBuilder:
-                      (
+                  errorBuilder: (
                     context,
                     error,
                     stackTrace,
