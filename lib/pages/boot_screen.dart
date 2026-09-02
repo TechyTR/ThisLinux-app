@@ -35,14 +35,13 @@ class BootScreen extends StatefulWidget {
 
 class _BootScreenState
     extends State<BootScreen> {
-
   final List<String> _bootLines = [
-    '[  OK  ] Starting ThisLinux...',
+    '[  OK  ] Starting Stellar Center...',
     '[  OK  ] Initializing system...',
     '[  OK  ] Loading system information...',
     '[  OK  ] Starting system services...',
     '[  OK  ] Checking device...',
-    '[  OK  ] ThisLinux is ready.',
+    '[  OK  ] Stellar Center is ready.',
   ];
 
   final List<String> _visibleLines = [];
@@ -53,7 +52,8 @@ class _BootScreenState
   bool _finished = false;
   bool _updateAvailable = false;
 
-  String _currentVersion = 'Yükleniyor...';
+  String _currentVersion =
+      'Yükleniyor...';
 
   int _currentLine = 0;
 
@@ -68,24 +68,17 @@ class _BootScreenState
 
   Future<void> _loadVersion() async {
     try {
-
       final packageInfo =
           await PackageInfo.fromPlatform();
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         _currentVersion =
             packageInfo.version;
       });
-
     } catch (_) {
-
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         _currentVersion =
@@ -96,14 +89,12 @@ class _BootScreenState
 
   Future<String> _getCurrentVersion() async {
     try {
-
       final packageInfo =
           await PackageInfo.fromPlatform();
 
       return packageInfo.version;
-
     } catch (_) {
-      return '0.0.0';
+      return '0.0';
     }
   }
 
@@ -118,12 +109,9 @@ class _BootScreenState
     final currentVersion =
         await _getCurrentVersion();
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setState(() {
-
       _currentVersion =
           currentVersion;
 
@@ -148,7 +136,6 @@ class _BootScreenState
         milliseconds: lineDuration,
       ),
       (timer) {
-
         if (!mounted) {
           timer.cancel();
           return;
@@ -156,9 +143,7 @@ class _BootScreenState
 
         if (_currentLine <
             _bootLines.length) {
-
           setState(() {
-
             _visibleLines.add(
               _bootLines[_currentLine],
             );
@@ -169,9 +154,7 @@ class _BootScreenState
 
         if (_currentLine >=
             _bootLines.length) {
-
           timer.cancel();
-
           _showLinuxLogo();
         }
       },
@@ -179,9 +162,7 @@ class _BootScreenState
   }
 
   Future<void> _showLinuxLogo() async {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setState(() {
       _showLogo = true;
@@ -193,9 +174,7 @@ class _BootScreenState
       ),
     );
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setState(() {
       _finished = true;
@@ -206,18 +185,19 @@ class _BootScreenState
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
-
         return AlertDialog(
           title: const Text(
             'Yeni sürüm bulundu',
           ),
           content: Text(
-            'ThisLinux için yeni bir sürüm mevcut.\n\n'
-            'Mevcut sürüm: v$_currentVersion\n\n'
-            'Güncelleme ekranını açmak ister misiniz?',
+            'Stellar Center için yeni '
+            'bir sürüm mevcut.\n\n'
+            'Mevcut sürüm: '
+            'v$_currentVersion\n\n'
+            'Güncelleme ekranını açmak '
+            'ister misiniz?',
           ),
           actions: [
-
             TextButton(
               onPressed: () {
                 Navigator.of(
@@ -228,18 +208,15 @@ class _BootScreenState
                 'Daha sonra',
               ),
             ),
-
             FilledButton(
               onPressed: () {
-
                 Navigator.of(
                   dialogContext,
                 ).pop();
 
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) =>
-                        Scaffold(
+                    builder: (_) => Scaffold(
                       appBar: AppBar(
                         title: const Text(
                           'Güncelleme',
@@ -251,7 +228,6 @@ class _BootScreenState
                           20,
                         ),
                         children: [
-
                           UpdateButton(
                             currentVersion:
                                 _currentVersion,
@@ -282,9 +258,7 @@ class _BootScreenState
   Widget build(
     BuildContext context,
   ) {
-
     if (_finished) {
-
       return HomeShell(
         selectedTheme:
             widget.selectedTheme,
@@ -302,7 +276,6 @@ class _BootScreenState
       body: SafeArea(
         child: Stack(
           children: [
-
             if (!_showLogo)
               Padding(
                 padding:
@@ -311,9 +284,8 @@ class _BootScreenState
                   crossAxisAlignment:
                       CrossAxisAlignment.start,
                   children: [
-
                     const Text(
-                      'ThisLinux',
+                      'Stellar Center',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,
@@ -321,11 +293,9 @@ class _BootScreenState
                             FontWeight.bold,
                       ),
                     ),
-
                     const SizedBox(
                       height: 24,
                     ),
-
                     ..._visibleLines.map(
                       (line) => Padding(
                         padding:
@@ -347,13 +317,12 @@ class _BootScreenState
                   ],
                 ),
               ),
-
             if (_showLogo)
               Center(
                 child: Image.asset(
-                  'assets/linux_logo.png',
-                  width: 100,
-                  height: 100,
+                  'assets/icon.png',
+                  width: 110,
+                  height: 110,
                   errorBuilder:
                       (
                     context,
@@ -361,14 +330,14 @@ class _BootScreenState
                     stackTrace,
                   ) {
                     return const Icon(
-                      Icons.computer,
+                      Icons
+                          .auto_awesome_rounded,
                       color: Colors.white,
                       size: 90,
                     );
                   },
                 ),
               ),
-
             if (_updateAvailable)
               Positioned(
                 right: 18,
@@ -384,15 +353,16 @@ class _BootScreenState
                   ),
                 ),
               ),
-
             Positioned(
               right: 18,
               bottom: 4,
               child: Text(
                 'v$_currentVersion',
-                style: const TextStyle(
+                style:
+                    const TextStyle(
                   color: Colors.white54,
-                  fontFamily: 'monospace',
+                  fontFamily:
+                      'monospace',
                   fontSize: 11,
                 ),
               ),
