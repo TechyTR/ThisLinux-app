@@ -1,4 +1,4 @@
-lib/pages/benchmark_page.dart dosyasını tamamen aşağıdaki kodla değiştir:
+
 import 'package:flutter/material.dart';
 
 import '../services/benchmark_service.dart';
