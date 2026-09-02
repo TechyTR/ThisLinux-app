@@ -1,4 +1,4 @@
-lib/pages/system_monitor_page.dart dosyasını tamamen aşağıdaki kodla değiştir:
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
