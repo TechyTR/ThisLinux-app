@@ -1,10 +1,16 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
 class BenchmarkPage extends StatefulWidget {
-  const BenchmarkPage({super.key});
+  const BenchmarkPage({
+    super.key,
+  });
 
   @override
   State<BenchmarkPage> createState() =>
@@ -12,49 +18,107 @@ class BenchmarkPage extends StatefulWidget {
 }
 
 class _BenchmarkPageState
-    extends State<BenchmarkPage> {
+    extends State<BenchmarkPage>
+    with SingleTickerProviderStateMixin {
   bool _running = false;
+  bool _cancelRequested = false;
+
   double _progress = 0;
 
-  int _cpuScore = 0;
-  int _memoryScore = 0;
+  String _status =
+      'Henüz test yapılmadı';
+
+  int _cpuSingle = 0;
+  int _cpuMulti = 0;
+  int _ramScore = 0;
   int _storageScore = 0;
+  int _graphicsScore = 0;
+  int _mixedScore = 0;
   int _totalScore = 0;
 
-  String _status = 'Henüz test yapılmadı';
+  late AnimationController
+      _graphicsController;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _graphicsController =
+        AnimationController(
+      vsync: this,
+      duration:
+          const Duration(seconds: 1),
+    );
+  }
+
+  @override
+  void dispose() {
+    _graphicsController.dispose();
+    super.dispose();
+  }
 
   Future<void> _startBenchmark() async {
     if (_running) return;
 
-    final shouldContinue =
-        await _showWarningDialog();
+    final confirmed =
+        await _showWarning();
 
-    if (!shouldContinue || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
 
-    await _runBenchmark();
+    _cancelRequested = false;
+
+    setState(() {
+      _running = true;
+      _progress = 0;
+      _status =
+          'Benchmark hazırlanıyor...';
+
+      _cpuSingle = 0;
+      _cpuMulti = 0;
+      _ramScore = 0;
+      _storageScore = 0;
+      _graphicsScore = 0;
+      _mixedScore = 0;
+      _totalScore = 0;
+    });
+
+    try {
+      await _runTests();
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _running = false;
+        _status =
+            'Benchmark sırasında hata oluştu.';
+      });
+    }
   }
 
-  Future<bool> _showWarningDialog() async {
-    final result = await showDialog<bool>(
+  Future<bool> _showWarning() async {
+    final result =
+        await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) {
+      builder: (context) {
         return AlertDialog(
           title: const Text(
-            'Performans Testi',
+            'Performans Benchmarkı',
           ),
           content: const Text(
-            'Cihazınız performans testi sırasında '
-            'ısınabilir.',
+            'Bu test CPU, RAM, depolama ve '
+            'grafik birimlerini yoğun şekilde '
+            'kullanabilir. Cihaz ısınabilir.\n\n'
+            'Android termal korumaları devre '
+            'dışı bırakılmaz.',
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(
-                  dialogContext,
-                ).pop(false);
+                Navigator.of(context)
+                    .pop(false);
               },
               child: const Text(
                 'İptal',
@@ -62,12 +126,11 @@ class _BenchmarkPageState
             ),
             FilledButton(
               onPressed: () {
-                Navigator.of(
-                  dialogContext,
-                ).pop(true);
+                Navigator.of(context)
+                    .pop(true);
               },
               child: const Text(
-                'Devam Et',
+                'Başlat',
               ),
             ),
           ],
@@ -78,133 +141,338 @@ class _BenchmarkPageState
     return result ?? false;
   }
 
-  Future<void> _runBenchmark() async {
-    if (_running) return;
+  Future<void> _runTests() async {
+    _setStatus(
+      'CPU Single-Core test ediliyor...',
+      0.04,
+    );
 
-    setState(() {
-      _running = true;
-      _progress = 0;
-      _cpuScore = 0;
-      _memoryScore = 0;
-      _storageScore = 0;
-      _totalScore = 0;
-      _status = 'CPU testi çalışıyor...';
-    });
+    final single =
+        await Isolate.run(
+      _cpuSingleWorker,
+    );
 
-    final cpuScore =
-        await _runCpuTest();
+    if (_shouldStop()) return;
 
-    if (!mounted) return;
+    _setResult(
+      () {
+        _cpuSingle = single;
+      },
+      0.18,
+    );
 
-    setState(() {
-      _cpuScore = cpuScore;
-      _progress = 0.35;
-      _status = 'Bellek testi çalışıyor...';
-    });
+    _setStatus(
+      'CPU Multi-Core test ediliyor...',
+      0.20,
+    );
 
-    final memoryScore =
-        await _runMemoryTest();
+    final multi =
+        await _runCpuMulti();
 
-    if (!mounted) return;
+    if (_shouldStop()) return;
 
-    setState(() {
-      _memoryScore = memoryScore;
-      _progress = 0.65;
-      _status =
-          'Depolama okuma/yazma testi çalışıyor...';
-    });
+    _setResult(
+      () {
+        _cpuMulti = multi;
+      },
+      0.38,
+    );
 
-    final storageScore =
+    _setStatus(
+      'RAM performansı ölçülüyor...',
+      0.40,
+    );
+
+    final ram =
+        await _runRamTest();
+
+    if (_shouldStop()) return;
+
+    _setResult(
+      () {
+        _ramScore = ram;
+      },
+      0.53,
+    );
+
+    _setStatus(
+      'Depolama testi çalışıyor...',
+      0.55,
+    );
+
+    final storage =
         await _runStorageTest();
 
-    if (!mounted) return;
+    if (_shouldStop()) return;
 
-    final total = max(
-      1,
-      ((_cpuScore * 0.50) +
-              (_memoryScore * 0.25) +
-              (storageScore * 0.25))
-          .round(),
+    _setResult(
+      () {
+        _storageScore = storage;
+      },
+      0.70,
+    );
+
+    _setStatus(
+      'Grafik / UI yükü ölçülüyor...',
+      0.72,
+    );
+
+    final graphics =
+        await _runGraphicsTest();
+
+    if (_shouldStop()) return;
+
+    _setResult(
+      () {
+        _graphicsScore = graphics;
+      },
+      0.84,
+    );
+
+    _setStatus(
+      'Mixed System testi çalışıyor...',
+      0.86,
+    );
+
+    final mixed =
+        await _runMixedTest();
+
+    if (_shouldStop()) return;
+
+    final total =
+        _calculateTotal(
+      single,
+      multi,
+      ram,
+      storage,
+      graphics,
+      mixed,
     );
 
     setState(() {
-      _storageScore = storageScore;
+      _mixedScore = mixed;
       _totalScore = total;
       _progress = 1;
-      _status = _getRating(total);
+      _status =
+          _rating(total);
       _running = false;
     });
   }
 
-  Future<int> _runCpuTest() async {
-    final stopwatch = Stopwatch()..start();
-
-    double result = 0;
-
-    while (stopwatch.elapsedMilliseconds < 1800) {
-      for (var i = 1; i < 12000; i++) {
-        result +=
-            sqrt(i) *
-            sin(i) *
-            cos(i);
-      }
+  bool _shouldStop() {
+    if (!_cancelRequested) {
+      return false;
     }
+
+    if (mounted) {
+      setState(() {
+        _running = false;
+        _status =
+            'Benchmark iptal edildi.';
+      });
+    }
+
+    return true;
+  }
+
+  void _setStatus(
+    String status,
+    double progress,
+  ) {
+    if (!mounted) return;
+
+    setState(() {
+      _status = status;
+      _progress = progress;
+    });
+  }
+
+  void _setResult(
+    VoidCallback update,
+    double progress,
+  ) {
+    if (!mounted) return;
+
+    setState(() {
+      update();
+      _progress = progress;
+    });
+  }
+
+  Future<int> _runCpuMulti() async {
+    final cores =
+        max(
+          2,
+          Platform.numberOfProcessors,
+        );
+
+    final workers =
+        min(8, cores);
+
+    final stopwatch =
+        Stopwatch()..start();
+
+    final futures =
+        List.generate(
+      workers,
+      (_) => Isolate.run(
+        _cpuMultiWorker,
+      ),
+    );
+
+    final results =
+        await Future.wait(futures);
 
     stopwatch.stop();
 
-    if (result.isNaN ||
-        result.isInfinite) {
-      return 1;
-    }
+    final operations =
+        results.fold<int>(
+      0,
+      (sum, value) =>
+          sum + value,
+    );
 
-    final elapsed =
+    final seconds =
         max(
-          1,
-          stopwatch.elapsedMicroseconds,
+          0.001,
+          stopwatch.elapsedMicroseconds /
+              1000000,
         );
 
-    final operations =
-        2160000000 ~/ elapsed;
+    final opsPerSecond =
+        operations / seconds;
 
-    return min(
-      100,
-      max(
-        1,
-        operations ~/ 5,
-      ),
+    return _score(
+      opsPerSecond,
+      30000000,
     );
   }
 
-  Future<int> _runMemoryTest() async {
-    final stopwatch = Stopwatch()..start();
+  static int _cpuSingleWorker() {
+    final stopwatch =
+        Stopwatch()..start();
 
-    final blocks = <List<int>>[];
+    double value = 0;
+
+    int iterations = 0;
+
+    while (
+        stopwatch.elapsedMilliseconds <
+            3000) {
+      for (
+        var i = 1;
+        i < 9000;
+        i++
+      ) {
+        value +=
+            sqrt(i) *
+            sin(i * 0.17) *
+            cos(i * 0.31);
+
+        value =
+            value % 1000000;
+
+        iterations++;
+      }
+    }
+
+    if (value.isNaN ||
+        value.isInfinite) {
+      return 1;
+    }
+
+    final seconds =
+        max(
+          0.001,
+          stopwatch.elapsedMicroseconds /
+              1000000,
+        );
+
+    return _scoreStatic(
+      iterations / seconds,
+      6000000,
+    );
+  }
+
+  static int _cpuMultiWorker() {
+    final stopwatch =
+        Stopwatch()..start();
+
+    double value = 0;
+
+    int iterations = 0;
+
+    while (
+        stopwatch.elapsedMilliseconds <
+            3000) {
+      for (
+        var i = 1;
+        i < 7000;
+        i++
+      ) {
+        value +=
+            sqrt(i) *
+            sin(i * 0.23) *
+            cos(i * 0.41);
+
+        value =
+            value % 1000000;
+
+        iterations++;
+      }
+    }
+
+    if (value.isNaN ||
+        value.isInfinite) {
+      return 1;
+    }
+
+    return iterations;
+  }
+
+  Future<int> _runRamTest() async {
+    final stopwatch =
+        Stopwatch()..start();
+
+    const blockSize =
+        16 * 1024 * 1024;
+
+    const blockCount = 24;
+
+    final blocks =
+        <Uint8List>[];
+
+    int checksum = 0;
 
     try {
-      for (var i = 0; i < 12; i++) {
-        blocks.add(
-          List<int>.filled(
-            250000,
-            i,
-            growable: false,
-          ),
-        );
-      }
+      for (
+        var i = 0;
+        i < blockCount;
+        i++
+      ) {
+        final block =
+            Uint8List(blockSize);
 
-      var checksum = 0;
+        for (
+          var j = 0;
+          j < block.length;
+          j += 4096
+        ) {
+          block[j] =
+              (j + i) & 0xff;
+        }
+
+        blocks.add(block);
+      }
 
       for (final block in blocks) {
         for (
           var i = 0;
           i < block.length;
-          i += 256
+          i += 4096
         ) {
           checksum += block[i];
         }
-      }
-
-      if (checksum == -1) {
-        return 1;
       }
     } finally {
       blocks.clear();
@@ -212,208 +480,445 @@ class _BenchmarkPageState
 
     stopwatch.stop();
 
-    final elapsed =
+    if (checksum == -1) {
+      return 1;
+    }
+
+    final megabytes =
+        (blockSize *
+                blockCount) /
+            1024 /
+            1024;
+
+    final seconds =
         max(
-          1,
-          stopwatch.elapsedMilliseconds,
+          0.001,
+          stopwatch.elapsedMicroseconds /
+              1000000,
         );
 
-    final score =
-        100 - (elapsed ~/ 12);
+    final speed =
+        megabytes / seconds;
 
-    return min(
-      100,
-      max(
-        1,
-        score,
-      ),
+    return _score(
+      speed,
+      2500,
     );
   }
 
   Future<int> _runStorageTest() async {
-    final stopwatch = Stopwatch()..start();
-
-    File? testFile;
+    Directory? directory;
+    File? file;
 
     try {
-      /*
-       * Uygulamanın cache klasöründe
-       * geçici benchmark dosyası oluşturulur.
-       *
-       * Böylece depolama benchmark'ı için
-       * harici depolama izni gerekmez.
-       */
-
-      final directory =
-          await Directory.systemTemp.createTemp(
-        'thislinux_storage_benchmark_',
+      directory =
+          await Directory.systemTemp
+              .createTemp(
+        'stellar_benchmark_',
       );
 
-      testFile = File(
-        '${directory.path}/storage_test.bin',
+      file = File(
+        '${directory.path}/test.bin',
       );
 
-      /*
-       * 8 MB test verisi.
-       *
-       * Büyük ama kısa süreli bir I/O testi
-       * oluşturmak için kullanılır.
-       */
-      const blockSize = 1024 * 1024;
-      const blockCount = 8;
+      const totalSize =
+          128 * 1024 * 1024;
 
-      final block = List<int>.generate(
-        blockSize,
-        (index) => index % 256,
-      );
+      const blockSize =
+          1024 * 1024;
 
-      /*
-       * YAZMA TESTİ
-       */
-      final writeStopwatch =
+      final block =
+          Uint8List(blockSize);
+
+      for (
+        var i = 0;
+        i < block.length;
+        i++
+      ) {
+        block[i] = i & 0xff;
+      }
+
+      final writeTimer =
           Stopwatch()..start();
 
       final output =
-          testFile.openWrite();
+          file.openWrite();
 
-      for (var i = 0;
-          i < blockCount;
-          i++) {
+      for (
+        var written = 0;
+        written < totalSize;
+        written += blockSize
+      ) {
         output.add(block);
       }
 
       await output.flush();
       await output.close();
 
-      writeStopwatch.stop();
+      writeTimer.stop();
 
-      /*
-       * OKUMA TESTİ
-       */
-      final readStopwatch =
+      final readTimer =
           Stopwatch()..start();
 
-      var checksum = 0;
+      int checksum = 0;
 
-      final input =
-          testFile.openRead();
-
-      await for (final chunk in input) {
+      await for (
+        final chunk
+            in file.openRead()
+      ) {
         for (
           var i = 0;
           i < chunk.length;
-          i += 4096
+          i += 8192
         ) {
           checksum += chunk[i];
         }
       }
 
-      readStopwatch.stop();
+      readTimer.stop();
 
       if (checksum == -1) {
         return 1;
       }
 
-      stopwatch.stop();
+      final writeSeconds =
+          max(
+            0.001,
+            writeTimer.elapsedMicroseconds /
+                1000000,
+          );
 
-      /*
-       * Toplam 8 MB yazıldı ve 8 MB okundu.
-       */
-      const totalMegabytes = 16.0;
+      final readSeconds =
+          max(
+            0.001,
+            readTimer.elapsedMicroseconds /
+                1000000,
+          );
 
-      final totalSeconds =
-          stopwatch.elapsedMicroseconds /
-              1000000.0;
+      final writeSpeed =
+          128 / writeSeconds;
 
-      final totalSpeed =
-          totalMegabytes /
-              max(
-                0.001,
-                totalSeconds,
-              );
+      final readSpeed =
+          128 / readSeconds;
 
-      /*
-       * Yaklaşık 50 MB/s ve üzerini
-       * 100 puan civarına yaklaştırır.
-       *
-       * Bu değer cihazlar arasında
-       * karşılaştırma yapılabilmesi için
-       * normalize edilir.
-       */
-      final score =
-          (totalSpeed * 2).round();
+      final combined =
+          (writeSpeed +
+                  readSpeed) /
+              2;
 
-      return min(
-        100,
-        max(
-          1,
-          score,
-        ),
+      return _score(
+        combined,
+        500,
       );
     } catch (_) {
       return 1;
     } finally {
       try {
-        await testFile?.delete();
+        await file?.delete();
+      } catch (_) {}
 
-        final parent =
-            testFile?.parent;
-
-        if (parent != null &&
-            await parent.exists()) {
-          await parent.delete();
-        }
+      try {
+        await directory?.delete();
       } catch (_) {}
     }
   }
 
-  String _getRating(int score) {
-    if (score >= 90) {
+  Future<int> _runGraphicsTest() async {
+    _graphicsController.repeat();
+
+    final stopwatch =
+        Stopwatch()..start();
+
+    int frames = 0;
+
+    while (
+        stopwatch.elapsedMilliseconds <
+            4000) {
+      if (_cancelRequested) {
+        _graphicsController.stop();
+        return 0;
+      }
+
+      await Future.delayed(
+        const Duration(
+          milliseconds: 16,
+        ),
+      );
+
+      frames++;
+    }
+
+    stopwatch.stop();
+    _graphicsController.stop();
+
+    final seconds =
+        max(
+          0.001,
+          stopwatch.elapsedMicroseconds /
+              1000000,
+        );
+
+    final fps =
+        frames / seconds;
+
+    return _score(
+      fps,
+      60,
+    );
+  }
+
+  Future<int> _runMixedTest() async {
+    final stopwatch =
+        Stopwatch()..start();
+
+    final cpuFuture =
+        Isolate.run(
+      _mixedWorker,
+    );
+
+    final memoryFuture =
+        _runSmallMemoryLoad();
+
+    final results =
+        await Future.wait([
+      cpuFuture,
+      memoryFuture,
+    ]);
+
+    stopwatch.stop();
+
+    final cpu =
+        results[0];
+
+    final memory =
+        results[1];
+
+    final combined =
+        (cpu * 0.65) +
+            (memory * 0.35);
+
+    return combined.round();
+  }
+
+  static int _mixedWorker() {
+    final stopwatch =
+        Stopwatch()..start();
+
+    double value = 0;
+    int iterations = 0;
+
+    while (
+        stopwatch.elapsedMilliseconds <
+            2500) {
+      for (
+        var i = 1;
+        i < 10000;
+        i++
+      ) {
+        value +=
+            sin(i) *
+            cos(i) *
+            sqrt(i);
+
+        iterations++;
+      }
+    }
+
+    if (value.isInfinite ||
+        value.isNaN) {
+      return 1;
+    }
+
+    return _scoreStatic(
+      iterations /
+          max(
+            0.001,
+            stopwatch.elapsedMicroseconds /
+                1000000,
+          ),
+      5000000,
+    );
+  }
+
+  Future<int> _runSmallMemoryLoad() async {
+    final blocks =
+        <Uint8List>[];
+
+    try {
+      for (
+        var i = 0;
+        i < 10;
+        i++
+      ) {
+        blocks.add(
+          Uint8List(
+            8 * 1024 * 1024,
+          ),
+        );
+      }
+
+      int value = 0;
+
+      for (final block in blocks) {
+        for (
+          var i = 0;
+          i < block.length;
+          i += 8192
+        ) {
+          value += block[i];
+        }
+      }
+
+      return min(
+        10000,
+        max(
+          1,
+          value + 5000,
+        ),
+      );
+    } finally {
+      blocks.clear();
+    }
+  }
+
+  static int _score(
+    double value,
+    double baseline,
+  ) {
+    return _scoreStatic(
+      value,
+      baseline,
+    );
+  }
+
+  static int _scoreStatic(
+    double value,
+    double baseline,
+  ) {
+    if (value <= 0 ||
+        value.isNaN ||
+        value.isInfinite) {
+      return 1;
+    }
+
+    /*
+     * Skor kasıtlı olarak 100 ile
+     * sınırlandırılmıyor.
+     */
+    return max(
+      1,
+      (value / baseline * 1000)
+          .round(),
+    );
+  }
+
+  int _calculateTotal(
+    int single,
+    int multi,
+    int ram,
+    int storage,
+    int graphics,
+    int mixed,
+  ) {
+    /*
+     * Stellar Center Benchmark skoru:
+     *
+     * Single  20%
+     * Multi   25%
+     * RAM     15%
+     * Storage 15%
+     * GPU/UI  10%
+     * Mixed   15%
+     *
+     * Bu AnTuTu skoru değildir.
+     * Stellar'ın kendi performans ölçeğidir.
+     */
+    return max(
+      1,
+      (single * 0.20 +
+              multi * 0.25 +
+              ram * 0.15 +
+              storage * 0.15 +
+              graphics * 0.10 +
+              mixed * 0.15)
+          .round(),
+    );
+  }
+
+  String _rating(int score) {
+    if (score >= 30000) {
+      return 'Ultra Performans';
+    }
+
+    if (score >= 20000) {
       return 'Amiral Gemisi';
     }
 
-    if (score >= 75) {
-      return 'Harika';
+    if (score >= 12000) {
+      return 'Çok Güçlü';
     }
 
-    if (score >= 60) {
+    if (score >= 7000) {
+      return 'Güçlü';
+    }
+
+    if (score >= 4000) {
       return 'İyi';
     }
 
-    if (score >= 45) {
+    if (score >= 2000) {
       return 'Orta';
     }
 
-    if (score >= 25) {
-      return 'Biraz Kötü';
-    }
-
-    return 'Kötü';
+    return 'Temel';
   }
 
-  Widget _scoreCard(
-    String title,
-    int score,
-    IconData icon,
-  ) {
-    final color =
-        Theme.of(context)
-            .colorScheme
-            .primary;
+  void _cancelBenchmark() {
+    if (!_running) return;
+
+    _cancelRequested = true;
+    _graphicsController.stop();
+
+    setState(() {
+      _running = false;
+      _status =
+          'Benchmark iptal edildi.';
+    });
+  }
+
+  Widget _scoreCard({
+    required String title,
+    required int score,
+    required IconData icon,
+  }) {
+    final scheme =
+        Theme.of(context).colorScheme;
 
     return Card(
       margin:
           const EdgeInsets.only(
-        bottom: 12,
+        bottom: 9,
       ),
       child: ListTile(
-        leading: Icon(
-          icon,
-          color: color,
+        leading: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: scheme.primary
+                .withOpacity(0.12),
+            borderRadius:
+                BorderRadius.circular(13),
+          ),
+          child: Icon(
+            icon,
+            color: scheme.primary,
+          ),
         ),
         title: Text(title),
         trailing: Text(
-          '$score/100',
+          score == 0
+              ? '--'
+              : '$score',
           style: const TextStyle(
             fontWeight:
                 FontWeight.bold,
@@ -429,8 +934,7 @@ class _BenchmarkPageState
     BuildContext context,
   ) {
     final scheme =
-        Theme.of(context)
-            .colorScheme;
+        Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -438,6 +942,16 @@ class _BenchmarkPageState
           'Benchmark',
         ),
         centerTitle: true,
+        actions: [
+          if (_running)
+            IconButton(
+              onPressed:
+                  _cancelBenchmark,
+              icon: const Icon(
+                Icons.stop_circle_outlined,
+              ),
+            ),
+        ],
       ),
       body: ListView(
         padding:
@@ -454,29 +968,34 @@ class _BenchmarkPageState
                         ? '--'
                         : '$_totalScore',
                     style: TextStyle(
-                      fontSize: 64,
+                      fontSize: 58,
                       fontWeight:
                           FontWeight.bold,
                       color:
                           scheme.primary,
                     ),
                   ),
+                  const SizedBox(
+                    height: 4,
+                  ),
                   const Text(
-                    'Genel Performans',
+                    'STELLAR SCORE',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 13,
+                      letterSpacing: 2,
+                      fontWeight:
+                          FontWeight.w700,
                     ),
                   ),
                   const SizedBox(
-                    height: 8,
+                    height: 12,
                   ),
                   Text(
                     _status,
                     textAlign:
                         TextAlign.center,
-                    style:
-                        const TextStyle(
-                      fontSize: 20,
+                    style: const TextStyle(
+                      fontSize: 18,
                       fontWeight:
                           FontWeight.w700,
                     ),
@@ -487,57 +1006,88 @@ class _BenchmarkPageState
           ),
 
           const SizedBox(
-            height: 16,
+            height: 14,
           ),
 
-          if (_running)
-            Column(
-              children: [
-                LinearProgressIndicator(
-                  value: _progress,
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                Text(_status),
-                const SizedBox(
-                  height: 16,
-                ),
-              ],
+          if (_running) ...[
+            ClipRRect(
+              borderRadius:
+                  BorderRadius.circular(10),
+              child:
+                  LinearProgressIndicator(
+                minHeight: 9,
+                value: _progress,
+              ),
             ),
+            const SizedBox(
+              height: 10,
+            ),
+            Text(
+              '${(_progress * 100).round()}%',
+              textAlign:
+                  TextAlign.center,
+              style: TextStyle(
+                color:
+                    scheme.primary,
+                fontWeight:
+                    FontWeight.w700,
+              ),
+            ),
+            const SizedBox(
+              height: 14,
+            ),
+          ],
 
           _scoreCard(
-            'CPU',
-            _cpuScore,
-            Icons.memory,
+            title: 'CPU Single-Core',
+            score: _cpuSingle,
+            icon: Icons.memory,
           ),
 
           _scoreCard(
-            'Bellek',
-            _memoryScore,
-            Icons.memory,
+            title: 'CPU Multi-Core',
+            score: _cpuMulti,
+            icon: Icons.developer_board,
           ),
 
           _scoreCard(
-            'Depolama',
-            _storageScore,
-            Icons.storage,
+            title: 'RAM',
+            score: _ramScore,
+            icon: Icons.sd_storage,
+          ),
+
+          _scoreCard(
+            title: 'Storage',
+            score: _storageScore,
+            icon: Icons.storage,
+          ),
+
+          _scoreCard(
+            title: 'Graphics / UI',
+            score: _graphicsScore,
+            icon: Icons.graphic_eq,
+          ),
+
+          _scoreCard(
+            title: 'Mixed System',
+            score: _mixedScore,
+            icon: Icons.speed,
           ),
 
           const SizedBox(
-            height: 12,
+            height: 10,
           ),
 
           SizedBox(
             height: 54,
-            child:
-                FilledButton.icon(
-              onPressed:
-                  _running
-                      ? null
-                      : _startBenchmark,
-              icon: const Icon(
-                Icons.speed,
+            child: FilledButton.icon(
+              onPressed: _running
+                  ? null
+                  : _startBenchmark,
+              icon: Icon(
+                _running
+                    ? Icons.hourglass_top
+                    : Icons.play_arrow,
               ),
               label: Text(
                 _running
@@ -548,18 +1098,19 @@ class _BenchmarkPageState
           ),
 
           const SizedBox(
-            height: 16,
+            height: 14,
           ),
 
           Text(
-            'Performans testi cihazı kısa süreliğine '
-            'yüksek işlem altında çalıştırabilir.',
+            'Stellar Score, Stellar Center için '
+            'oluşturulmuş bağımsız bir performans '
+            'ölçeğidir ve AnTuTu puanıyla aynı değildir.',
             textAlign:
                 TextAlign.center,
             style: TextStyle(
               fontSize: 12,
-              color: scheme
-                  .onSurfaceVariant,
+              color:
+                  scheme.onSurfaceVariant,
             ),
           ),
         ],
