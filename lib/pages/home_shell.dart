@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'app_info_page.dart';
+import 'dashboard_page.dart';
 import 'notes_page.dart';
 import 'system_info_page.dart';
+import 'system_monitor_page.dart';
 
 class HomeShell extends StatefulWidget {
   final AppThemeColor selectedTheme;
@@ -45,6 +47,25 @@ class _HomeShellState
 
   List<Widget> _buildPages() {
     return [
+      DashboardPage(
+        selectedTheme:
+            widget.selectedTheme,
+        selectedStyle:
+            widget.selectedStyle,
+        onThemeChanged:
+            widget.onThemeChanged,
+        onStyleChanged:
+            widget.onStyleChanged,
+        onSystemInfo:
+            () => _openPage(1),
+        onSystemMonitor:
+            () => _openPage(2),
+        onNotes:
+            () => _openPage(3),
+        onAppInfo:
+            () => _openPage(4),
+      ),
+
       SystemInfoPage(
         selectedTheme:
             widget.selectedTheme,
@@ -55,7 +76,20 @@ class _HomeShellState
         onStyleChanged:
             widget.onStyleChanged,
       ),
+
+      SystemMonitorPage(
+        selectedTheme:
+            widget.selectedTheme,
+        selectedStyle:
+            widget.selectedStyle,
+        onThemeChanged:
+            widget.onThemeChanged,
+        onStyleChanged:
+            widget.onStyleChanged,
+      ),
+
       const NotesPage(),
+
       AppInfoPage(
         selectedTheme:
             widget.selectedTheme,
@@ -67,6 +101,17 @@ class _HomeShellState
             widget.onStyleChanged,
       ),
     ];
+  }
+
+  void _openPage(int index) {
+    if (index < 0 ||
+        index >= _pages.length) {
+      return;
+    }
+
+    setState(() {
+      _currentIndex = index;
+    });
   }
 
   @override
