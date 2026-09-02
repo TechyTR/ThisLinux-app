@@ -1,7 +1,9 @@
 import 'package:battery_plus/battery_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../services/app_version.dart';
 import '../theme/app_theme.dart';
 
 class SystemInfoPage extends StatefulWidget {
@@ -31,7 +33,15 @@ class SystemInfoPage extends StatefulWidget {
 
 class _SystemInfoPageState
     extends State<SystemInfoPage> {
+  static const MethodChannel _channel =
+      MethodChannel(
+    'org.test.thislinux/native',
+  );
+
   AndroidDeviceInfo? _info;
+
+  Map<String, dynamic> _nativeInfo =
+      <String, dynamic>{};
 
   int _batteryLevel = -1;
 
@@ -55,11 +65,9 @@ class _SystemInfoPageState
 
     try {
       final deviceInfo =
-          await DeviceInfoPlugin()
-              .androidInfo;
+          await DeviceInfoPlugin().androidInfo;
 
-      final battery =
-          Battery();
+      final battery = Battery();
 
       final level =
           await battery.batteryLevel;
@@ -67,10 +75,33 @@ class _SystemInfoPageState
       final state =
           await battery.batteryState;
 
+      Map<String, dynamic> nativeInfo =
+          <String, dynamic>{};
+
+      try {
+        final result =
+            await _channel.invokeMethod<
+                Map<dynamic, dynamic>>(
+          'getDeviceInfo',
+        );
+
+        if (result != null) {
+          nativeInfo = result.map(
+            (key, value) => MapEntry(
+              key.toString(),
+              value,
+            ),
+          );
+        }
+      } catch (_) {
+        nativeInfo = <String, dynamic>{};
+      }
+
       if (!mounted) return;
 
       setState(() {
         _info = deviceInfo;
+        _nativeInfo = nativeInfo;
         _batteryLevel = level;
         _batteryState = state;
         _loading = false;
@@ -84,15 +115,148 @@ class _SystemInfoPageState
     }
   }
 
-  String _value(
-    String? value,
+  String _stringValue(
+    dynamic value,
   ) {
-    if (value == null ||
-        value.trim().isEmpty) {
+    if (value == null) {
       return 'Bilinmiyor';
     }
 
-    return value;
+    final text = value.toString().trim();
+
+    if (text.isEmpty ||
+        text == 'null') {
+      return 'Bilinmiyor';
+    }
+
+    return text;
+  }
+
+  String _formatBytes(
+    dynamic value,
+  ) {
+    if (value == null) {
+      return 'Bilinmiyor';
+    }
+
+    final bytes =
+        value is num
+            ? value.toDouble()
+            : double.tryParse(
+                  value.toString(),
+                ) ??
+                0;
+
+    if (bytes <= 0) {
+      return 'Bilinmiyor';
+    }
+
+    const units = [
+      'B',
+      'KB',
+      'MB',
+      'GB',
+      'TB',
+    ];
+
+    var size = bytes;
+    var unit = 0;
+
+    while (size >= 1024 &&
+        unit < units.length - 1) {
+      size /= 1024;
+      unit++;
+    }
+
+    if (unit == 0) {
+      return '${size.toStringAsFixed(0)} ${units[unit]}';
+    }
+
+    return '${size.toStringAsFixed(2)} ${units[unit]}';
+  }
+
+  String _formatRam(
+    dynamic value,
+  ) {
+    if (value == null) {
+      return 'Bilinmiyor';
+    }
+
+    final bytes =
+        value is num
+            ? value.toDouble()
+            : double.tryParse(
+                  value.toString(),
+                ) ??
+                0;
+
+    if (bytes <= 0) {
+      return 'Bilinmiyor';
+    }
+
+    final gb =
+        bytes /
+        (1024 * 1024 * 1024);
+
+    return '${gb.toStringAsFixed(2)} GB';
+  }
+
+  String _formatNumber(
+    dynamic value,
+  ) {
+    if (value == null) {
+      return 'Bilinmiyor';
+    }
+
+    if (value is num) {
+      return value
+          .toStringAsFixed(0);
+    }
+
+    return _stringValue(value);
+  }
+
+  String _formatDensity(
+    dynamic value,
+  ) {
+    if (value == null) {
+      return 'Bilinmiyor';
+    }
+
+    final density =
+        value is num
+            ? value.toDouble()
+            : double.tryParse(
+                  value.toString(),
+                );
+
+    if (density == null) {
+      return 'Bilinmiyor';
+    }
+
+    return '${density.toStringAsFixed(2)}x';
+  }
+
+  String _formatRefreshRate(
+    dynamic value,
+  ) {
+    if (value == null) {
+      return 'Bilinmiyor';
+    }
+
+    final rate =
+        value is num
+            ? value.toDouble()
+            : double.tryParse(
+                  value.toString(),
+                );
+
+    if (rate == null ||
+        rate <= 0) {
+      return 'Bilinmiyor';
+    }
+
+    return '${rate.toStringAsFixed(1)} Hz';
   }
 
   String _batteryStateText() {
@@ -114,6 +278,48 @@ class _SystemInfoPageState
     }
   }
 
+  String _storageUsageText() {
+    final total =
+        _nativeInfo['total_storage'];
+
+    final available =
+        _nativeInfo['available_storage'];
+
+    if (total == null ||
+        available == null) {
+      return 'Bilinmiyor';
+    }
+
+    final totalBytes =
+        total is num
+            ? total.toDouble()
+            : double.tryParse(
+                  total.toString(),
+                ) ??
+                0;
+
+    final availableBytes =
+        available is num
+            ? available.toDouble()
+            : double.tryParse(
+                  available.toString(),
+                ) ??
+                0;
+
+    final used =
+        totalBytes - availableBytes;
+
+    if (totalBytes <= 0) {
+      return 'Bilinmiyor';
+    }
+
+    final percentage =
+        (used / totalBytes * 100)
+            .clamp(0, 100);
+
+    return '${percentage.toStringAsFixed(1)}% kullanılıyor';
+  }
+
   Widget _sectionTitle(
     BuildContext context,
     String title,
@@ -126,7 +332,7 @@ class _SystemInfoPageState
           const EdgeInsets.only(
         left: 4,
         bottom: 10,
-        top: 10,
+        top: 18,
       ),
       child: Text(
         title,
@@ -163,11 +369,14 @@ class _SystemInfoPageState
         leading: Container(
           width: 42,
           height: 42,
-          decoration: BoxDecoration(
+          decoration:
+              BoxDecoration(
             color: scheme.primary
                 .withOpacity(0.12),
             borderRadius:
-                BorderRadius.circular(13),
+                BorderRadius.circular(
+              13,
+            ),
           ),
           child: Icon(
             icon,
@@ -188,7 +397,7 @@ class _SystemInfoPageState
           ),
           child: Text(
             value,
-            maxLines: 3,
+            maxLines: 4,
             overflow:
                 TextOverflow.ellipsis,
           ),
@@ -272,7 +481,9 @@ class _SystemInfoPageState
                           Border.all(
                         color: scheme
                             .onSurface
-                            .withOpacity(0.45),
+                            .withOpacity(
+                          0.45,
+                        ),
                         width: 1.6,
                       ),
                     ),
@@ -293,8 +504,7 @@ class _SystemInfoPageState
                               color:
                                   scheme.primary,
                               borderRadius:
-                                  BorderRadius
-                                      .circular(
+                                  BorderRadius.circular(
                                 5,
                               ),
                             ),
@@ -315,7 +525,9 @@ class _SystemInfoPageState
                       BoxDecoration(
                     color: scheme
                         .onSurface
-                        .withOpacity(0.5),
+                        .withOpacity(
+                      0.5,
+                    ),
                     borderRadius:
                         BorderRadius.circular(
                       3,
@@ -341,278 +553,144 @@ class _SystemInfoPageState
     );
   }
 
-  @override
-  Widget build(
+  Widget _summaryCard(
     BuildContext context,
   ) {
     final scheme =
         Theme.of(context).colorScheme;
 
-    if (_loading) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'Sistem Bilgileri',
-          ),
-          centerTitle: true,
-        ),
-        body: const Center(
-          child:
-              CircularProgressIndicator(),
-        ),
-      );
-    }
+    final model = _stringValue(
+      _nativeInfo['model'] ??
+          _info?.model,
+    );
 
-    final info = _info;
+    final manufacturer =
+        _stringValue(
+      _nativeInfo['manufacturer'] ??
+          _info?.manufacturer,
+    );
 
-    if (info == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'Sistem Bilgileri',
-          ),
-          centerTitle: true,
-        ),
-        body: Center(
-          child: FilledButton.icon(
-            onPressed: _loadAll,
-            icon: const Icon(
-              Icons.refresh,
-            ),
-            label: const Text(
-              'Tekrar dene',
-            ),
-          ),
-        ),
-      );
-    }
+    final cpuCount =
+        _nativeInfo['cpu_count'];
 
-    final version =
-        info.version;
+    final totalRam =
+        _nativeInfo['total_ram'];
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Sistem Bilgileri',
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: _loadAll,
-            icon: const Icon(
-              Icons.refresh,
-            ),
-          ),
-        ],
+    final width =
+        _nativeInfo['screen_width'];
+
+    final height =
+        _nativeInfo['screen_height'];
+
+    return Card(
+      margin:
+          const EdgeInsets.only(
+        bottom: 8,
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadAll,
-        child: ListView(
-          physics:
-              const AlwaysScrollableScrollPhysics(),
-          padding:
-              const EdgeInsets.all(20),
+      child: Padding(
+        padding:
+            const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
           children: [
-            Text(
-              'Cihaz',
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineMedium
-                  ?.copyWith(
-                    fontWeight:
-                        FontWeight.bold,
+            Row(
+              children: [
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration:
+                      BoxDecoration(
+                    color: scheme.primary
+                        .withOpacity(
+                      0.12,
+                    ),
+                    borderRadius:
+                        BorderRadius.circular(
+                      18,
+                    ),
                   ),
+                  child: Icon(
+                    Icons.phone_android,
+                    size: 30,
+                    color:
+                        scheme.primary,
+                  ),
+                ),
+                const SizedBox(
+                  width: 15,
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        model,
+                        style: const TextStyle(
+                          fontSize: 19,
+                          fontWeight:
+                              FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 3,
+                      ),
+                      Text(
+                        manufacturer,
+                        style: TextStyle(
+                          color: scheme
+                              .onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 6),
-            Text(
-              '${_value(info.manufacturer)} '
-              '${_value(info.model)}',
-              style: TextStyle(
-                color:
-                    scheme.onSurfaceVariant,
-              ),
-            ),
-
-            _sectionTitle(
-              context,
-              'Donanım',
-            ),
-
-            _infoCard(
-              icon: Icons.phone_android,
-              title: 'Model',
-              value: _value(info.model),
-            ),
-
-            _infoCard(
-              icon: Icons.business,
-              title: 'Üretici',
-              value:
-                  _value(info.manufacturer),
-            ),
-
-            _infoCard(
-              icon: Icons.devices,
-              title: 'Marka',
-              value: _value(info.brand),
-            ),
-
-            _infoCard(
-              icon: Icons.memory,
-              title: 'Donanım',
-              value:
-                  _value(info.hardware),
-            ),
-
-            _infoCard(
-              icon: Icons.developer_board,
-              title: 'Board',
-              value:
-                  _value(info.board),
-            ),
-
-            _infoCard(
-              icon: Icons.smartphone,
-              title: 'Cihaz kodu',
-              value:
-                  _value(info.device),
-            ),
-
-            _infoCard(
-              icon: Icons.inventory_2,
-              title: 'Ürün',
-              value:
-                  _value(info.product),
-            ),
-
-            _sectionTitle(
-              context,
-              'Android',
-            ),
-
-            _infoCard(
-              icon: Icons.android,
-              title: 'Android',
-              value:
-                  'Android ${_value(version.release)}',
-            ),
-
-            _infoCard(
-              icon: Icons.numbers,
-              title: 'SDK',
-              value:
-                  '${version.sdkInt}',
-            ),
-
-            _infoCard(
-              icon: Icons.build,
-              title: 'Build',
-              value:
-                  _value(version.incremental),
-            ),
-
-            _infoCard(
-              icon: Icons.security,
-              title: 'Güvenlik yaması',
-              value:
-                  _value(version.securityPatch),
-            ),
-
-            _infoCard(
-              icon: Icons.settings,
-              title: 'Base OS',
-              value:
-                  _value(version.baseOS),
-            ),
-
-            _infoCard(
-              icon: Icons.update,
-              title: 'Preview SDK',
-              value:
-                  '${version.previewSdkInt}',
-            ),
-
-            _sectionTitle(
-              context,
-              'Uygulama ortamı',
-            ),
-
-            _infoCard(
-              icon: Icons.api,
-              title: 'API seviyesi',
-              value:
-                  '${version.sdkInt}',
-            ),
-
-            _infoCard(
-              icon: Icons.architecture,
-              title: 'Desteklenen ABI',
-              value:
-                  info.supportedAbis
-                      .join(', '),
-            ),
-
-            _infoCard(
-              icon: Icons.extension,
-              title: '32-bit ABI',
-              value:
-                  info.supported32BitAbis
-                      .join(', '),
-            ),
-
-            _infoCard(
-              icon: Icons.extension_outlined,
-              title: '64-bit ABI',
-              value:
-                  info.supported64BitAbis
-                      .join(', '),
-            ),
-
-            _sectionTitle(
-              context,
-              'Pil',
-            ),
-
-            _batteryCard(),
-
-            _sectionTitle(
-              context,
-              'Stellar Center',
-            ),
-
-            _infoCard(
-              icon:
-                  Icons.auto_awesome,
-              title: 'Sürüm',
-              value: '2.5',
-            ),
-
-            _infoCard(
-              icon: Icons.linux,
-              title: 'Platform',
-              value:
-                  'Linux / Android',
-            ),
-
             const SizedBox(
-              height: 12,
+              height: 18,
             ),
-
-            Text(
-              'Not: Donanım kimliği, IMEI ve seri '
-              'numarası gibi hassas tanımlayıcılar '
-              'gösterilmez.',
-              textAlign:
-                  TextAlign.center,
-              style: TextStyle(
-                color:
-                    scheme.onSurfaceVariant,
-                fontSize: 12,
-              ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _chip(
+                  context,
+                  Icons.memory,
+                  cpuCount == null
+                      ? 'CPU ? çekirdek'
+                      : '$cpuCount çekirdek',
+                ),
+                _chip(
+                  context,
+                  Icons.memory_outlined,
+                  _formatRam(
+                    totalRam,
+                  ),
+                ),
+                _chip(
+                  context,
+                  Icons.aspect_ratio,
+                  width == null ||
+                          height == null
+                      ? 'Ekran bilinmiyor'
+                      : '$width × $height',
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
   }
-}
+
+  Widget _chip(
+    BuildContext context,
+    IconData icon,
+    String text,
+  ) {
+    final scheme =
+        Theme.of(context).colorScheme;
+
+   
