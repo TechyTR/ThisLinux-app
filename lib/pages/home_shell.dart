@@ -12,13 +12,8 @@ class HomeShell extends StatefulWidget {
   final AppThemeColor selectedTheme;
   final AppThemeStyle selectedStyle;
 
-  final Future<void> Function(
-    AppThemeColor,
-  ) onThemeChanged;
-
-  final Future<void> Function(
-    AppThemeStyle,
-  ) onStyleChanged;
+  final Future<void> Function(AppThemeColor) onThemeChanged;
+  final Future<void> Function(AppThemeStyle) onStyleChanged;
 
   const HomeShell({
     super.key,
@@ -29,12 +24,10 @@ class HomeShell extends StatefulWidget {
   });
 
   @override
-  State<HomeShell> createState() =>
-      _HomeShellState();
+  State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState
-    extends State<HomeShell> {
+class _HomeShellState extends State<HomeShell> {
   int _currentIndex = 0;
 
   late List<Widget> _pages;
@@ -48,66 +41,47 @@ class _HomeShellState
   List<Widget> _buildPages() {
     return [
       DashboardPage(
-        selectedTheme:
-            widget.selectedTheme,
-        selectedStyle:
-            widget.selectedStyle,
-        onThemeChanged:
-            widget.onThemeChanged,
-        onStyleChanged:
-            widget.onStyleChanged,
-        onSystemInfo:
-            () => _openPage(1),
-        onSystemMonitor:
-            () => _openPage(2),
-        onNotes:
-            () => _openPage(3),
-        onAppInfo:
-            () => _openPage(4),
+        selectedTheme: widget.selectedTheme,
+        selectedStyle: widget.selectedStyle,
+        onThemeChanged: widget.onThemeChanged,
+        onStyleChanged: widget.onStyleChanged,
+        onSystemInfo: () => _openPage(1),
+        onSystemMonitor: () => _openPage(2),
+        onNotes: () => _openPage(3),
+        onAppInfo: () => _openPage(4),
       ),
-
       SystemInfoPage(
-        selectedTheme:
-            widget.selectedTheme,
-        selectedStyle:
-            widget.selectedStyle,
-        onThemeChanged:
-            widget.onThemeChanged,
-        onStyleChanged:
-            widget.onStyleChanged,
+        selectedTheme: widget.selectedTheme,
+        selectedStyle: widget.selectedStyle,
+        onThemeChanged: widget.onThemeChanged,
+        onStyleChanged: widget.onStyleChanged,
       ),
-
       SystemMonitorPage(
-        selectedTheme:
-            widget.selectedTheme,
-        selectedStyle:
-            widget.selectedStyle,
-        onThemeChanged:
-            widget.onThemeChanged,
-        onStyleChanged:
-            widget.onStyleChanged,
+        selectedTheme: widget.selectedTheme,
+        selectedStyle: widget.selectedStyle,
+        onThemeChanged: widget.onThemeChanged,
+        onStyleChanged: widget.onStyleChanged,
       ),
-
       const NotesPage(),
-
       AppInfoPage(
-        selectedTheme:
-            widget.selectedTheme,
-        selectedStyle:
-            widget.selectedStyle,
-        onThemeChanged:
-            widget.onThemeChanged,
-        onStyleChanged:
-            widget.onStyleChanged,
+        selectedTheme: widget.selectedTheme,
+        selectedStyle: widget.selectedStyle,
+        onThemeChanged: widget.onThemeChanged,
+        onStyleChanged: widget.onStyleChanged,
       ),
     ];
   }
 
   void _openPage(int index) {
-    if (index < 0 ||
-        index >= _pages.length) {
-      return;
-    }
+    if (index < 0 || index >= _pages.length) return;
+
+    setState(() {
+      _currentIndex = index;
+    });
+  }
+
+  void _selectDestination(int index) {
+    if (index == _currentIndex) return;
 
     setState(() {
       _currentIndex = index;
@@ -115,48 +89,66 @@ class _HomeShellState
   }
 
   @override
-  void didUpdateWidget(
-    covariant HomeShell oldWidget,
-  ) {
+  void didUpdateWidget(covariant HomeShell oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (oldWidget.selectedTheme !=
-            widget.selectedTheme ||
-        oldWidget.selectedStyle !=
-            widget.selectedStyle) {
+    if (oldWidget.selectedTheme != widget.selectedTheme ||
+        oldWidget.selectedStyle != widget.selectedStyle) {
       setState(() {
         _pages = _buildPages();
       });
     }
   }
 
-  void _selectDestination(int index) {
-    if (index == _currentIndex) {
-      return;
-    }
-
-    setState(() {
-      _currentIndex = index;
-    });
-  }
-
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
+      extendBody: widget.selectedStyle != AppThemeStyle.normal,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 320),
+        reverseDuration: const Duration(milliseconds: 220),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        layoutBuilder: (
+          Widget? currentChild,
+          List<Widget> previousChildren,
+        ) {
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              ...previousChildren,
+              if (currentChild != null) currentChild,
+            ],
+          );
+        },
+        transitionBuilder: (child, animation) {
+          final fade = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
+
+          final slide = Tween<Offset>(
+            begin: const Offset(0.025, 0),
+            end: Offset.zero,
+          ).animate(fade);
+
+          return FadeTransition(
+            opacity: fade,
+            child: SlideTransition(
+              position: slide,
+              child: child,
+            ),
+          );
+        },
+        child: KeyedSubtree(
+          key: ValueKey(_currentIndex),
+          child: _pages[_currentIndex],
+        ),
       ),
-      bottomNavigationBar:
-          BottomNavBar(
-        currentIndex:
-            _currentIndex,
-        selectedStyle:
-            widget.selectedStyle,
-        onDestinationSelected:
-            _selectDestination,
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentIndex,
+        selectedStyle: widget.selectedStyle,
+        onDestinationSelected: _selectDestination,
       ),
     );
   }
