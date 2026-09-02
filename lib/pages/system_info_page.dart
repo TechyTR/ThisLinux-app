@@ -4,8 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-class SystemInfoPage
-    extends StatefulWidget {
+class SystemInfoPage extends StatefulWidget {
   final AppThemeColor selectedTheme;
   final AppThemeStyle selectedStyle;
 
@@ -32,63 +31,35 @@ class SystemInfoPage
 
 class _SystemInfoPageState
     extends State<SystemInfoPage> {
-  String deviceModel =
-      'Yükleniyor...';
+  AndroidDeviceInfo? _info;
 
-  String manufacturer =
-      'Yükleniyor...';
+  int _batteryLevel = -1;
 
-  String androidVersion =
-      'Yükleniyor...';
+  BatteryState _batteryState =
+      BatteryState.unknown;
 
-  String batteryLevel =
-      'Yükleniyor...';
-
-  String batteryState =
-      'Yükleniyor...';
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-
-    _loadDeviceInfo();
-    _loadBatteryInfo();
+    _loadAll();
   }
 
-  Future<void> _loadDeviceInfo() async {
-    try {
-      final deviceInfo =
-          DeviceInfoPlugin();
-
-      final androidInfo =
-          await deviceInfo.androidInfo;
-
-      if (!mounted) return;
-
+  Future<void> _loadAll() async {
+    if (mounted) {
       setState(() {
-        deviceModel =
-            androidInfo.model;
-
-        manufacturer =
-            androidInfo.manufacturer;
-
-        androidVersion =
-            'Android ${androidInfo.version.release}';
-      });
-    } catch (_) {
-      if (!mounted) return;
-
-      setState(() {
-        deviceModel = 'Alınamadı';
-        manufacturer = 'Alınamadı';
-        androidVersion = 'Alınamadı';
+        _loading = true;
       });
     }
-  }
 
-  Future<void> _loadBatteryInfo() async {
     try {
-      final battery = Battery();
+      final deviceInfo =
+          await DeviceInfoPlugin()
+              .androidInfo;
+
+      final battery =
+          Battery();
 
       final level =
           await battery.batteryLevel;
@@ -98,50 +69,76 @@ class _SystemInfoPageState
 
       if (!mounted) return;
 
-      String stateText;
-
-      switch (state) {
-        case BatteryState.charging:
-          stateText = 'Şarj oluyor';
-          break;
-
-        case BatteryState.discharging:
-          stateText = 'Şarj olmuyor';
-          break;
-
-        case BatteryState.full:
-          stateText = 'Dolu';
-          break;
-
-        case BatteryState.connectedNotCharging:
-          stateText =
-              'Bağlı, şarj olmuyor';
-          break;
-
-        case BatteryState.unknown:
-          stateText = 'Bilinmiyor';
-          break;
-      }
-
       setState(() {
-        batteryLevel = '$level%';
-        batteryState = stateText;
+        _info = deviceInfo;
+        _batteryLevel = level;
+        _batteryState = state;
+        _loading = false;
       });
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
-        batteryLevel = 'Alınamadı';
-        batteryState = 'Alınamadı';
+        _loading = false;
       });
     }
   }
 
-  Future<void> _refresh() async {
-    await Future.wait([
-      _loadDeviceInfo(),
-      _loadBatteryInfo(),
-    ]);
+  String _value(
+    String? value,
+  ) {
+    if (value == null ||
+        value.trim().isEmpty) {
+      return 'Bilinmiyor';
+    }
+
+    return value;
+  }
+
+  String _batteryStateText() {
+    switch (_batteryState) {
+      case BatteryState.charging:
+        return 'Şarj oluyor';
+
+      case BatteryState.discharging:
+        return 'Şarj olmuyor';
+
+      case BatteryState.full:
+        return 'Dolu';
+
+      case BatteryState.connectedNotCharging:
+        return 'Bağlı, şarj olmuyor';
+
+      case BatteryState.unknown:
+        return 'Bilinmiyor';
+    }
+  }
+
+  Widget _sectionTitle(
+    BuildContext context,
+    String title,
+  ) {
+    final scheme =
+        Theme.of(context).colorScheme;
+
+    return Padding(
+      padding:
+          const EdgeInsets.only(
+        left: 4,
+        bottom: 10,
+        top: 10,
+      ),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight:
+              FontWeight.w700,
+          color:
+              scheme.onSurfaceVariant,
+        ),
+      ),
+    );
   }
 
   Widget _infoCard({
@@ -155,17 +152,27 @@ class _SystemInfoPageState
     return Card(
       margin:
           const EdgeInsets.only(
-        bottom: 12,
+        bottom: 9,
       ),
       child: ListTile(
         contentPadding:
             const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 6,
+          horizontal: 17,
+          vertical: 5,
         ),
-        leading: Icon(
-          icon,
-          color: scheme.primary,
+        leading: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: scheme.primary
+                .withOpacity(0.12),
+            borderRadius:
+                BorderRadius.circular(13),
+          ),
+          child: Icon(
+            icon,
+            color: scheme.primary,
+          ),
         ),
         title: Text(
           title,
@@ -179,226 +186,157 @@ class _SystemInfoPageState
               const EdgeInsets.only(
             top: 4,
           ),
-          child: Text(value),
+          child: Text(
+            value,
+            maxLines: 3,
+            overflow:
+                TextOverflow.ellipsis,
+          ),
         ),
       ),
     );
   }
 
-  Widget _batteryWidget() {
+  Widget _batteryCard() {
     final scheme =
         Theme.of(context).colorScheme;
 
-    final isGlass =
-        widget.selectedStyle !=
-            AppThemeStyle.normal;
-
-    final isLight =
-        widget.selectedStyle ==
-            AppThemeStyle
-                .liquidGlassLight;
-
-    final parsed =
-        int.tryParse(
-          batteryLevel.replaceAll(
-            '%',
-            '',
-          ),
-        );
-
     final level =
-        parsed == null
-            ? 0
-            : parsed.clamp(0, 100);
+        _batteryLevel.clamp(0, 100);
 
     final fill =
         level / 100.0;
 
-    return Container(
+    return Card(
       margin:
           const EdgeInsets.only(
-        bottom: 12,
+        bottom: 9,
       ),
-      padding:
-          const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: isGlass
-            ? (isLight
-                ? Colors.white
-                    .withOpacity(0.52)
-                : Colors.white
-                    .withOpacity(0.07))
-            : Theme.of(context)
-                .colorScheme
-                .surfaceContainer,
-        borderRadius:
-            BorderRadius.circular(22),
-        border: isGlass
-            ? Border.all(
-                color: Colors.white
-                    .withOpacity(
-                  isLight
-                      ? 0.72
-                      : 0.18,
-                ),
-              )
-            : null,
-        boxShadow: isGlass
-            ? [
-                BoxShadow(
-                  color: scheme.primary
-                      .withOpacity(
-                    isLight
-                        ? 0.08
-                        : 0.12,
-                  ),
-                  blurRadius: 18,
-                ),
-              ]
-            : null,
-      ),
-      child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.battery_full,
-                color:
-                    scheme.primary,
-              ),
-              const SizedBox(
-                width: 10,
-              ),
-              const Text(
-                'Pil',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight:
-                      FontWeight.w600,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                batteryLevel,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight:
-                      FontWeight.bold,
+      child: Padding(
+        padding:
+            const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.battery_full,
                   color:
                       scheme.primary,
                 ),
-              ),
-            ],
-          ),
-
-          const SizedBox(
-            height: 16,
-          ),
-
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 30,
-                  padding:
-                      const EdgeInsets.all(3),
-                  decoration:
-                      BoxDecoration(
-                    borderRadius:
-                        BorderRadius.circular(
-                      9,
-                    ),
-                    border: Border.all(
-                      color: scheme
-                          .onSurface
-                          .withOpacity(
-                        isLight
-                            ? 0.45
-                            : 0.55,
-                      ),
-                      width: 1.7,
-                    ),
+                const SizedBox(
+                  width: 10,
+                ),
+                const Text(
+                  'Pil',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight:
+                        FontWeight.w700,
                   ),
-                  child: ClipRRect(
-                    borderRadius:
-                        BorderRadius.circular(
-                      5,
+                ),
+                const Spacer(),
+                Text(
+                  _batteryLevel < 0
+                      ? '--'
+                      : '$_batteryLevel%',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight:
+                        FontWeight.bold,
+                    color:
+                        scheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(
+              height: 14,
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 28,
+                    padding:
+                        const EdgeInsets.all(3),
+                    decoration:
+                        BoxDecoration(
+                      borderRadius:
+                          BorderRadius.circular(
+                        8,
+                      ),
+                      border:
+                          Border.all(
+                        color: scheme
+                            .onSurface
+                            .withOpacity(0.45),
+                        width: 1.6,
+                      ),
                     ),
-                    child: Align(
-                      alignment:
-                          Alignment.centerLeft,
-                      child:
-                          FractionallySizedBox(
-                        widthFactor: fill,
-                        child: Container(
-                          decoration:
-                              BoxDecoration(
-                            color:
-                                scheme.primary,
-                            borderRadius:
-                                BorderRadius
-                                    .circular(
-                              5,
+                    child: ClipRRect(
+                      borderRadius:
+                          BorderRadius.circular(
+                        5,
+                      ),
+                      child: Align(
+                        alignment:
+                            Alignment.centerLeft,
+                        child:
+                            FractionallySizedBox(
+                          widthFactor: fill,
+                          child: Container(
+                            decoration:
+                                BoxDecoration(
+                              color:
+                                  scheme.primary,
+                              borderRadius:
+                                  BorderRadius
+                                      .circular(
+                                5,
+                              ),
                             ),
-                            boxShadow: isGlass
-                                ? [
-                                    BoxShadow(
-                                      color: scheme
-                                          .primary
-                                          .withOpacity(
-                                        0.45,
-                                      ),
-                                      blurRadius:
-                                          9,
-                                    ),
-                                  ]
-                                : null,
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-
-              Container(
-                width: 6,
-                height: 12,
-                margin:
-                    const EdgeInsets.only(
-                  left: 2,
-                ),
-                decoration:
-                    BoxDecoration(
-                  color: scheme
-                      .onSurface
-                      .withOpacity(
-                    0.55,
+                Container(
+                  width: 6,
+                  height: 11,
+                  margin:
+                      const EdgeInsets.only(
+                    left: 2,
                   ),
-                  borderRadius:
-                      BorderRadius.circular(
-                    3,
+                  decoration:
+                      BoxDecoration(
+                    color: scheme
+                        .onSurface
+                        .withOpacity(0.5),
+                    borderRadius:
+                        BorderRadius.circular(
+                      3,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-
-          const SizedBox(
-            height: 10,
-          ),
-
-          Text(
-            batteryState,
-            style: TextStyle(
-              color:
-                  scheme.onSurfaceVariant,
-              fontSize: 13,
+              ],
             ),
-          ),
-        ],
+            const SizedBox(
+              height: 9,
+            ),
+            Text(
+              _batteryStateText(),
+              style: TextStyle(
+                color:
+                    scheme.onSurfaceVariant,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -410,14 +348,65 @@ class _SystemInfoPageState
     final scheme =
         Theme.of(context).colorScheme;
 
+    if (_loading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'Sistem Bilgileri',
+          ),
+          centerTitle: true,
+        ),
+        body: const Center(
+          child:
+              CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    final info = _info;
+
+    if (info == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'Sistem Bilgileri',
+          ),
+          centerTitle: true,
+        ),
+        body: Center(
+          child: FilledButton.icon(
+            onPressed: _loadAll,
+            icon: const Icon(
+              Icons.refresh,
+            ),
+            label: const Text(
+              'Tekrar dene',
+            ),
+          ),
+        ),
+      );
+    }
+
+    final version =
+        info.version;
+
     return Scaffold(
       appBar: AppBar(
-        title:
-            const Text('Sistem'),
+        title: const Text(
+          'Sistem Bilgileri',
+        ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: _loadAll,
+            icon: const Icon(
+              Icons.refresh,
+            ),
+          ),
+        ],
       ),
       body: RefreshIndicator(
-        onRefresh: _refresh,
+        onRefresh: _loadAll,
         child: ListView(
           physics:
               const AlwaysScrollableScrollPhysics(),
@@ -425,70 +414,200 @@ class _SystemInfoPageState
               const EdgeInsets.all(20),
           children: [
             Text(
-              'Sistem Bilgileri',
-              style:
-                  Theme.of(context)
-                      .textTheme
-                      .headlineMedium
-                      ?.copyWith(
+              'Cihaz',
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineMedium
+                  ?.copyWith(
                     fontWeight:
                         FontWeight.bold,
                   ),
             ),
-
-            const SizedBox(
-              height: 8,
-            ),
-
+            const SizedBox(height: 6),
             Text(
-              'Cihazınız hakkında temel bilgiler',
+              '${_value(info.manufacturer)} '
+              '${_value(info.model)}',
               style: TextStyle(
                 color:
                     scheme.onSurfaceVariant,
               ),
             ),
 
-            const SizedBox(
-              height: 24,
+            _sectionTitle(
+              context,
+              'Donanım',
             ),
 
             _infoCard(
-              icon:
-                  Icons.smartphone,
-              title: 'Cihaz',
-              value:
-                  deviceModel,
+              icon: Icons.phone_android,
+              title: 'Model',
+              value: _value(info.model),
             ),
 
             _infoCard(
               icon: Icons.business,
               title: 'Üretici',
               value:
-                  manufacturer,
+                  _value(info.manufacturer),
+            ),
+
+            _infoCard(
+              icon: Icons.devices,
+              title: 'Marka',
+              value: _value(info.brand),
+            ),
+
+            _infoCard(
+              icon: Icons.memory,
+              title: 'Donanım',
+              value:
+                  _value(info.hardware),
+            ),
+
+            _infoCard(
+              icon: Icons.developer_board,
+              title: 'Board',
+              value:
+                  _value(info.board),
+            ),
+
+            _infoCard(
+              icon: Icons.smartphone,
+              title: 'Cihaz kodu',
+              value:
+                  _value(info.device),
+            ),
+
+            _infoCard(
+              icon: Icons.inventory_2,
+              title: 'Ürün',
+              value:
+                  _value(info.product),
+            ),
+
+            _sectionTitle(
+              context,
+              'Android',
             ),
 
             _infoCard(
               icon: Icons.android,
-              title:
-                  'Android Sürümü',
+              title: 'Android',
               value:
-                  androidVersion,
+                  'Android ${_value(version.release)}',
             ),
 
-            _batteryWidget(),
+            _infoCard(
+              icon: Icons.numbers,
+              title: 'SDK',
+              value:
+                  '${version.sdkInt}',
+            ),
+
+            _infoCard(
+              icon: Icons.build,
+              title: 'Build',
+              value:
+                  _value(version.incremental),
+            ),
+
+            _infoCard(
+              icon: Icons.security,
+              title: 'Güvenlik yaması',
+              value:
+                  _value(version.securityPatch),
+            ),
+
+            _infoCard(
+              icon: Icons.settings,
+              title: 'Base OS',
+              value:
+                  _value(version.baseOS),
+            ),
+
+            _infoCard(
+              icon: Icons.update,
+              title: 'Preview SDK',
+              value:
+                  '${version.previewSdkInt}',
+            ),
+
+            _sectionTitle(
+              context,
+              'Uygulama ortamı',
+            ),
+
+            _infoCard(
+              icon: Icons.api,
+              title: 'API seviyesi',
+              value:
+                  '${version.sdkInt}',
+            ),
+
+            _infoCard(
+              icon: Icons.architecture,
+              title: 'Desteklenen ABI',
+              value:
+                  info.supportedAbis
+                      .join(', '),
+            ),
+
+            _infoCard(
+              icon: Icons.extension,
+              title: '32-bit ABI',
+              value:
+                  info.supported32BitAbis
+                      .join(', '),
+            ),
+
+            _infoCard(
+              icon: Icons.extension_outlined,
+              title: '64-bit ABI',
+              value:
+                  info.supported64BitAbis
+                      .join(', '),
+            ),
+
+            _sectionTitle(
+              context,
+              'Pil',
+            ),
+
+            _batteryCard(),
+
+            _sectionTitle(
+              context,
+              'Stellar Center',
+            ),
+
+            _infoCard(
+              icon:
+                  Icons.auto_awesome,
+              title: 'Sürüm',
+              value: '2.5',
+            ),
+
+            _infoCard(
+              icon: Icons.linux,
+              title: 'Platform',
+              value:
+                  'Linux / Android',
+            ),
 
             const SizedBox(
-              height: 8,
+              height: 12,
             ),
 
             Text(
-              'Yenilemek için ekranı aşağı çekin.',
+              'Not: Donanım kimliği, IMEI ve seri '
+              'numarası gibi hassas tanımlayıcılar '
+              'gösterilmez.',
               textAlign:
                   TextAlign.center,
               style: TextStyle(
                 color:
                     scheme.onSurfaceVariant,
-                fontSize: 13,
+                fontSize: 12,
               ),
             ),
           ],
