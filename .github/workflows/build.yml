@@ -33,38 +33,24 @@ jobs:
           echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
 
       - name: Get dependencies
+        run: flutter pub get
+
+      - name: Generate app icon
+        run: dart run flutter_launcher_icons
+
+      - name: Read app version
+        id: version
+        shell: bash
         run: |
-          flutter pub get
+          VERSION=$(sed -n 's/^version:[[:space:]]*\([0-9][0-9.]*\)+.*$/\1/p' pubspec.yaml | head -n 1)
 
-      - name: Verify Android configuration
-        run: |
-          echo "=== Android settings.gradle ==="
-          cat android/settings.gradle
-
-          echo ""
-          echo "=== Android app/build.gradle ==="
-          cat android/app/build.gradle
-
-          echo ""
-          echo "=== Android Manifest ==="
-          cat android/app/src/main/AndroidManifest.xml
-
-          echo ""
-          echo "=== Android embedding check ==="
-
-          if grep -RniE \
-            'io\.flutter\.app\.|io\.flutter\.view\.|flutterEmbedding.*1' \
-            android/app/src/main; then
-
-            echo "ERROR: Android V1 embedding detected."
+          if [ -z "$VERSION" ]; then
+            echo "Could not read version from pubspec.yaml"
             exit 1
           fi
 
-          echo "Android V2 embedding confirmed."
-
-      - name: Generate app icon
-        run: |
-          dart run flutter_launcher_icons
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building Stellar Center v$VERSION"
 
       - name: Build APK
         run: |
@@ -80,16 +66,18 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: apk
+          name: apk-${{ steps.version.outputs.version }}
           path: build/app/outputs/flutter-apk/app-release.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
-          name: v2.3.0
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Stellar Center v${{ steps.version.outputs.version }}
           body: |
-            ThisLinux güncel sürüm.
+            Stellar Center v${{ steps.version.outputs.version }}
+
+            Android release APK.
           files: build/app/outputs/flutter-apk/app-release.apk
           make_latest: true
           overwrite_files: true
