@@ -7,29 +7,21 @@ import 'theme/app_theme.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  runApp(
-    const ThisLinuxApp(),
-  );
+  runApp(const ThisLinuxApp());
 }
 
-class ThisLinuxApp
-    extends StatefulWidget {
+class ThisLinuxApp extends StatefulWidget {
   const ThisLinuxApp({
     super.key,
   });
 
   @override
-  State<ThisLinuxApp> createState() =>
-      _ThisLinuxAppState();
+  State<ThisLinuxApp> createState() => _ThisLinuxAppState();
 }
 
-class _ThisLinuxAppState
-    extends State<ThisLinuxApp> {
-  AppThemeColor _selectedTheme =
-      AppThemeColor.purple;
-
-  AppThemeStyle _selectedStyle =
-      AppThemeStyle.normal;
+class _ThisLinuxAppState extends State<ThisLinuxApp> {
+  AppThemeColor _selectedTheme = AppThemeColor.purple;
+  AppThemeStyle _selectedStyle = AppThemeStyle.normal;
 
   bool _preferencesLoaded = false;
 
@@ -41,25 +33,19 @@ class _ThisLinuxAppState
 
   Future<void> _loadPreferences() async {
     final colorValue =
-        await PreferencesService
-            .getThemeColor();
+        await PreferencesService.getThemeColor();
 
     final styleValue =
-        await PreferencesService
-            .getThemeStyle();
+        await PreferencesService.getThemeStyle();
 
     if (!mounted) return;
 
     setState(() {
       _selectedTheme =
-          AppTheme.colorFromString(
-        colorValue,
-      );
+          AppTheme.colorFromString(colorValue);
 
       _selectedStyle =
-          AppTheme.styleFromString(
-        styleValue,
-      );
+          AppTheme.styleFromString(styleValue);
 
       _preferencesLoaded = true;
     });
@@ -72,8 +58,7 @@ class _ThisLinuxAppState
       _selectedTheme = color;
     });
 
-    await PreferencesService
-        .saveThemeColor(
+    await PreferencesService.saveThemeColor(
       AppTheme.colorToString(color),
     );
   }
@@ -85,47 +70,37 @@ class _ThisLinuxAppState
       _selectedStyle = style;
     });
 
-    await PreferencesService
-        .saveThemeStyle(
+    await PreferencesService.saveThemeStyle(
       AppTheme.styleToString(style),
     );
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     if (!_preferencesLoaded) {
       return const MaterialApp(
         debugShowCheckedModeBanner: false,
         home: Scaffold(
-          backgroundColor:
-              Colors.black,
+          backgroundColor: Colors.black,
           body: Center(
-            child:
-                CircularProgressIndicator(),
+            child: CircularProgressIndicator(),
           ),
         ),
       );
     }
 
     return MaterialApp(
-      title: 'ThisLinux',
-      debugShowCheckedModeBanner:
-          false,
+      title: 'Stellar Center',
+      debugShowCheckedModeBanner: false,
       theme: AppTheme.build(
         _selectedTheme,
         _selectedStyle,
       ),
       home: BootScreen(
-        selectedTheme:
-            _selectedTheme,
-        selectedStyle:
-            _selectedStyle,
-        onThemeChanged:
-            _changeTheme,
-        onStyleChanged:
-            _changeStyle,
+        selectedTheme: _selectedTheme,
+        selectedStyle: _selectedStyle,
+        onThemeChanged: _changeTheme,
+        onStyleChanged: _changeStyle,
       ),
     );
   }
