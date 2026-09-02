@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../widgets/liquid_glass_card.dart';
 
 import '../services/app_version.dart';
 import '../theme/app_theme.dart';
