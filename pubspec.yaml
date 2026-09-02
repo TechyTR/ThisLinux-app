@@ -2,7 +2,7 @@ name: thislinux
 description: "ThisLinux system utility application."
 publish_to: 'none'
 
-version: 2.5+1
+version: 2.5.0+1
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
