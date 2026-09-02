@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/update_button.dart';
@@ -9,15 +8,17 @@ import 'network_lab_page.dart';
 import 'sensor_lab_page.dart';
 import 'storage_manager_page.dart';
 
-class AppInfoPage extends StatefulWidget {
+class AppInfoPage extends StatelessWidget {
   final AppThemeColor selectedTheme;
   final AppThemeStyle selectedStyle;
 
-  final Future<void> Function(AppThemeColor)
-      onThemeChanged;
+  final Future<void> Function(
+    AppThemeColor,
+  ) onThemeChanged;
 
-  final Future<void> Function(AppThemeStyle)
-      onStyleChanged;
+  final Future<void> Function(
+    AppThemeStyle,
+  ) onStyleChanged;
 
   const AppInfoPage({
     super.key,
@@ -27,47 +28,12 @@ class AppInfoPage extends StatefulWidget {
     required this.onStyleChanged,
   });
 
-  @override
-  State<AppInfoPage> createState() =>
-      _AppInfoPageState();
-}
-
-class _AppInfoPageState
-    extends State<AppInfoPage> {
-  String currentVersion = 'Yükleniyor...';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadVersion();
-  }
-
-  Future<void> _loadVersion() async {
-    try {
-      final packageInfo =
-          await PackageInfo.fromPlatform();
-
-      if (!mounted) return;
-
-      setState(() {
-        currentVersion =
-            packageInfo.version;
-      });
-    } catch (_) {
-      if (!mounted) return;
-
-      setState(() {
-        currentVersion = 'Bilinmiyor';
-      });
-    }
-  }
-
   Widget _themeButton(
     BuildContext context,
     AppThemeColor theme,
   ) {
-    final isSelected =
-        widget.selectedTheme == theme;
+    final selected =
+        selectedTheme == theme;
 
     final color =
         AppTheme.colorOf(theme);
@@ -82,11 +48,11 @@ class _AppInfoPageState
 
     return GestureDetector(
       onTap: () {
-        widget.onThemeChanged(theme);
+        onThemeChanged(theme);
       },
       child: AnimatedContainer(
         duration:
-            const Duration(milliseconds: 200),
+            const Duration(milliseconds: 220),
         margin: const EdgeInsets.only(
           right: 12,
           bottom: 12,
@@ -97,7 +63,7 @@ class _AppInfoPageState
           vertical: 12,
         ),
         decoration: BoxDecoration(
-          color: isSelected
+          color: selected
               ? color
               : Colors.transparent,
           border: Border.all(
@@ -106,12 +72,12 @@ class _AppInfoPageState
           ),
           borderRadius:
               BorderRadius.circular(30),
-          boxShadow: isSelected
+          boxShadow: selected
               ? [
                   BoxShadow(
                     color:
-                        color.withOpacity(0.30),
-                    blurRadius: 14,
+                        color.withOpacity(0.32),
+                    blurRadius: 16,
                     spreadRadius: 1,
                   ),
                 ]
@@ -120,7 +86,7 @@ class _AppInfoPageState
         child: Text(
           AppTheme.labelOf(theme),
           style: TextStyle(
-            color: isSelected
+            color: selected
                 ? textColor
                 : color,
             fontWeight:
@@ -132,12 +98,13 @@ class _AppInfoPageState
   }
 
   Widget _styleButton(
+    BuildContext context,
     AppThemeStyle style,
     IconData icon,
     String title,
   ) {
-    final isSelected =
-        widget.selectedStyle == style;
+    final selected =
+        selectedStyle == style;
 
     return Card(
       margin:
@@ -145,13 +112,13 @@ class _AppInfoPageState
       child: ListTile(
         leading: Icon(icon),
         title: Text(title),
-        trailing: isSelected
+        trailing: selected
             ? const Icon(
                 Icons.check_circle,
               )
             : null,
         onTap: () {
-          widget.onStyleChanged(style);
+          onStyleChanged(style);
         },
       ),
     );
@@ -177,7 +144,10 @@ class _AppInfoPageState
     );
   }
 
-  void _openPage(Widget page) {
+  void _openPage(
+    BuildContext context,
+    Widget page,
+  ) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => page,
@@ -186,36 +156,103 @@ class _AppInfoPageState
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     final scheme =
         Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Uygulama'),
+        title: const Text(
+          'Stellar Center',
+        ),
         centerTitle: true,
       ),
       body: ListView(
         padding:
             const EdgeInsets.all(20),
         children: [
-          const Text(
-            'ThisLinux',
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight:
-                  FontWeight.bold,
+          Container(
+            padding:
+                const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius:
+                  BorderRadius.circular(28),
+              gradient: const LinearGradient(
+                begin:
+                    Alignment.topLeft,
+                end:
+                    Alignment.bottomRight,
+                colors: [
+                  Color(0xFFE53935),
+                  Color(0xFFFF9800),
+                  Color(0xFFFFD740),
+                  Color(0xFF43A047),
+                  Color(0xFF1E88E5),
+                  Color(0xFF8E24AA),
+                ],
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Image.asset(
+                  'assets/icon.png',
+                  width: 58,
+                  height: 58,
+                  errorBuilder:
+                      (
+                    context,
+                    error,
+                    stackTrace,
+                  ) {
+                    return const Icon(
+                      Icons
+                          .auto_awesome_rounded,
+                      color: Colors.white,
+                      size: 58,
+                    );
+                  },
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Stellar Center',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight:
+                        FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Linux',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight:
+                        FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
+
+          const SizedBox(height: 14),
+
           Text(
-            'Sistem yardımcı uygulaması',
+            'Sistem yardımcı merkezi',
             style: TextStyle(
               color:
                   scheme.onSurfaceVariant,
+              fontSize: 14,
             ),
           ),
+
           const SizedBox(height: 28),
+
           Text(
             'Tema',
             style: TextStyle(
@@ -225,7 +262,9 @@ class _AppInfoPageState
                   scheme.onSurfaceVariant,
             ),
           ),
+
           const SizedBox(height: 12),
+
           Wrap(
             children:
                 AppThemeColor.values
@@ -238,7 +277,9 @@ class _AppInfoPageState
                     )
                     .toList(),
           ),
+
           const SizedBox(height: 12),
+
           Text(
             'Görünüm',
             style: TextStyle(
@@ -248,25 +289,34 @@ class _AppInfoPageState
                   scheme.onSurfaceVariant,
             ),
           ),
+
           const SizedBox(height: 12),
+
           _styleButton(
+            context,
             AppThemeStyle.normal,
             Icons.palette_outlined,
             'Material Design',
           ),
+
           _styleButton(
+            context,
             AppThemeStyle
                 .liquidGlassLight,
             Icons.light_mode,
             'Liquid Glass Light',
           ),
+
           _styleButton(
+            context,
             AppThemeStyle
                 .liquidGlassDark,
             Icons.dark_mode,
             'Liquid Glass Dark',
           ),
+
           const SizedBox(height: 12),
+
           Text(
             'Araçlar',
             style: TextStyle(
@@ -276,18 +326,22 @@ class _AppInfoPageState
                   scheme.onSurfaceVariant,
             ),
           ),
+
           const SizedBox(height: 12),
+
           _toolButton(
             icon: Icons.speed,
             title: 'Benchmark',
             subtitle:
-                'Cihaz performansını test et',
+                'Cihaz performansını detaylı test et',
             onTap: () {
               _openPage(
+                context,
                 const BenchmarkPage(),
               );
             },
           ),
+
           _toolButton(
             icon: Icons.storage,
             title: 'Storage Manager',
@@ -295,21 +349,25 @@ class _AppInfoPageState
                 'Depolama kullanımını incele',
             onTap: () {
               _openPage(
+                context,
                 const StorageManagerPage(),
               );
             },
           ),
+
           _toolButton(
             icon: Icons.sensors,
             title: 'SensorLab',
             subtitle:
-                'Sensör bilgilerini incele',
+                'Sensörleri incele',
             onTap: () {
               _openPage(
+                context,
                 const SensorLabPage(),
               );
             },
           ),
+
           _toolButton(
             icon: Icons.network_check,
             title: 'Network Lab',
@@ -317,10 +375,12 @@ class _AppInfoPageState
                 'Ağ bağlantısını incele',
             onTap: () {
               _openPage(
+                context,
                 const NetworkLabPage(),
               );
             },
           ),
+
           _toolButton(
             icon: Icons.battery_full,
             title: 'Battery Lab',
@@ -328,11 +388,14 @@ class _AppInfoPageState
                 'Pil durumunu incele',
             onTap: () {
               _openPage(
+                context,
                 const BatteryLabPage(),
               );
             },
           ),
+
           const SizedBox(height: 12),
+
           Text(
             'Güncelleme',
             style: TextStyle(
@@ -342,22 +405,41 @@ class _AppInfoPageState
                   scheme.onSurfaceVariant,
             ),
           ),
+
           const SizedBox(height: 12),
-          UpdateButton(
-            currentVersion:
-                currentVersion,
+
+          const UpdateButton(
+            currentVersion: '2.5',
           ),
-          const SizedBox(height: 14),
+
+          const SizedBox(height: 18),
+
           Center(
-            child: Text(
-              'ThisLinux v$currentVersion',
-              style: TextStyle(
-                color:
-                    scheme.onSurfaceVariant,
-                fontSize: 13,
-              ),
+            child: Column(
+              children: [
+                Text(
+                  'Stellar Center',
+                  style: TextStyle(
+                    fontWeight:
+                        FontWeight.w600,
+                    color:
+                        scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Linux • v2.5',
+                  style: TextStyle(
+                    color:
+                        scheme.onSurfaceVariant,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
             ),
           ),
+
+          const SizedBox(height: 20),
         ],
       ),
     );
