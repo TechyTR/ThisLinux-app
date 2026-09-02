@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/app_version.dart';
 import '../theme/app_theme.dart';
 import '../widgets/update_button.dart';
 import 'battery_lab_page.dart';
@@ -32,11 +33,8 @@ class AppInfoPage extends StatelessWidget {
     BuildContext context,
     AppThemeColor theme,
   ) {
-    final selected =
-        selectedTheme == theme;
-
-    final color =
-        AppTheme.colorOf(theme);
+    final selected = selectedTheme == theme;
+    final color = AppTheme.colorOf(theme);
 
     final textColor =
         ThemeData.estimateBrightnessForColor(
@@ -51,14 +49,14 @@ class AppInfoPage extends StatelessWidget {
         onThemeChanged(theme);
       },
       child: AnimatedContainer(
-        duration:
-            const Duration(milliseconds: 220),
+        duration: const Duration(
+          milliseconds: 220,
+        ),
         margin: const EdgeInsets.only(
           right: 12,
           bottom: 12,
         ),
-        padding:
-            const EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: 18,
           vertical: 12,
         ),
@@ -75,8 +73,7 @@ class AppInfoPage extends StatelessWidget {
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color:
-                        color.withOpacity(0.32),
+                    color: color.withOpacity(0.32),
                     blurRadius: 16,
                     spreadRadius: 1,
                   ),
@@ -89,8 +86,7 @@ class AppInfoPage extends StatelessWidget {
             color: selected
                 ? textColor
                 : color,
-            fontWeight:
-                FontWeight.bold,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),
@@ -103,12 +99,12 @@ class AppInfoPage extends StatelessWidget {
     IconData icon,
     String title,
   ) {
-    final selected =
-        selectedStyle == style;
+    final selected = selectedStyle == style;
 
     return Card(
-      margin:
-          const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(
+        bottom: 10,
+      ),
       child: ListTile(
         leading: Icon(icon),
         title: Text(title),
@@ -131,14 +127,16 @@ class AppInfoPage extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return Card(
-      margin:
-          const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(
+        bottom: 10,
+      ),
       child: ListTile(
         leading: Icon(icon),
         title: Text(title),
         subtitle: Text(subtitle),
-        trailing:
-            const Icon(Icons.chevron_right),
+        trailing: const Icon(
+          Icons.chevron_right,
+        ),
         onTap: onTap,
       ),
     );
@@ -170,20 +168,16 @@ class AppInfoPage extends StatelessWidget {
         centerTitle: true,
       ),
       body: ListView(
-        padding:
-            const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         children: [
           Container(
-            padding:
-                const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               borderRadius:
                   BorderRadius.circular(28),
               gradient: const LinearGradient(
-                begin:
-                    Alignment.topLeft,
-                end:
-                    Alignment.bottomRight,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
                 colors: [
                   Color(0xFFE53935),
                   Color(0xFFFF9800),
@@ -202,8 +196,7 @@ class AppInfoPage extends StatelessWidget {
                   'assets/icon.png',
                   width: 58,
                   height: 58,
-                  errorBuilder:
-                      (
+                  errorBuilder: (
                     context,
                     error,
                     stackTrace,
@@ -245,8 +238,7 @@ class AppInfoPage extends StatelessWidget {
           Text(
             'Sistem yardımcı merkezi',
             style: TextStyle(
-              color:
-                  scheme.onSurfaceVariant,
+              color: scheme.onSurfaceVariant,
               fontSize: 14,
             ),
           ),
@@ -256,10 +248,8 @@ class AppInfoPage extends StatelessWidget {
           Text(
             'Tema',
             style: TextStyle(
-              fontWeight:
-                  FontWeight.w600,
-              color:
-                  scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant,
             ),
           ),
 
@@ -283,10 +273,8 @@ class AppInfoPage extends StatelessWidget {
           Text(
             'Görünüm',
             style: TextStyle(
-              fontWeight:
-                  FontWeight.w600,
-              color:
-                  scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant,
             ),
           ),
 
@@ -320,10 +308,8 @@ class AppInfoPage extends StatelessWidget {
           Text(
             'Araçlar',
             style: TextStyle(
-              fontWeight:
-                  FontWeight.w600,
-              color:
-                  scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant,
             ),
           ),
 
@@ -399,17 +385,16 @@ class AppInfoPage extends StatelessWidget {
           Text(
             'Güncelleme',
             style: TextStyle(
-              fontWeight:
-                  FontWeight.w600,
-              color:
-                  scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant,
             ),
           ),
 
           const SizedBox(height: 12),
 
           const UpdateButton(
-            currentVersion: '2.5',
+            currentVersion:
+                AppVersion.current,
           ),
 
           const SizedBox(height: 18),
@@ -428,7 +413,7 @@ class AppInfoPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Linux • v2.5',
+                  'Linux • v${AppVersion.current}',
                   style: TextStyle(
                     color:
                         scheme.onSurfaceVariant,
