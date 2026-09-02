@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/app_version.dart';
 import '../services/update_service.dart';
 
 class UpdateButton extends StatefulWidget {
@@ -53,7 +54,7 @@ class _UpdateButtonState
 
     final newer =
         UpdateService.isNewerVersion(
-      widget.currentVersion,
+      AppVersion.current,
       update.latestVersion,
     );
 
@@ -62,7 +63,7 @@ class _UpdateButtonState
           .showSnackBar(
         SnackBar(
           content: Text(
-            'Stellar Center v${widget.currentVersion} güncel.',
+            'Stellar Center v${AppVersion.current} güncel.',
           ),
         ),
       );
@@ -84,9 +85,12 @@ class _UpdateButtonState
             'Yeni Stellar sürümü',
           ),
           content: Text(
-            'Yeni sürüm: v${update.latestVersion}\n\n'
-            'Mevcut sürüm: v${widget.currentVersion}\n\n'
-            'APK indirilecek ve Android kurulum ekranı açılacak.',
+            'Yeni sürüm: '
+            'v${update.latestVersion}\n\n'
+            'Mevcut sürüm: '
+            'v${AppVersion.current}\n\n'
+            'APK indirilecek ve Android '
+            'kurulum ekranı açılacak.',
           ),
           actions: [
             TextButton(
@@ -161,8 +165,7 @@ class _UpdateButtonState
         _checking || _installing;
 
     return Card(
-      margin:
-          const EdgeInsets.only(
+      margin: const EdgeInsets.only(
         bottom: 10,
       ),
       child: ListTile(
@@ -178,7 +181,7 @@ class _UpdateButtonState
               ? 'APK indiriliyor...'
               : _checking
                   ? 'Güncellemeler kontrol ediliyor...'
-                  : 'Stellar Center v${widget.currentVersion}',
+                  : 'Stellar Center v${AppVersion.current}',
         ),
         trailing: busy
             ? const SizedBox(
