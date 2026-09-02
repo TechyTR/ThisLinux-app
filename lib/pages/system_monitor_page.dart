@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class SystemMonitorPage extends StatefulWidget {
-  const SystemMonitorPage({super.key});
+  const SystemMonitorPage({
+    super.key,
+  });
 
   @override
   State<SystemMonitorPage> createState() =>
@@ -14,15 +16,29 @@ class SystemMonitorPage extends StatefulWidget {
 
 class _SystemMonitorPageState
     extends State<SystemMonitorPage> {
+  static const MethodChannel _channel =
+      MethodChannel(
+    'org.test.thislinux/native',
+  );
+
   Timer? _timer;
 
-  int _battery = 0;
+  int _battery = -1;
   String _batteryState = 'Bilinmiyor';
+  String _plugSource = 'None';
+  double _batteryTemperature = -1;
 
   double _memoryUsed = 0;
   double _memoryTotal = 0;
+  double _memoryAvailable = 0;
 
   double _cpuUsage = 0;
+
+  int _cpuTotalPrevious = 0;
+  int _cpuIdlePrevious = 0;
+  bool _hasPreviousCpu = false;
+
+  bool _loading = true;
 
   @override
   void initState() {
@@ -42,47 +58,63 @@ class _SystemMonitorPageState
       _updateMemory(),
       _updateCpu(),
     ]);
+
+    if (mounted && _loading) {
+      setState(() {
+        _loading = false;
+      });
+    }
   }
 
   Future<void> _updateBattery() async {
     try {
-      final battery = Battery();
+      final result =
+          await _channel.invokeMethod<
+              Map<dynamic, dynamic>>(
+        'getBatteryStatus',
+      );
+
+      if (result == null || !mounted) {
+        return;
+      }
 
       final level =
-          await battery.batteryLevel;
+          _toInt(result['level']);
 
-      final state =
-          await battery.batteryState;
+      final charging =
+          result['isCharging'] == true;
 
-      if (!mounted) return;
+      final plugSource =
+          result['plugSource']
+              ?.toString() ??
+          'None';
+
+      final temperature =
+          _toDouble(
+        result['temperature'],
+      );
+
+      String state;
+
+      if (charging) {
+        state = 'Şarj oluyor';
+      } else if (level >= 100) {
+        state = 'Dolu';
+      } else {
+        state = 'Şarj olmuyor';
+      }
 
       setState(() {
         _battery = level;
-
-        switch (state) {
-          case BatteryState.charging:
-            _batteryState = 'Şarj oluyor';
-            break;
-
-          case BatteryState.discharging:
-            _batteryState = 'Şarj olmuyor';
-            break;
-
-          case BatteryState.full:
-            _batteryState = 'Dolu';
-            break;
-
-          case BatteryState.connectedNotCharging:
-            _batteryState =
-                'Bağlı, şarj olmuyor';
-            break;
-
-          case BatteryState.unknown:
-            _batteryState = 'Bilinmiyor';
-            break;
-        }
+        _batteryState = state;
+        _plugSource = plugSource;
+        _batteryTemperature =
+            temperature;
       });
-    } catch (_) {}
+    } catch (_) {
+      // Native battery bilgisi alınamazsa
+      // mevcut değerler korunur.
+    }
   }
 
   Future<void> _updateMemory() async {
@@ -97,47 +129,69 @@ class _SystemMonitorPageState
       final content =
           await file.readAsString();
 
-      int total = 0;
-      int available = 0;
+      int totalKb = 0;
+      int availableKb = 0;
 
       for (final line
           in content.split('\n')) {
-        if (line.startsWith('MemTotal:')) {
-          total = _parseKb(line);
+        if (line.startsWith(
+          'MemTotal:',
+        )) {
+          totalKb = _parseKb(line);
         }
 
-        if (line.startsWith('MemAvailable:')) {
-          available = _parseKb(line);
+        if (line.startsWith(
+          'MemAvailable:',
+        )) {
+          availableKb =
+              _parseKb(line);
         }
       }
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
+
+      final usedKb =
+          totalKb - availableKb;
 
       setState(() {
         _memoryTotal =
-            total / 1024;
+            totalKb / 1024;
+
+        _memoryAvailable =
+            availableKb / 1024;
 
         _memoryUsed =
-            (total - available) / 1024;
+            usedKb > 0
+                ? usedKb / 1024
+                : 0;
       });
     } catch (_) {}
   }
 
-  int _parseKb(String line) {
+  int _parseKb(
+    String line,
+  ) {
     final parts =
-        line.split(RegExp(r'\s+'));
+        line.trim().split(
+      RegExp(r'\s+'),
+    );
 
     if (parts.length < 2) {
       return 0;
     }
 
-    return int.tryParse(parts[1]) ?? 0;
+    return int.tryParse(
+          parts[1],
+        ) ??
+        0;
   }
 
   Future<void> _updateCpu() async {
     try {
       final file =
-          File('/proc/loadavg');
+          File('/proc/stat');
 
       if (!await file.exists()) {
         return;
@@ -146,25 +200,123 @@ class _SystemMonitorPageState
       final content =
           await file.readAsString();
 
-      final parts =
-          content.trim().split(' ');
+      String? cpuLine;
 
-      if (parts.isEmpty) {
+      for (final line
+          in content.split('\n')) {
+        if (line.startsWith('cpu ')) {
+          cpuLine = line;
+          break;
+        }
+      }
+
+      if (cpuLine == null) {
         return;
       }
 
-      final load =
-          double.tryParse(parts[0]) ?? 0;
+      final parts =
+          cpuLine
+              .trim()
+              .split(
+                RegExp(r'\s+'),
+              );
 
-      final cores =
-          Platform.numberOfProcessors;
+      if (parts.length < 5) {
+        return;
+      }
+
+      final values =
+          parts
+              .skip(1)
+              .map(
+                (value) =>
+                    int.tryParse(value) ?? 0,
+              )
+              .toList();
+
+      if (values.length < 4) {
+        return;
+      }
+
+      final user = values[0];
+      final nice = values[1];
+      final system = values[2];
+      final idle = values[3];
+
+      final iowait =
+          values.length > 4
+              ? values[4]
+              : 0;
+
+      final irq =
+          values.length > 5
+              ? values[5]
+              : 0;
+
+      final softirq =
+          values.length > 6
+              ? values[6]
+              : 0;
+
+      final steal =
+          values.length > 7
+              ? values[7]
+              : 0;
+
+      final total =
+          user +
+          nice +
+          system +
+          idle +
+          iowait +
+          irq +
+          softirq +
+          steal;
+
+      final effectiveIdle =
+          idle + iowait;
+
+      if (!_hasPreviousCpu) {
+        _cpuTotalPrevious =
+            total;
+
+        _cpuIdlePrevious =
+            effectiveIdle;
+
+        _hasPreviousCpu = true;
+
+        return;
+      }
+
+      final totalDelta =
+          total -
+          _cpuTotalPrevious;
+
+      final idleDelta =
+          effectiveIdle -
+          _cpuIdlePrevious;
+
+      _cpuTotalPrevious =
+          total;
+
+      _cpuIdlePrevious =
+          effectiveIdle;
+
+      if (totalDelta <= 0) {
+        return;
+      }
 
       final usage =
-          ((load / cores) * 100)
+          ((totalDelta -
+                  idleDelta) /
+              totalDelta *
+              100)
               .clamp(0, 100)
               .toDouble();
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _cpuUsage = usage;
@@ -172,104 +324,87 @@ class _SystemMonitorPageState
     } catch (_) {}
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+  int _toInt(
+    dynamic value,
+  ) {
+    if (value is int) {
+      return value;
+    }
+
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return int.tryParse(
+          value?.toString() ?? '',
+        ) ??
+        -1;
   }
 
-  Widget _metric(
-    String title,
-    String value,
-    IconData icon,
+  double _toDouble(
+    dynamic value,
   ) {
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return double.tryParse(
+          value?.toString() ?? '',
+        ) ??
+        -1;
+  }
+
+  String _formatTemperature() {
+    if (_batteryTemperature < 0) {
+      return 'Bilinmiyor';
+    }
+
+    return '${_batteryTemperature.toStringAsFixed(1)} °C';
+  }
+
+  String _formatMemory(
+    double value,
+  ) {
+    if (value <= 0) {
+      return '--';
+    }
+
+    if (value >= 1024) {
+      return '${(value / 1024).toStringAsFixed(2)} GB';
+    }
+
+    return '${value.toStringAsFixed(0)} MB';
+  }
+
+  double _memoryPercentage() {
+    if (_memoryTotal <= 0) {
+      return 0;
+    }
+
+    return (_memoryUsed /
+            _memoryTotal *
+            100)
+        .clamp(0, 100)
+        .toDouble();
+  }
+
+  Widget _progressCard({
+    required String title,
+    required String value,
+    required double progress,
+    required IconData icon,
+  }) {
     final scheme =
         Theme.of(context).colorScheme;
 
     return Card(
       margin:
-          const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: Icon(
-          icon,
-          color: scheme.primary,
-        ),
-        title: Text(title),
-        trailing: Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+          const EdgeInsets.only(
+        bottom: 12,
       ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final memoryPercentage =
-        _memoryTotal <= 0
-            ? 0
-            : (_memoryUsed /
-                    _memoryTotal *
-                    100)
-                .clamp(0, 100);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Sistem İzleme',
-        ),
-        centerTitle: true,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _metric(
-            'CPU',
-            '${_cpuUsage.toStringAsFixed(1)}%',
-            Icons.memory,
-          ),
-
-          _metric(
-            'RAM',
-            '${_memoryUsed.toStringAsFixed(0)} / '
-                '${_memoryTotal.toStringAsFixed(0)} MB',
-            Icons.sd_memory,
-          ),
-
-          _metric(
-            'RAM Kullanımı',
-            '${memoryPercentage.toStringAsFixed(1)}%',
-            Icons.bar_chart,
-          ),
-
-          _metric(
-            'Pil',
-            '$_battery%',
-            Icons.battery_full,
-          ),
-
-          _metric(
-            'Pil Durumu',
-            _batteryState,
-            Icons.bolt,
-          ),
-
-          const SizedBox(height: 12),
-
-          Text(
-            'Veriler yaklaşık 1 saniyede bir yenilenir.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+      child: Padding(
+        padding:
+            const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment:
+             
