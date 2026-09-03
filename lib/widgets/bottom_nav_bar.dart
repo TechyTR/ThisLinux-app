@@ -20,26 +20,29 @@ class BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isGlass = Theme.of(context).scaffoldBackgroundColor.a < 0.99;
 
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      minimum: const EdgeInsets.fromLTRB(28, 4, 28, 8),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: isGlass ? 18 : 0, sigmaY: isGlass ? 18 : 0),
+          filter: ImageFilter.blur(
+            sigmaX: isGlass ? 18 : 0,
+            sigmaY: isGlass ? 18 : 0,
+          ),
           child: Container(
-            height: 68,
-            padding: const EdgeInsets.all(6),
+            height: 66,
+            padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              color: style
-                  ? Colors.black.withValues(alpha: 0.16)
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.18)
                   : Colors.white.withValues(alpha: 0.82),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: style
+                color: isDark
                     ? Colors.white.withValues(alpha: 0.10)
                     : Colors.black.withValues(alpha: 0.06),
               ),
@@ -47,32 +50,62 @@ class BottomNavBar extends StatelessWidget {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final itemWidth = constraints.maxWidth / items.length;
+                final selectedLeft = itemWidth * currentIndex + 3;
 
                 return Stack(
                   children: [
-                    AnimatedAlign(
-                      duration: const Duration(milliseconds: 280),
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 360),
                       curve: Curves.easeOutCubic,
-                      alignment: Alignment(
-                        -1 + (2 * currentIndex / (items.length - 1)),
-                        0,
-                      ),
-                      child: FractionallySizedBox(
-                        widthFactor: 1 / items.length,
-                        heightFactor: 1,
-                        child: Padding(
-                          padding: const EdgeInsets.all(1),
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: accent.withValues(alpha: style ? 0.18 : 0.12),
-                              borderRadius: BorderRadius.circular(19),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: accent.withValues(alpha: 0.16),
-                                  blurRadius: 14,
-                                  spreadRadius: 1,
+                      left: selectedLeft,
+                      top: 3,
+                      width: itemWidth - 6,
+                      height: 55,
+                      child: IgnorePointer(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(19),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(
+                              sigmaX: 14,
+                              sigmaY: 14,
+                            ),
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.075)
+                                    : Colors.white.withValues(alpha: 0.24),
+                                borderRadius: BorderRadius.circular(19),
+                                border: Border.all(
+                                  color: isDark
+                                      ? Colors.white.withValues(alpha: 0.25)
+                                      : Colors.white.withValues(alpha: 0.68),
                                 ),
-                              ],
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: accent.withValues(alpha: 0.13),
+                                    blurRadius: 16,
+                                    spreadRadius: -2,
+                                  ),
+                                ],
+                              ),
+                              child: Align(
+                                alignment: Alignment.topCenter,
+                                child: Container(
+                                  height: 1.2,
+                                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.white.withValues(
+                                          alpha: isDark ? 0.34 : 0.72,
+                                        ),
+                                        Colors.transparent,
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -84,40 +117,35 @@ class BottomNavBar extends StatelessWidget {
                         final selected = index == currentIndex;
 
                         return Expanded(
-                          child: Semantics(
-                            button: true,
-                            selected: selected,
-                            label: item.label,
+                          child: Material(
+                            type: MaterialType.transparency,
                             child: InkWell(
                               borderRadius: BorderRadius.circular(19),
                               onTap: () => onTap(index),
-                              splashColor: accent.withValues(alpha: 0.12),
-                              highlightColor: accent.withValues(alpha: 0.06),
-                              child: TweenAnimationBuilder<double>(
-                                tween: Tween(begin: 0, end: selected ? 1 : 0),
+                              splashColor: accent.withValues(alpha: 0.14),
+                              highlightColor: accent.withValues(alpha: 0.07),
+                              child: AnimatedScale(
+                                scale: selected ? 1.045 : 1.0,
                                 duration: const Duration(milliseconds: 180),
                                 curve: Curves.easeOutCubic,
-                                builder: (context, value, child) {
-                                  return Transform.scale(
-                                    scale: 1 + (0.06 * value),
-                                    child: child,
-                                  );
-                                },
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    IconTheme(
-                                      data: IconThemeData(
-                                        size: 24,
+                                    AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 180),
+                                      switchInCurve: Curves.easeOutCubic,
+                                      switchOutCurve: Curves.easeInCubic,
+                                      child: Icon(
+                                        selected ? item.activeIcon : item.icon,
+                                        key: ValueKey('$index-$selected'),
+                                        size: 22,
                                         color: selected ? accent : mutedColor,
                                       ),
-                                      child: selected
-                                          ? item.activeIcon
-                                          : item.icon,
                                     ),
                                     const SizedBox(height: 2),
                                     AnimatedDefaultTextStyle(
-                                      duration: const Duration(milliseconds: 160),
+                                      duration: const Duration(milliseconds: 180),
+                                      curve: Curves.easeOutCubic,
                                       style: Theme.of(context)
                                           .textTheme
                                           .labelSmall!
