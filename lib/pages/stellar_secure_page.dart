@@ -2,9 +2,9 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../services/app_version.dart';
 import '../services/security_service.dart';
 import '../theme/app_theme.dart';
-import '../services/app_version.dart';
 
 class StellarSecurePage extends StatefulWidget {
   final AppThemeColor selectedTheme;
@@ -17,41 +17,48 @@ class StellarSecurePage extends StatefulWidget {
   });
 
   @override
-  State<StellarSecurePage> createState() =>
-      _StellarSecurePageState();
+  State<StellarSecurePage> createState() => _StellarSecurePageState();
 }
 
-class _StellarSecurePageState
-    extends State<StellarSecurePage> {
-  SecurityStatus _status =
-      SecurityStatus.scanRequired;
-
+class _StellarSecurePageState extends State<StellarSecurePage>
+    with SingleTickerProviderStateMixin {
+  SecurityStatus _status = SecurityStatus.scanRequired;
   bool _protectionEnabled = true;
   bool _scanning = false;
-
   List<String> _scannedApps = [];
   List<String> _suspiciousApps = [];
 
+  late final AnimationController _scanController;
+
   bool get _isGlass =>
-      widget.selectedStyle ==
-          AppThemeStyle.liquidGlassLight ||
-      widget.selectedStyle ==
-          AppThemeStyle.liquidGlassDark;
+      widget.selectedStyle == AppThemeStyle.liquidGlassLight ||
+      widget.selectedStyle == AppThemeStyle.liquidGlassDark;
 
   bool get _isLightGlass =>
-      widget.selectedStyle ==
-      AppThemeStyle.liquidGlassLight;
+      widget.selectedStyle == AppThemeStyle.liquidGlassLight;
+
+  @override
+  void initState() {
+    super.initState();
+    _scanController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scanController.dispose();
+    super.dispose();
+  }
 
   Color _statusColor(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-
     switch (_status) {
       case SecurityStatus.safe:
         return Colors.green;
-
       case SecurityStatus.scanRequired:
         return Colors.orange;
-
       case SecurityStatus.malwareDetected:
         return scheme.error;
     }
@@ -61,25 +68,21 @@ class _StellarSecurePageState
     switch (_status) {
       case SecurityStatus.safe:
         return 'Telefonunuz güvende';
-
       case SecurityStatus.scanRequired:
         return 'Telefonunuzun taranması gerekiyor';
-
       case SecurityStatus.malwareDetected:
-        return 'Telefonda Kötü Amaçlı Yazılım Tespit Edildi';
+        return 'Kötü amaçlı yazılım göstergesi tespit edildi';
     }
   }
 
   IconData get _statusIcon {
     switch (_status) {
       case SecurityStatus.safe:
-        return Icons.check_circle_rounded;
-
+        return Icons.verified_user_rounded;
       case SecurityStatus.scanRequired:
         return Icons.warning_rounded;
-
       case SecurityStatus.malwareDetected:
-        return Icons.dangerous_rounded;
+        return Icons.gpp_bad_rounded;
     }
   }
 
@@ -88,24 +91,26 @@ class _StellarSecurePageState
 
     setState(() {
       _scanning = true;
-      _status = SecurityStatus.scanRequired;
       _scannedApps = [];
       _suspiciousApps = [];
     });
+    _scanController.repeat();
 
-    final result =
-        await SecurityService.scanDevice(
+    final result = await SecurityService.scanDevice(
       onAppScanned: (app) {
-        if (!mounted) return;
-
+        if (!mounted || !_scanning) return;
+        // Only show a lightweight rolling progress list during the scan.
         setState(() {
-          _scannedApps.add(app);
+          if (_scannedApps.length < 12) {
+            _scannedApps = [..._scannedApps, app];
+          }
         });
       },
     );
 
     if (!mounted) return;
 
+    _scanController.stop();
     setState(() {
       _status = result.status;
       _scannedApps = result.scannedApps;
@@ -114,46 +119,157 @@ class _StellarSecurePageState
     });
   }
 
-  Widget _glassCard({
-    required Widget child,
-  }) {
+  Widget _glassCard({required Widget child}) {
     final scheme = Theme.of(context).colorScheme;
-
-    Widget content = Container(
+    final content = Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(26),
         color: _isGlass
-            ? Colors.white.withOpacity(
-                _isLightGlass ? 0.15 : 0.065,
-              )
+            ? Colors.white.withOpacity(_isLightGlass ? 0.15 : 0.065)
             : scheme.surfaceContainerHighest,
         border: _isGlass
             ? Border.all(
-                color: Colors.white.withOpacity(
-                  _isLightGlass ? 0.52 : 0.18,
-                ),
+                color: Colors.white.withOpacity(_isLightGlass ? 0.52 : 0.18),
               )
             : null,
       ),
       child: child,
     );
 
-    if (_isGlass) {
-      content = ClipRRect(
-        borderRadius: BorderRadius.circular(26),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: 25,
-            sigmaY: 25,
-          ),
-          child: content,
-        ),
-      );
-    }
+    if (!_isGlass) return content;
 
-    return content;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(26),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: content,
+      ),
+    );
+  }
+
+  Widget _scanButton(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final accent = scheme.primary;
+
+    final button = AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      height: 56,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: _isGlass
+            ? LinearGradient(
+                colors: [
+                  accent.withOpacity(_isLightGlass ? 0.30 : 0.22),
+                  Colors.white.withOpacity(_isLightGlass ? 0.20 : 0.07),
+                ],
+              )
+            : null,
+        color: _isGlass ? null : accent,
+        border: _isGlass
+            ? Border.all(
+                color: Colors.white.withOpacity(_isLightGlass ? 0.50 : 0.18),
+              )
+            : null,
+        boxShadow: [
+          BoxShadow(
+            color: accent.withOpacity(_scanning ? 0.28 : 0.12),
+            blurRadius: _scanning ? 18 : 10,
+            spreadRadius: _scanning ? 1 : 0,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: _scanning ? null : _scan,
+          splashColor: Colors.white.withOpacity(0.20),
+          highlightColor: Colors.white.withOpacity(0.10),
+          child: Center(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              child: Row(
+                key: ValueKey(_scanning),
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_scanning)
+                    RotationTransition(
+                      turns: _scanController,
+                      child: const Icon(
+                        Icons.radar_rounded,
+                        color: Colors.white,
+                      ),
+                    )
+                  else
+                    const Icon(Icons.radar_rounded, color: Colors.white),
+                  const SizedBox(width: 10),
+                  Text(
+                    _scanning ? 'Telefonunuz taranıyor' : 'Telefonu Tara',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (!_isGlass) return button;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: button,
+      ),
+    );
+  }
+
+  Widget _animatedStatus(BuildContext context) {
+    final color = _statusColor(context);
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      switchInCurve: Curves.easeOutBack,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(scale: animation, child: child),
+        );
+      },
+      child: Column(
+        key: ValueKey(_status),
+        children: [
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.72, end: 1),
+            duration: const Duration(milliseconds: 550),
+            curve: Curves.easeOutBack,
+            builder: (context, value, child) => Transform.scale(
+              scale: value,
+              child: child,
+            ),
+            child: Icon(_statusIcon, size: 58, color: color),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _statusText,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -173,12 +289,14 @@ class _StellarSecurePageState
             Positioned(
               top: -100,
               right: -80,
-              child: Container(
-                width: 240,
-                height: 240,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: statusColor.withOpacity(0.10),
+              child: IgnorePointer(
+                child: Container(
+                  width: 220,
+                  height: 220,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: statusColor.withOpacity(0.08),
+                  ),
                 ),
               ),
             ),
@@ -186,23 +304,20 @@ class _StellarSecurePageState
             Positioned(
               bottom: 80,
               left: -120,
-              child: Container(
-                width: 260,
-                height: 260,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: scheme.primary.withOpacity(0.07),
+              child: IgnorePointer(
+                child: Container(
+                  width: 240,
+                  height: 240,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: scheme.primary.withOpacity(0.055),
+                  ),
                 ),
               ),
             ),
           SafeArea(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                16,
-                8,
-                16,
-                30,
-              ),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
               children: [
                 _glassCard(
                   child: Row(
@@ -212,8 +327,7 @@ class _StellarSecurePageState
                         height: 62,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color:
-                              scheme.primary.withOpacity(0.12),
+                          color: scheme.primary.withOpacity(0.12),
                         ),
                         child: Icon(
                           Icons.shield_rounded,
@@ -224,8 +338,7 @@ class _StellarSecurePageState
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
                               'Stellar Secure',
@@ -237,10 +350,7 @@ class _StellarSecurePageState
                             const SizedBox(height: 4),
                             Text(
                               'v${AppVersion.current}',
-                              style: TextStyle(
-                                color:
-                                    scheme.onSurfaceVariant,
-                              ),
+                              style: TextStyle(color: scheme.onSurfaceVariant),
                             ),
                           ],
                         ),
@@ -252,46 +362,9 @@ class _StellarSecurePageState
                 _glassCard(
                   child: Column(
                     children: [
-                      Icon(
-                        _statusIcon,
-                        size: 54,
-                        color: statusColor,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _statusText,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+                      _animatedStatus(context),
                       const SizedBox(height: 18),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed:
-                              _scanning ? null : _scan,
-                          icon: _scanning
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child:
-                                      CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.radar_rounded,
-                                ),
-                          label: Text(
-                            _scanning
-                                ? 'Telefonunuz taranıyor'
-                                : 'Telefonu Tara',
-                          ),
-                        ),
-                      ),
+                      _scanButton(context),
                     ],
                   ),
                 ),
@@ -301,9 +374,7 @@ class _StellarSecurePageState
                     children: [
                       Icon(
                         Icons.security_rounded,
-                        color: _protectionEnabled
-                            ? Colors.green
-                            : scheme.error,
+                        color: _protectionEnabled ? Colors.green : scheme.error,
                       ),
                       const SizedBox(width: 14),
                       const Expanded(
@@ -318,11 +389,9 @@ class _StellarSecurePageState
                       Switch.adaptive(
                         value: _protectionEnabled,
                         activeColor: Colors.green,
-                        onChanged: (value) {
-                          setState(() {
-                            _protectionEnabled = value;
-                          });
-                        },
+                        onChanged: (value) => setState(() {
+                          _protectionEnabled = value;
+                        }),
                       ),
                     ],
                   ),
@@ -331,47 +400,30 @@ class _StellarSecurePageState
                   const SizedBox(height: 12),
                   _glassCard(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            const Icon(
-                              Icons.apps_rounded,
-                            ),
+                            const Icon(Icons.apps_rounded),
                             const SizedBox(width: 10),
-                            Text(
+                            const Text(
                               'Taranan uygulamalar',
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w800,
-                                color: scheme.onSurface,
                               ),
                             ),
                             const Spacer(),
-                            Text(
-                              '${_scannedApps.length}',
-                              style: TextStyle(
-                                color:
-                                    scheme.onSurfaceVariant,
-                              ),
-                            ),
+                            Text('${_scannedApps.length}'),
                           ],
                         ),
                         const SizedBox(height: 14),
                         if (_scannedApps.isEmpty)
-                          const Text(
-                            'Uygulamalar hazırlanıyor...',
-                          )
+                          const Text('Uygulamalar hazırlanıyor...')
                         else
-                          ..._scannedApps
-                              .take(40)
-                              .map(
+                          ..._scannedApps.take(40).map(
                                 (app) => Padding(
-                                  padding:
-                                      const EdgeInsets.only(
-                                    bottom: 9,
-                                  ),
+                                  padding: const EdgeInsets.only(bottom: 9),
                                   child: Row(
                                     children: [
                                       const Icon(
@@ -384,8 +436,7 @@ class _StellarSecurePageState
                                         child: Text(
                                           app,
                                           maxLines: 1,
-                                          overflow:
-                                              TextOverflow.ellipsis,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ],
@@ -400,8 +451,7 @@ class _StellarSecurePageState
                   const SizedBox(height: 12),
                   _glassCard(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Şüpheli uygulamalar',
@@ -412,9 +462,7 @@ class _StellarSecurePageState
                           ),
                         ),
                         const SizedBox(height: 10),
-                        ..._suspiciousApps.map(
-                          (app) => Text('• $app'),
-                        ),
+                        ..._suspiciousApps.map((app) => Text('• $app')),
                       ],
                     ),
                   ),
