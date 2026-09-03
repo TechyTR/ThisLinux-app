@@ -88,7 +88,10 @@ class _SystemMonitorPageState extends State<SystemMonitorPage> {
       final lines = await File('/proc/stat').readAsLines();
       String? line;
       for (final item in lines) {
-        if (item.startsWith('cpu ')) { line = item; break; }
+        if (item.startsWith('cpu ')) {
+          line = item;
+          break;
+        }
       }
       if (line == null) return _cpu;
       final values = line!.trim().split(RegExp(r'\s+')).skip(1).take(8).map(int.tryParse).whereType<int>().toList();
@@ -106,7 +109,9 @@ class _SystemMonitorPageState extends State<SystemMonitorPage> {
       _previousIdle = idle;
       if (totalDelta <= 0) return _cpu;
       return ((1 - idleDelta / totalDelta) * 100).clamp(0, 100).toDouble();
-    } catch (_) { return _cpu; }
+    } catch (_) {
+      return _cpu;
+    }
   }
 
   Future<(double, double)> _readRam() async {
@@ -120,7 +125,9 @@ class _SystemMonitorPageState extends State<SystemMonitorPage> {
       }
       if (total == null || available == null) return (_ramTotal, _ramAvailable);
       return (total! / 1048576, available! / 1048576);
-    } catch (_) { return (_ramTotal, _ramAvailable); }
+    } catch (_) {
+      return (_ramTotal, _ramAvailable);
+    }
   }
 
   Future<Map<String, dynamic>> _readNative() async {
@@ -318,5 +325,17 @@ class _SystemMonitorPageState extends State<SystemMonitorPage> {
     );
   }
 
-  Widget _info(String title, String value) => Padding(padding: const EdgeInsets.symmetric(vertical: 5), child: Row(children: [Expanded(child: Text(title)), Flexible(child: Text(value, textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.w650)))]));
+  Widget _info(String title, String value) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(children: [
+          Expanded(child: Text(title)),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ]),
+      );
 }
