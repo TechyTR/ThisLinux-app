@@ -27,6 +27,9 @@ class MainActivity : FlutterActivity() {
     private val BENCHMARK_CHANNEL =
         "org.test.thislinux/benchmark_graphics"
 
+    private var previousCpuTotal: Long? = null
+    private var previousCpuIdle: Long? = null
+
     companion object {
         private const val SHIZUKU_PACKAGE =
             "moe.shizuku.privileged.api"
@@ -271,6 +274,57 @@ class MainActivity : FlutterActivity() {
                             },
                             "source" to
                                 chargePlug
+                        )
+                    )
+                }
+
+                "getBenchmarkTelemetry" -> {
+                    val batteryIntent =
+                        registerReceiver(
+                            null,
+                            IntentFilter(
+                                Intent.ACTION_BATTERY_CHANGED
+                            )
+                        )
+
+                    val level =
+                        batteryIntent?.getIntExtra(
+                            BatteryManager.EXTRA_LEVEL,
+                            -1
+                        ) ?: -1
+
+                    val scale =
+                        batteryIntent?.getIntExtra(
+                            BatteryManager.EXTRA_SCALE,
+                            -1
+                        ) ?: -1
+
+                    val batteryPercent =
+                        if (level >= 0 && scale > 0) {
+                            (level * 100.0 / scale).toInt()
+                        } else {
+                            null
+                        }
+
+                    val rawTemperature =
+                        batteryIntent?.getIntExtra(
+                            BatteryManager.EXTRA_TEMPERATURE,
+                            -1
+                        ) ?: -1
+
+                    val temperatureC =
+                        if (rawTemperature >= 0) {
+                            rawTemperature / 10.0
+                        } else {
+                            null
+                        }
+
+                    result.success(
+                        mapOf(
+                            "cpuPercent" to readCpuUsagePercent(),
+                            "gpuPercent" to readGpuBusyPercent(),
+                            "batteryPercent" to batteryPercent,
+                            "temperatureC" to temperatureC
                         )
                     )
                 }
@@ -1088,6 +1142,77 @@ class MainActivity : FlutterActivity() {
                 null
             )
         }
+    }
+
+    private fun readCpuUsagePercent(): Double? {
+        return try {
+            val fields =
+                File("/proc/stat")
+                    .useLines { lines ->
+                        lines.firstOrNull()
+                            ?.trim()
+                            ?.split(Regex("\\s+"))
+                            ?.drop(1)
+                            ?.mapNotNull { it.toLongOrNull() }
+                    }
+                    ?: return null
+
+            if (fields.size < 4) return null
+
+            val idle = fields[3] + (fields.getOrNull(4) ?: 0L)
+            val total = fields.sum()
+            val oldTotal = previousCpuTotal
+            val oldIdle = previousCpuIdle
+
+            previousCpuTotal = total
+            previousCpuIdle = idle
+
+            if (oldTotal == null || oldIdle == null) return null
+
+            val totalDelta = total - oldTotal
+            val idleDelta = idle - oldIdle
+
+            if (totalDelta <= 0L) return null
+
+            ((totalDelta - idleDelta) * 100.0 / totalDelta)
+                .coerceIn(0.0, 100.0)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun readGpuBusyPercent(): Double? {
+        val candidates =
+            listOf(
+                "/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage",
+                "/sys/class/kgsl/kgsl-3d0/gpubusy"
+            )
+
+        for (path in candidates) {
+            try {
+                val file = File(path)
+                if (!file.exists() || !file.canRead()) continue
+
+                val raw = file.readText().trim()
+                val direct = raw.toDoubleOrNull()
+
+                if (direct != null) {
+                    return direct.coerceIn(0.0, 100.0)
+                }
+
+                val pair = raw
+                    .split(Regex("\\s+"))
+                    .mapNotNull { it.toDoubleOrNull() }
+
+                if (pair.size >= 2 && pair[1] > 0.0) {
+                    return (pair[0] * 100.0 / pair[1])
+                        .coerceIn(0.0, 100.0)
+                }
+            } catch (_: Exception) {
+            }
+        }
+
+        return null
     }
 
     private fun isShizukuInstalled(): Boolean {
