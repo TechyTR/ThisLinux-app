@@ -29,7 +29,6 @@ class _StorageManagerPageState extends State<StorageManagerPage>
     'Arşivler': 0,
     'Diğer': 0,
   };
-
   final Map<String, int> _counts = {
     'Görseller': 0,
     'Videolar': 0,
@@ -86,15 +85,17 @@ class _StorageManagerPageState extends State<StorageManagerPage>
   }
 
   Future<void> _scanStorage() async {
-    if (!_hasAccess || _loading) return;
-    setState(() {
-      _loading = true;
-      _fileCount = 0;
-      _errors = 0;
-      _totalBytes = 0;
-      for (final key in _sizes.keys) _sizes[key] = 0;
-      for (final key in _counts.keys) _counts[key] = 0;
-    });
+    if (!_hasAccess) return;
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _fileCount = 0;
+        _errors = 0;
+        _totalBytes = 0;
+        for (final key in _sizes.keys) _sizes[key] = 0;
+        for (final key in _counts.keys) _counts[key] = 0;
+      });
+    }
 
     final sizes = {for (final key in _sizes.keys) key: 0.0};
     final counts = {for (final key in _counts.keys) key: 0};
@@ -115,12 +116,8 @@ class _StorageManagerPageState extends State<StorageManagerPage>
               bytes += size;
               files++;
               visited++;
-              if (visited % 80 == 0) {
-                await Future<void>.delayed(Duration.zero);
-              }
+              if (visited % 64 == 0) await Future<void>.delayed(Duration.zero);
             } else if (entity is Directory) {
-              // Do not skip Android/ or other large user-data directories.
-              // Inaccessible entries are handled individually and counted as errors.
               await walk(entity);
             }
           } catch (_) {
@@ -224,15 +221,13 @@ class _StorageManagerPageState extends State<StorageManagerPage>
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          Text(_size(_totalBytes), style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800)),
-                          const SizedBox(height: 5),
-                          const Text('Taranan kullanıcı depolaması'),
-                          const SizedBox(height: 5),
-                          Text('$_fileCount dosya${_errors > 0 ? ' • $_errors erişim atlandı' : ''}', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                        ],
-                      ),
+                      child: Column(children: [
+                        Text(_size(_totalBytes), style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 5),
+                        const Text('Taranan kullanıcı depolaması'),
+                        const SizedBox(height: 5),
+                        Text('$_fileCount dosya${_errors > 0 ? ' • $_errors erişim atlandı' : ''}', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                      ]),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -243,14 +238,14 @@ class _StorageManagerPageState extends State<StorageManagerPage>
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
                         leading: CircleAvatar(backgroundColor: color.withOpacity(0.13), child: Icon(_icon(entry.key), color: color)),
-                        title: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.w650)),
+                        title: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: Text('${_counts[entry.key] ?? 0} dosya • ${_size(entry.value)}'),
                         trailing: Text('${(percentage * 100).toStringAsFixed(1)}%', style: TextStyle(fontWeight: FontWeight.bold, color: color)),
                       ),
                     );
                   }),
                   const SizedBox(height: 6),
-                  const Text('Taranabilen tüm kullanıcı depolama klasörleri dahil edilir. Erişilemeyen Android korumalı alanları ayrıca hata sayısında gösterilir.', textAlign: TextAlign.center, style: TextStyle(fontSize: 11)),
+                  const Text('Tüm erişilebilir kullanıcı depolama klasörleri taranır. Android korumalı alanları atlanırsa bu durum hata sayısında gösterilir.', textAlign: TextAlign.center, style: TextStyle(fontSize: 11)),
                 ],
               ),
             ),
