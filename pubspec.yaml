@@ -41,7 +41,3 @@ flutter_launcher_icons:
   android: true
   ios: false
   image_path: "assets/icon.png"
-git add pubspec.yaml
-git add android/app/src/main/kotlin/org/test/thislinux/BenchmarkActivity.kt
-git commit -m "Update 4K 120 FPS benchmark"
-git push origin main
