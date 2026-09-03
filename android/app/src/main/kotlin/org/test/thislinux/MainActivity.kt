@@ -24,12 +24,16 @@ class MainActivity : FlutterActivity() {
 
     private val CHANNEL = "org.test.thislinux/native"
     private val UPDATER_CHANNEL = "thislinux/updater"
+    private val BENCHMARK_CHANNEL =
+        "org.test.thislinux/benchmark_graphics"
 
     companion object {
         private const val SHIZUKU_PACKAGE =
             "moe.shizuku.privileged.api"
 
         private const val SHIZUKU_PERMISSION_REQUEST_CODE = 2001
+
+        private const val BENCHMARK_REQUEST_CODE = 4001
     }
 
     override fun configureFlutterEngine(
@@ -43,49 +47,6 @@ class MainActivity : FlutterActivity() {
         ).setMethodCallHandler { call, result ->
 
             when (call.method) {
-
-                "run4K120Benchmark" -> {
-    try {
-        startActivityForResult(
-            Intent(
-                this,
-                BenchmarkActivity::class.java
-            ),
-            BENCHMARK_REQUEST_CODE
-        )
-
-        result.success(true)
-
-    } catch (e: Exception) {
-        result.error(
-            "BENCHMARK_ERROR",
-            e.message,
-            null
-        )
-    }
-}
-
-"getDisplayRefreshRate" -> {
-    result.success(
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            display?.refreshRate?.toDouble() ?: 60.0
-        } else {
-            @Suppress("DEPRECATION")
-            windowManager.defaultDisplay.refreshRate.toDouble()
-        }
-    )
-}
-
-"cancel4K120Benchmark" -> {
-    try {
-        finishActivity(
-            BENCHMARK_REQUEST_CODE
-        )
-    } catch (_: Exception) {
-    }
-
-    result.success(true)
-}
 
                 "getDeviceInfo" -> {
 
@@ -127,23 +88,30 @@ class MainActivity : FlutterActivity() {
                             "model" to Build.MODEL,
                             "product" to Build.PRODUCT,
                             "brand" to Build.BRAND,
-                            "manufacturer" to Build.MANUFACTURER,
+                            "manufacturer" to
+                                Build.MANUFACTURER,
                             "hardware" to Build.HARDWARE,
                             "board" to Build.BOARD,
-                            "bootloader" to Build.BOOTLOADER,
+                            "bootloader" to
+                                Build.BOOTLOADER,
                             "display" to Build.DISPLAY,
-                            "fingerprint" to Build.FINGERPRINT,
+                            "fingerprint" to
+                                Build.FINGERPRINT,
                             "host" to Build.HOST,
                             "id" to Build.ID,
                             "type" to Build.TYPE,
                             "user" to Build.USER,
                             "cpu_abi" to Build.CPU_ABI,
-                            "supported_abis" to supportedAbis,
+                            "supported_abis" to
+                                supportedAbis,
                             "cpu_count" to cpuCount,
 
-                            "sdk_int" to Build.VERSION.SDK_INT,
-                            "release" to Build.VERSION.RELEASE,
-                            "incremental" to Build.VERSION.INCREMENTAL,
+                            "sdk_int" to
+                                Build.VERSION.SDK_INT,
+                            "release" to
+                                Build.VERSION.RELEASE,
+                            "incremental" to
+                                Build.VERSION.INCREMENTAL,
 
                             "security_patch" to
                                 if (
@@ -238,9 +206,11 @@ class MainActivity : FlutterActivity() {
 
                     val isCharging =
                         status ==
-                            BatteryManager.BATTERY_STATUS_CHARGING ||
+                            BatteryManager
+                                .BATTERY_STATUS_CHARGING ||
                         status ==
-                            BatteryManager.BATTERY_STATUS_FULL
+                            BatteryManager
+                                .BATTERY_STATUS_FULL
 
                     val plugged =
                         batteryIntent?.getIntExtra(
@@ -251,13 +221,16 @@ class MainActivity : FlutterActivity() {
                     val chargePlug =
                         when (plugged) {
 
-                            BatteryManager.BATTERY_PLUGGED_USB ->
+                            BatteryManager
+                                .BATTERY_PLUGGED_USB ->
                                 "USB"
 
-                            BatteryManager.BATTERY_PLUGGED_AC ->
+                            BatteryManager
+                                .BATTERY_PLUGGED_AC ->
                                 "AC"
 
-                            BatteryManager.BATTERY_PLUGGED_WIRELESS ->
+                            BatteryManager
+                                .BATTERY_PLUGGED_WIRELESS ->
                                 "Wireless"
 
                             else ->
@@ -280,15 +253,24 @@ class MainActivity : FlutterActivity() {
                     result.success(
                         mapOf(
                             "level" to batteryPct,
-                            "isCharging" to isCharging,
-                            "plugSource" to chargePlug,
-                            "temperature" to temperature,
+                            "isCharging" to
+                                isCharging,
+                            "plugSource" to
+                                chargePlug,
+                            "temperature" to
+                                temperature,
                             "state" to when {
-                                isCharging -> "Şarj oluyor"
-                                batteryPct >= 0 -> "Şarj olmuyor"
-                                else -> "Bilinmiyor"
+                                isCharging ->
+                                    "Şarj oluyor"
+
+                                batteryPct >= 0 ->
+                                    "Şarj olmuyor"
+
+                                else ->
+                                    "Bilinmiyor"
                             },
-                            "source" to chargePlug
+                            "source" to
+                                chargePlug
                         )
                     )
                 }
@@ -315,8 +297,10 @@ class MainActivity : FlutterActivity() {
 
                             permissionGranted =
                                 try {
-                                    Shizuku.checkSelfPermission() ==
-                                        PackageManager.PERMISSION_GRANTED
+                                    Shizuku
+                                        .checkSelfPermission() ==
+                                        PackageManager
+                                            .PERMISSION_GRANTED
                                 } catch (_: Exception) {
                                     false
                                 }
@@ -332,10 +316,14 @@ class MainActivity : FlutterActivity() {
 
                     result.success(
                         mapOf(
-                            "installed" to installed,
-                            "running" to running,
-                            "permissionGranted" to permissionGranted,
-                            "suAvailable" to suAvailable
+                            "installed" to
+                                installed,
+                            "running" to
+                                running,
+                            "permissionGranted" to
+                                permissionGranted,
+                            "suAvailable" to
+                                suAvailable
                         )
                     )
                 }
@@ -348,7 +336,8 @@ class MainActivity : FlutterActivity() {
                             result.success(
                                 mapOf(
                                     "success" to false,
-                                    "reason" to "not_installed"
+                                    "reason" to
+                                        "not_installed"
                                 )
                             )
                             return@setMethodCallHandler
@@ -358,7 +347,8 @@ class MainActivity : FlutterActivity() {
                             result.success(
                                 mapOf(
                                     "success" to false,
-                                    "reason" to "not_running"
+                                    "reason" to
+                                        "not_running"
                                 )
                             )
                             return@setMethodCallHandler
@@ -371,19 +361,22 @@ class MainActivity : FlutterActivity() {
                             result.success(
                                 mapOf(
                                     "success" to true,
-                                    "permissionGranted" to true
+                                    "permissionGranted" to
+                                        true
                                 )
                             )
                             return@setMethodCallHandler
                         }
 
                         if (
-                            Shizuku.shouldShowRequestPermissionRationale()
+                            Shizuku
+                                .shouldShowRequestPermissionRationale()
                         ) {
                             result.success(
                                 mapOf(
                                     "success" to false,
-                                    "reason" to "rationale"
+                                    "reason" to
+                                        "rationale"
                                 )
                             )
                             return@setMethodCallHandler
@@ -396,7 +389,8 @@ class MainActivity : FlutterActivity() {
                         result.success(
                             mapOf(
                                 "success" to true,
-                                "permissionRequested" to true
+                                "permissionRequested" to
+                                    true
                             )
                         )
 
@@ -455,18 +449,23 @@ class MainActivity : FlutterActivity() {
                                     PackageManager.GET_META_DATA
                                 )
                                 .map {
+
                                     mapOf(
                                         "packageName" to
                                             it.packageName,
+
                                         "label" to
                                             packageManager
                                                 .getApplicationLabel(it)
                                                 .toString(),
-                                        "system" to
-                                            (
-                                                it.flags and
-                                                    android.content.pm.ApplicationInfo.FLAG_SYSTEM
-                                            ) != 0
+
+                                        "system" to (
+                                            it.flags and
+                                                android.content
+                                                    .pm
+                                                    .ApplicationInfo
+                                                    .FLAG_SYSTEM
+                                        ) != 0
                                     )
                                 }
 
@@ -505,7 +504,8 @@ class MainActivity : FlutterActivity() {
 
                             try {
 
-                                val file = File(path)
+                                val file =
+                                    File(path)
 
                                 if (
                                     file.exists() &&
@@ -523,8 +523,11 @@ class MainActivity : FlutterActivity() {
                                     ) {
 
                                         frequency =
-                                            if (value > 100000) {
-                                                value / 1000.0
+                                            if (
+                                                value > 100000
+                                            ) {
+                                                value /
+                                                    1000.0
                                             } else {
                                                 value.toDouble()
                                             }
@@ -634,14 +637,19 @@ class MainActivity : FlutterActivity() {
 
                                     thermalZones.add(
                                         mapOf(
-                                            "name" to zone.name,
+                                            "name" to
+                                                zone.name,
+
                                             "type" to (
-                                                if (type.isBlank()) {
+                                                if (
+                                                    type.isBlank()
+                                                ) {
                                                     zone.name
                                                 } else {
                                                     type
                                                 }
                                             ),
+
                                             "temperature" to
                                                 temperature
                                         )
@@ -658,9 +666,12 @@ class MainActivity : FlutterActivity() {
                     result.success(
                         mapOf(
                             "cpu_count" to cpuCount,
-                            "online_cpu_list" to onlineCpuList,
-                            "cpu_frequencies" to frequencies,
-                            "thermal_zones" to thermalZones
+                            "online_cpu_list" to
+                                onlineCpuList,
+                            "cpu_frequencies" to
+                                frequencies,
+                            "thermal_zones" to
+                                thermalZones
                         )
                     )
                 }
@@ -708,8 +719,10 @@ class MainActivity : FlutterActivity() {
                             Build.VERSION.SDK_INT >=
                             Build.VERSION_CODES.R
                         ) {
+
                             Environment
                                 .isExternalStorageManager()
+
                         } else {
                             true
                         }
@@ -773,11 +786,90 @@ class MainActivity : FlutterActivity() {
 
                         requestPermissions(
                             arrayOf(
-                                android.Manifest.permission.READ_EXTERNAL_STORAGE,
-                                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                                android.Manifest.permission
+                                    .READ_EXTERNAL_STORAGE,
+
+                                android.Manifest.permission
+                                    .WRITE_EXTERNAL_STORAGE
                             ),
                             1001
                         )
+                    }
+
+                    result.success(true)
+                }
+
+                else -> {
+                    result.notImplemented()
+                }
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            BENCHMARK_CHANNEL
+        ).setMethodCallHandler { call, result ->
+
+            when (call.method) {
+
+                "run4K120Benchmark" -> {
+
+                    try {
+
+                        val intent =
+                            Intent(
+                                this,
+                                BenchmarkActivity::class.java
+                            )
+
+                        startActivityForResult(
+                            intent,
+                            BENCHMARK_REQUEST_CODE
+                        )
+
+                        result.success(true)
+
+                    } catch (e: Exception) {
+
+                        result.error(
+                            "BENCHMARK_ERROR",
+                            e.message,
+                            null
+                        )
+                    }
+                }
+
+                "getDisplayRefreshRate" -> {
+
+                    val refreshRate =
+                        if (
+                            Build.VERSION.SDK_INT >=
+                            Build.VERSION_CODES.R
+                        ) {
+
+                            display?.refreshRate
+                                ?.toDouble()
+                                ?: 60.0
+
+                        } else {
+
+                            @Suppress("DEPRECATION")
+                            windowManager
+                                .defaultDisplay
+                                .refreshRate
+                                .toDouble()
+                        }
+
+                    result.success(refreshRate)
+                }
+
+                "cancel4K120Benchmark" -> {
+
+                    try {
+                        finishActivity(
+                            BENCHMARK_REQUEST_CODE
+                        )
+                    } catch (_: Exception) {
                     }
 
                     result.success(true)
@@ -824,7 +916,8 @@ class MainActivity : FlutterActivity() {
                             connection.requestMethod = "GET"
                             connection.connectTimeout = 15000
                             connection.readTimeout = 30000
-                            connection.instanceFollowRedirects = true
+                            connection.instanceFollowRedirects =
+                                true
 
                             connection.connect()
 
@@ -832,6 +925,7 @@ class MainActivity : FlutterActivity() {
                                 connection.responseCode !in
                                 200..299
                             ) {
+
                                 throw Exception(
                                     "Download failed: HTTP ${connection.responseCode}"
                                 )
@@ -849,13 +943,14 @@ class MainActivity : FlutterActivity() {
 
                             connection.inputStream.use { input ->
 
-                                apkFile.outputStream().use { output ->
+                                apkFile.outputStream()
+                                    .use { output ->
 
-                                    input.copyTo(
-                                        output,
-                                        8192
-                                    )
-                                }
+                                        input.copyTo(
+                                            output,
+                                            8192
+                                        )
+                                    }
                             }
 
                             connection.disconnect()
@@ -927,14 +1022,88 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    override fun onActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?
+    ) {
+        super.onActivityResult(
+            requestCode,
+            resultCode,
+            data
+        )
+
+        if (
+            requestCode !=
+            BENCHMARK_REQUEST_CODE
+        ) {
+            return
+        }
+
+        val messenger =
+            flutterEngine
+                ?.dartExecutor
+                ?.binaryMessenger
+                ?: return
+
+        val channel =
+            MethodChannel(
+                messenger,
+                BENCHMARK_CHANNEL
+            )
+
+        if (
+            resultCode == RESULT_OK &&
+            data != null
+        ) {
+
+            val resultMap =
+                HashMap<String, Any>()
+
+            val extras =
+                data.extras
+
+            if (extras != null) {
+
+                for (key in extras.keySet()) {
+
+                    val value =
+                        extras.get(key)
+
+                    if (value != null) {
+                        resultMap[key] = value
+                    }
+                }
+            }
+
+            channel.invokeMethod(
+                "benchmarkResult",
+                resultMap
+            )
+
+        } else {
+
+            channel.invokeMethod(
+                "benchmarkCancelled",
+                null
+            )
+        }
+    }
+
     private fun isShizukuInstalled(): Boolean {
         return try {
+
             packageManager.getPackageInfo(
                 SHIZUKU_PACKAGE,
                 0
             )
+
             true
-        } catch (_: PackageManager.NameNotFoundException) {
+
+        } catch (
+            _: PackageManager.NameNotFoundException
+        ) {
+
             false
         }
     }
