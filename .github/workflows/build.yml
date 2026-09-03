@@ -52,6 +52,29 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Building Stellar Center v$VERSION"
 
+      - name: Apply compatibility fixes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('android/app/src/main/kotlin/org/test/thislinux/BenchmarkActivity.kt')
+          text = path.read_text()
+          text = text.replace(
+              'import androidx.media3.exoplayer.mediacodec.DecoderReuseEvaluation',
+              'import androidx.media3.decoder.DecoderReuseEvaluation'
+          )
+          path.write_text(text)
+
+          path = Path('android/app/src/main/kotlin/org/test/thislinux/MainActivity.kt')
+          text = path.read_text()
+          old = '''"system" to (\n                                            it.flags and\n                                                android.content\n                                                    .pm\n                                                    .ApplicationInfo\n                                                    .FLAG_SYSTEM\n                                        ) != 0'''
+          new = '''"system" to (\n                                            (it.flags and\n                                                android.content\n                                                    .pm\n                                                    .ApplicationInfo\n                                                    .FLAG_SYSTEM) != 0\n                                        )'''
+          if old not in text:
+              raise SystemExit('MainActivity system flag pattern not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+
       - name: Build APK
         run: |
           flutter clean
