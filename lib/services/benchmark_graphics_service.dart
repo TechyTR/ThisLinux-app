@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 
 class GraphicsBenchmarkResult {
@@ -11,6 +13,7 @@ class GraphicsBenchmarkResult {
   final int videoWidth;
   final int videoHeight;
   final double videoFps;
+  final double processingAverageMs;
 
   const GraphicsBenchmarkResult({
     required this.averageFps,
@@ -23,12 +26,13 @@ class GraphicsBenchmarkResult {
     required this.videoWidth,
     required this.videoHeight,
     required this.videoFps,
+    required this.processingAverageMs,
   });
 
   factory GraphicsBenchmarkResult.fromMap(
     Map<dynamic, dynamic> map,
   ) {
-    double number(dynamic value) {
+    double toDouble(dynamic value) {
       if (value is num) {
         return value.toDouble();
       }
@@ -36,10 +40,10 @@ class GraphicsBenchmarkResult {
       return double.tryParse(
             value?.toString() ?? '',
           ) ??
-          0;
+          0.0;
     }
 
-    int integer(dynamic value) {
+    int toInt(dynamic value) {
       if (value is num) {
         return value.toInt();
       }
@@ -51,27 +55,69 @@ class GraphicsBenchmarkResult {
     }
 
     return GraphicsBenchmarkResult(
-      averageFps:
-          number(map['averageFps']),
-      minimumFps:
-          number(map['minimumFps']),
-      onePercentLow:
-          number(map['onePercentLow']),
-      droppedFrames:
-          integer(map['droppedFrames']),
-      renderedFrames:
-          integer(map['renderedFrames']),
-      frameTimeMs:
-          number(map['frameTimeMs']),
-      stutterRate:
-          number(map['stutterRate']),
-      videoWidth:
-          integer(map['videoWidth']),
-      videoHeight:
-          integer(map['videoHeight']),
-      videoFps:
-          number(map['videoFps']),
+      averageFps: toDouble(
+        map['averageFps'],
+      ),
+      minimumFps: toDouble(
+        map['minimumFps'],
+      ),
+      onePercentLow: toDouble(
+        map['onePercentLow'],
+      ),
+      droppedFrames: toInt(
+        map['droppedFrames'],
+      ),
+      renderedFrames: toInt(
+        map['renderedFrames'],
+      ),
+      frameTimeMs: toDouble(
+        map['frameTimeMs'],
+      ),
+      stutterRate: toDouble(
+        map['stutterRate'],
+      ),
+      videoWidth: toInt(
+        map['videoWidth'],
+      ),
+      videoHeight: toInt(
+        map['videoHeight'],
+      ),
+      videoFps: toDouble(
+        map['videoFps'],
+      ),
+      processingAverageMs: toDouble(
+        map['processingAverageMs'],
+      ),
     );
+  }
+
+  bool get isValid {
+    return videoWidth >= 3840 &&
+        videoHeight >= 2160 &&
+        videoFps >= 119 &&
+        renderedFrames > 0 &&
+        averageFps > 0;
+  }
+
+  double get resolutionScore {
+    if (videoWidth >= 3840 &&
+        videoHeight >= 2160) {
+      return 1.0;
+    }
+
+    return 0.0;
+  }
+
+  double get refreshScore {
+    if (videoFps >= 120) {
+      return 1.0;
+    }
+
+    if (videoFps >= 60) {
+      return 0.5;
+    }
+
+    return 0.0;
   }
 }
 
@@ -81,23 +127,66 @@ class BenchmarkGraphicsService {
     'org.test.thislinux/benchmark_graphics',
   );
 
-  static Future<GraphicsBenchmarkResult?> run() async {
+  static Future<GraphicsBenchmarkResult?>
+      run() async {
+    final completer =
+        Completer<GraphicsBenchmarkResult?>();
+
+    late final Future<dynamic> Function(
+      MethodCall,
+    ) handler;
+
+    handler = (call) async {
+      switch (call.method) {
+        case 'benchmarkResult':
+          if (!completer.isCompleted) {
+            final arguments =
+                call.arguments;
+
+            if (arguments is Map) {
+              completer.complete(
+                GraphicsBenchmarkResult
+                    .fromMap(
+                  arguments,
+                ),
+              );
+            } else {
+              completer.complete(null);
+            }
+          }
+          break;
+
+        case 'benchmarkCancelled':
+          if (!completer.isCompleted) {
+            completer.complete(null);
+          }
+          break;
+      }
+
+      return null;
+    };
+
+    _channel.setMethodCallHandler(
+      handler,
+    );
+
     try {
-      final result =
-          await _channel.invokeMethod<
-              Map<dynamic, dynamic>>(
+      await _channel.invokeMethod(
         'run4K120Benchmark',
       );
 
-      if (result == null) {
-        return null;
-      }
-
-      return GraphicsBenchmarkResult.fromMap(
-        result,
+      return await completer.future.timeout(
+        const Duration(
+          minutes: 5,
+        ),
+        onTimeout: () => null,
       );
     } catch (_) {
       return null;
+    } finally {
+      _channel.setMethodCallHandler(
+        null,
+      );
     }
   }
 
