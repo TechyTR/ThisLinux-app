@@ -1,6 +1,59 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/services.dart';
+
+class FpsSample {
+  final double timeSeconds;
+  final double fps;
+
+  const FpsSample({
+    required this.timeSeconds,
+    required this.fps,
+  });
+
+  factory FpsSample.fromMap(Map<dynamic, dynamic> map) {
+    double value(dynamic input) =>
+        input is num ? input.toDouble() : double.tryParse(input?.toString() ?? '') ?? 0.0;
+
+    return FpsSample(
+      timeSeconds: value(map['timeSeconds']),
+      fps: value(map['fps']),
+    );
+  }
+}
+
+class BenchmarkTelemetry {
+  final double? cpuPercent;
+  final double? gpuPercent;
+  final int? batteryPercent;
+  final double? temperatureC;
+  final DateTime capturedAt;
+
+  const BenchmarkTelemetry({
+    required this.cpuPercent,
+    required this.gpuPercent,
+    required this.batteryPercent,
+    required this.temperatureC,
+    required this.capturedAt,
+  });
+
+  factory BenchmarkTelemetry.fromMap(Map<dynamic, dynamic> map) {
+    double? number(dynamic input) {
+      if (input is num) return input.toDouble();
+      return double.tryParse(input?.toString() ?? '');
+    }
+
+    final battery = number(map['batteryPercent']);
+    return BenchmarkTelemetry(
+      cpuPercent: number(map['cpuPercent']),
+      gpuPercent: number(map['gpuPercent']),
+      batteryPercent: battery == null ? null : battery.round(),
+      temperatureC: number(map['temperatureC']),
+      capturedAt: DateTime.now(),
+    );
+  }
+}
 
 class GraphicsBenchmarkResult {
   final double averageFps;
@@ -14,6 +67,7 @@ class GraphicsBenchmarkResult {
   final int videoHeight;
   final double videoFps;
   final double processingAverageMs;
+  final List<FpsSample> fpsSamples;
 
   const GraphicsBenchmarkResult({
     required this.averageFps,
@@ -27,6 +81,7 @@ class GraphicsBenchmarkResult {
     required this.videoHeight,
     required this.videoFps,
     required this.processingAverageMs,
+    required this.fpsSamples,
   });
 
   factory GraphicsBenchmarkResult.fromMap(
@@ -52,6 +107,21 @@ class GraphicsBenchmarkResult {
             value?.toString() ?? '',
           ) ??
           0;
+    }
+
+    List<FpsSample> samples(dynamic raw) {
+      if (raw is! String || raw.isEmpty) return const [];
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is! List) return const [];
+        return decoded
+            .whereType<Map>()
+            .map(FpsSample.fromMap)
+            .where((sample) => sample.timeSeconds >= 0 && sample.fps > 0)
+            .toList(growable: false);
+      } catch (_) {
+        return const [];
+      }
     }
 
     return GraphicsBenchmarkResult(
@@ -88,6 +158,7 @@ class GraphicsBenchmarkResult {
       processingAverageMs: toDouble(
         map['processingAverageMs'],
       ),
+      fpsSamples: samples(map['fpsSamples']),
     );
   }
 
@@ -122,6 +193,10 @@ class GraphicsBenchmarkResult {
 }
 
 class BenchmarkGraphicsService {
+  static const MethodChannel _nativeChannel = MethodChannel(
+    'org.test.thislinux/native',
+  );
+
   static const MethodChannel _channel =
       MethodChannel(
     'org.test.thislinux/benchmark_graphics',
@@ -200,6 +275,23 @@ class BenchmarkGraphicsService {
       return result?.toDouble();
     } catch (_) {
       return null;
+    }
+  }
+
+  static Future<BenchmarkTelemetry> readTelemetry() async {
+    try {
+      final result = await _nativeChannel.invokeMethod<Map<dynamic, dynamic>>(
+        'getBenchmarkTelemetry',
+      );
+      return BenchmarkTelemetry.fromMap(result ?? const {});
+    } catch (_) {
+      return BenchmarkTelemetry(
+        cpuPercent: null,
+        gpuPercent: null,
+        batteryPercent: null,
+        temperatureC: null,
+        capturedAt: DateTime.now(),
+      );
     }
   }
 
