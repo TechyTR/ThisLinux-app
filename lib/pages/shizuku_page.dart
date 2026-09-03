@@ -27,195 +27,147 @@ class _ShizukuPageState extends State<ShizukuPage> {
   bool _running = false;
   bool _permissionGranted = false;
   bool _suAvailable = false;
+  bool _loading = true;
 
   bool get _isGlass =>
-      widget.selectedStyle == AppThemeStyle.liquidGlassLight ||
-      widget.selectedStyle == AppThemeStyle.liquidGlassDark;
+      widget.selectedStyle ==
+          AppThemeStyle.liquidGlassLight ||
+      widget.selectedStyle ==
+          AppThemeStyle.liquidGlassDark;
 
   bool get _isLightGlass =>
-      widget.selectedStyle == AppThemeStyle.liquidGlassLight;
+      widget.selectedStyle ==
+      AppThemeStyle.liquidGlassLight;
 
   @override
   void initState() {
     super.initState();
-    _checkStatus();
+    _loadStatus();
   }
 
-  Future<void> _checkStatus() async {
+  Future<void> _loadStatus() async {
     try {
       final result =
           await _channel.invokeMethod<Map<dynamic, dynamic>>(
         'getShizukuStatus',
       );
 
-      if (!mounted || result == null) return;
-
-      setState(() {
-        _installed = result['installed'] == true;
-        _running = result['running'] == true;
-        _permissionGranted =
-            result['permission_granted'] == true;
-        _suAvailable = result['su_available'] == true;
-      });
+      if (result != null && mounted) {
+        setState(() {
+          _installed =
+              result['installed'] == true;
+          _running =
+              result['running'] == true;
+          _permissionGranted =
+              result['permissionGranted'] == true;
+          _suAvailable =
+              result['suAvailable'] == true;
+        });
+      }
     } catch (_) {
-      if (!mounted) return;
+      if (mounted) {
+        setState(() {
+          _installed = false;
+          _running = false;
+          _permissionGranted = false;
+          _suAvailable = false;
+        });
+      }
+    }
 
+    if (mounted) {
       setState(() {
-        _installed = false;
-        _running = false;
-        _permissionGranted = false;
-        _suAvailable = false;
+        _loading = false;
       });
     }
   }
 
+  Future<void> _openShizuku() async {
+    try {
+      await _channel.invokeMethod('openShizuku');
+    } catch (_) {}
+  }
+
   Future<void> _connect() async {
     try {
-      await _channel.invokeMethod(
-        'connectShizuku',
-      );
+      await _channel.invokeMethod('connectShizuku');
     } catch (_) {}
 
     await Future<void>.delayed(
       const Duration(milliseconds: 500),
     );
 
-    await _checkStatus();
+    await _loadStatus();
   }
 
-  Future<void> _openShizuku() async {
-    try {
-      await _channel.invokeMethod(
-        'openShizuku',
-      );
-    } catch (_) {}
-  }
+  Widget _card(Widget child) {
+    final scheme = Theme.of(context).colorScheme;
 
-  Widget _glassCard({
-    required Widget child,
-    EdgeInsetsGeometry padding = const EdgeInsets.all(18),
-    double radius = 24,
-  }) {
-    if (!_isGlass) {
-      return Card(
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: padding,
-          child: child,
+    Widget content = Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        color: _isGlass
+            ? Colors.white.withOpacity(
+                _isLightGlass ? 0.15 : 0.065,
+              )
+            : scheme.surfaceContainerHighest,
+        border: _isGlass
+            ? Border.all(
+                color: Colors.white.withOpacity(
+                  _isLightGlass ? 0.50 : 0.18,
+                ),
+              )
+            : null,
+      ),
+      child: child,
+    );
+
+    if (_isGlass) {
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(26),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: 25,
+            sigmaY: 25,
+          ),
+          child: content,
         ),
       );
     }
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: 25,
-          sigmaY: 25,
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(radius),
-            color: Colors.white.withOpacity(
-              _isLightGlass ? 0.17 : 0.07,
-            ),
-            border: Border.all(
-              color: Colors.white.withOpacity(
-                _isLightGlass ? 0.60 : 0.21,
-              ),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(
-                  _isLightGlass ? 0.06 : 0.18,
-                ),
-                blurRadius: 28,
-                spreadRadius: -8,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Padding(
-                padding: padding,
-                child: child,
-              ),
-              Positioned(
-                left: 16,
-                right: 16,
-                top: 0,
-                height: 1.5,
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.transparent,
-                          Colors.white.withOpacity(
-                            _isLightGlass ? 0.80 : 0.38,
-                          ),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    return content;
   }
 
-  Widget _statusRow({
-    required String title,
-    required bool active,
-    required IconData icon,
-  }) {
-    final color = active
+  Widget _statusRow(
+    String title,
+    bool value,
+  ) {
+    final color = value
         ? Colors.green
         : Theme.of(context).colorScheme.error;
 
-    return _glassCard(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(0.18),
-                  blurRadius: 18,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-            child: Icon(
-              active
-                  ? Icons.check_rounded
-                  : Icons.close_rounded,
-              color: color,
-            ),
+          Icon(
+            value
+                ? Icons.check_circle_rounded
+                : Icons.cancel_rounded,
+            color: color,
+            size: 24,
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               title,
               style: const TextStyle(
                 fontSize: 15,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ),
-          Icon(
-            icon,
-            color: color,
-            size: 23,
           ),
         ],
       ),
@@ -228,171 +180,248 @@ class _ShizukuPageState extends State<ShizukuPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Shizuku bağlantısı',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-          ),
-        ),
+        title: const Text('Shizuku'),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
         actions: [
           IconButton(
-            onPressed: _checkStatus,
-            icon: const Icon(
-              Icons.refresh_rounded,
-            ),
+            onPressed: _loadStatus,
+            icon: const Icon(Icons.refresh_rounded),
           ),
         ],
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            18,
-            10,
-            18,
-            30,
-          ),
-          children: [
-            _glassCard(
-              child: Row(
-                children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: scheme.primary.withOpacity(
-                        _isGlass ? 0.10 : 0.13,
+      body: _loading
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(
+                16,
+                8,
+                16,
+                30,
+              ),
+              children: [
+                _card(
+                  Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 58,
+                            height: 58,
+                            decoration: BoxDecoration(
+                              color: scheme.primary
+                                  .withOpacity(0.12),
+                              borderRadius:
+                                  BorderRadius.circular(18),
+                            ),
+                            child: Icon(
+                              Icons.admin_panel_settings_rounded,
+                              size: 31,
+                              color: scheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 15),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Shizuku bağlantısı',
+                                  style: TextStyle(
+                                    fontSize: 21,
+                                    fontWeight:
+                                        FontWeight.w800,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Stellar Center sistem erişimi',
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      borderRadius:
-                          BorderRadius.circular(20),
-                    ),
-                    child: Icon(
-                      Icons.cable_rounded,
-                      size: 32,
-                      color: scheme.primary,
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 15),
-                  const Expanded(
-                    child: Column(
+                ),
+                const SizedBox(height: 12),
+                _card(
+                  Column(
+                    children: [
+                      _statusRow(
+                        'Shizuku yüklü',
+                        _installed,
+                      ),
+                      _statusRow(
+                        'Shizuku çalışıyor',
+                        _running,
+                      ),
+                      _statusRow(
+                        'Stellar Center yetkili',
+                        _permissionGranted,
+                      ),
+                      _statusRow(
+                        'SU yetkisi var',
+                        _suAvailable,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (!_installed)
+                  _card(
+                    Column(
                       crossAxisAlignment:
                           CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Shizuku',
+                        const Text(
+                          'Shizuku yüklenmemiş',
                           style: TextStyle(
-                            fontSize: 21,
-                            fontWeight: FontWeight.w900,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 8),
                         Text(
-                          'Gelişmiş Android sistem erişimi',
+                          'Stellar Center ile gelişmiş sistem erişimi kullanmak için önce Shizuku kurulmalıdır.',
                           style: TextStyle(
-                            fontSize: 12,
+                            color:
+                                scheme.onSurfaceVariant,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _openShizuku,
+                            icon: const Icon(
+                              Icons.open_in_new_rounded,
+                            ),
+                            label: const Text(
+                              'Shizuku yükle',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (!_running)
+                  _card(
+                    Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Shizuku çalışmıyor',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Önce Shizuku uygulamasını başlatın.',
+                          style: TextStyle(
+                            color:
+                                scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed: _openShizuku,
+                            child: const Text(
+                              'Shizuku\'yu aç',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (!_permissionGranted)
+                  _card(
+                    Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Stellar Center yetkisi gerekiyor',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Shizuku çalışıyor. Şimdi Stellar Center için Shizuku izni verin.',
+                          style: TextStyle(
+                            color:
+                                scheme.onSurfaceVariant,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _connect,
+                            icon: const Icon(
+                              Icons.link_rounded,
+                            ),
+                            label: const Text(
+                              'Shizuku\'yu bağla',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  _card(
+                    Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Bağlantı hazır',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _suAvailable
+                              ? 'Shizuku bağlantısı aktif ve SU seviyesi erişilebilir.'
+                              : 'Shizuku bağlantısı aktif. Root/SU yetkisi bulunmuyor.',
+                          style: TextStyle(
+                            color:
+                                scheme.onSurfaceVariant,
+                            height: 1.4,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (!_installed)
-              _glassCard(
-                child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Shizuku yüklü değil',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      'Gelişmiş bağlantıyı kullanmak için Shizuku kurulmalıdır.',
-                      style: TextStyle(
-                        color: scheme.onSurfaceVariant,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: _openShizuku,
-                        child: const Text(
-                          'Shizuku yükle',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 12),
-            _statusRow(
-              title: 'Shizuku çalışıyor',
-              active: _running,
-              icon: Icons.power_rounded,
-            ),
-            const SizedBox(height: 10),
-            _statusRow(
-              title: 'Stellar Center yetkili',
-              active: _permissionGranted,
-              icon: Icons.admin_panel_settings_rounded,
-            ),
-            const SizedBox(height: 10),
-            _statusRow(
-              title: 'SU yetkisi var',
-              active: _suAvailable,
-              icon: Icons.terminal_rounded,
-            ),
-            const SizedBox(height: 16),
-            if (_installed && !_running)
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: FilledButton.icon(
-                  onPressed: _openShizuku,
-                  icon: const Icon(
-                    Icons.open_in_new_rounded,
-                  ),
-                  label: const Text(
-                    'Shizuku’yu bağla',
+                const SizedBox(height: 16),
+                Text(
+                  'Shizuku root değildir. Android sistem API\'lerine daha gelişmiş erişim sağlar. Root erişimi varsa ayrıca algılanır.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
-              ),
-            if (_installed && _running && !_permissionGranted)
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: FilledButton.icon(
-                  onPressed: _connect,
-                  icon: const Icon(
-                    Icons.security_rounded,
-                  ),
-                  label: const Text(
-                    'Stellar Center’a izin ver',
-                  ),
-                ),
-              ),
-            const SizedBox(height: 18),
-            _glassCard(
-              child: Text(
-                'Shizuku, Stellar Secure için daha gelişmiş Android API erişimi sağlayabilir. Root yetkisiyle aynı şey değildir ve Stellar Center güvenlik kontrollerini devre dışı bırakmaz.',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  height: 1.5,
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
     );
   }
 }
