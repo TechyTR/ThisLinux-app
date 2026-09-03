@@ -19,6 +19,7 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.mediacodec.DecoderReuseEvaluation
 import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.ui.PlayerView
+import kotlin.math.roundTolnt
 
 class BenchmarkActivity : Activity() {
 
