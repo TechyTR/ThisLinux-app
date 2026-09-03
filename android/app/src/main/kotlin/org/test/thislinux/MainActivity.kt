@@ -3,6 +3,7 @@ package org.test.thislinux
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
@@ -14,6 +15,7 @@ import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import rikka.shizuku.Shizuku
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -22,6 +24,13 @@ class MainActivity : FlutterActivity() {
 
     private val CHANNEL = "org.test.thislinux/native"
     private val UPDATER_CHANNEL = "thislinux/updater"
+
+    companion object {
+        private const val SHIZUKU_PACKAGE =
+            "moe.shizuku.privileged.api"
+
+        private const val SHIZUKU_PERMISSION_REQUEST_CODE = 2001
+    }
 
     override fun configureFlutterEngine(
         @NonNull flutterEngine: FlutterEngine
@@ -38,34 +47,21 @@ class MainActivity : FlutterActivity() {
                 "getDeviceInfo" -> {
 
                     val activityManager =
-                        getSystemService(Context.ACTIVITY_SERVICE)
-                                as android.app.ActivityManager
+                        getSystemService(
+                            Context.ACTIVITY_SERVICE
+                        ) as android.app.ActivityManager
 
                     val memoryInfo =
                         android.app.ActivityManager.MemoryInfo()
 
                     activityManager.getMemoryInfo(memoryInfo)
 
-                    val totalRam =
-                        memoryInfo.totalMem
-
-                    val availableRam =
-                        memoryInfo.availMem
-
                     val storage =
-                        StatFs(Environment.getDataDirectory().path)
-
-                    val totalStorage =
-                        storage.totalBytes
-
-                    val availableStorage =
-                        storage.availableBytes
-
-                    val cpuCount =
-                        Runtime.getRuntime().availableProcessors()
-
-                    val supportedAbis =
-                        Build.SUPPORTED_ABIS.joinToString(", ")
+                        StatFs(
+                            Environment
+                                .getDataDirectory()
+                                .path
+                        )
 
                     val displayMetrics =
                         resources.displayMetrics
@@ -73,33 +69,40 @@ class MainActivity : FlutterActivity() {
                     val display =
                         windowManager.defaultDisplay
 
-                    val refreshRate =
-                        display.refreshRate
+                    val cpuCount =
+                        Runtime.getRuntime()
+                            .availableProcessors()
 
-                    val info = mutableMapOf<String, Any>(
+                    val supportedAbis =
+                        Build.SUPPORTED_ABIS
+                            .joinToString(", ")
 
-                        "device" to Build.DEVICE,
-                        "model" to Build.MODEL,
-                        "product" to Build.PRODUCT,
-                        "brand" to Build.BRAND,
-                        "manufacturer" to Build.MANUFACTURER,
-                        "hardware" to Build.HARDWARE,
-                        "board" to Build.BOARD,
-                        "bootloader" to Build.BOOTLOADER,
-                        "display" to Build.DISPLAY,
-                        "fingerprint" to Build.FINGERPRINT,
-                        "host" to Build.HOST,
-                        "id" to Build.ID,
-                        "type" to Build.TYPE,
-                        "user" to Build.USER,
-                        "cpu_abi" to Build.CPU_ABI,
-                        "supported_abis" to supportedAbis,
-                        "cpu_count" to cpuCount,
-                        "sdk_int" to Build.VERSION.SDK_INT,
-                        "release" to Build.VERSION.RELEASE,
-                        "incremental" to Build.VERSION.INCREMENTAL,
+                    val info =
+                        mutableMapOf<String, Any>(
 
-                        "security_patch" to
+                            "device" to Build.DEVICE,
+                            "model" to Build.MODEL,
+                            "product" to Build.PRODUCT,
+                            "brand" to Build.BRAND,
+                            "manufacturer" to Build.MANUFACTURER,
+                            "hardware" to Build.HARDWARE,
+                            "board" to Build.BOARD,
+                            "bootloader" to Build.BOOTLOADER,
+                            "display" to Build.DISPLAY,
+                            "fingerprint" to Build.FINGERPRINT,
+                            "host" to Build.HOST,
+                            "id" to Build.ID,
+                            "type" to Build.TYPE,
+                            "user" to Build.USER,
+                            "cpu_abi" to Build.CPU_ABI,
+                            "supported_abis" to supportedAbis,
+                            "cpu_count" to cpuCount,
+
+                            "sdk_int" to Build.VERSION.SDK_INT,
+                            "release" to Build.VERSION.RELEASE,
+                            "incremental" to Build.VERSION.INCREMENTAL,
+
+                            "security_patch" to
                                 if (
                                     Build.VERSION.SDK_INT >=
                                     Build.VERSION_CODES.M
@@ -109,25 +112,35 @@ class MainActivity : FlutterActivity() {
                                     "N/A"
                                 },
 
-                        "total_ram" to totalRam,
-                        "available_ram" to availableRam,
-                        "total_storage" to totalStorage,
-                        "available_storage" to availableStorage,
+                            "total_ram" to
+                                memoryInfo.totalMem,
 
-                        "screen_width" to
+                            "available_ram" to
+                                memoryInfo.availMem,
+
+                            "total_storage" to
+                                storage.totalBytes,
+
+                            "available_storage" to
+                                storage.availableBytes,
+
+                            "screen_width" to
                                 displayMetrics.widthPixels,
 
-                        "screen_height" to
+                            "screen_height" to
                                 displayMetrics.heightPixels,
 
-                        "density" to
+                            "density" to
                                 displayMetrics.density,
 
-                        "refresh_rate" to refreshRate
-                    )
+                            "refresh_rate" to
+                                display.refreshRate
+                        )
 
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-
+                    if (
+                        Build.VERSION.SDK_INT >=
+                        Build.VERSION_CODES.S
+                    ) {
                         info["soc_manufacturer"] =
                             Build.SOC_MANUFACTURER
 
@@ -182,9 +195,9 @@ class MainActivity : FlutterActivity() {
 
                     val isCharging =
                         status ==
-                                BatteryManager.BATTERY_STATUS_CHARGING ||
+                            BatteryManager.BATTERY_STATUS_CHARGING ||
                         status ==
-                                BatteryManager.BATTERY_STATUS_FULL
+                            BatteryManager.BATTERY_STATUS_FULL
 
                     val plugged =
                         batteryIntent?.getIntExtra(
@@ -221,48 +234,252 @@ class MainActivity : FlutterActivity() {
                             -1.0
                         }
 
-                    val info =
+                    result.success(
                         mapOf(
                             "level" to batteryPct,
                             "isCharging" to isCharging,
                             "plugSource" to chargePlug,
-                            "temperature" to temperature
+                            "temperature" to temperature,
+                            "state" to when {
+                                isCharging -> "Şarj oluyor"
+                                batteryPct >= 0 -> "Şarj olmuyor"
+                                else -> "Bilinmiyor"
+                            },
+                            "source" to chargePlug
+                        )
+                    )
+                }
+
+                "getShizukuStatus" -> {
+
+                    val installed =
+                        isShizukuInstalled()
+
+                    var running = false
+                    var permissionGranted = false
+                    var suAvailable = false
+
+                    if (installed) {
+
+                        running =
+                            try {
+                                Shizuku.pingBinder()
+                            } catch (_: Exception) {
+                                false
+                            }
+
+                        if (running) {
+
+                            permissionGranted =
+                                try {
+                                    Shizuku.checkSelfPermission() ==
+                                        PackageManager.PERMISSION_GRANTED
+                                } catch (_: Exception) {
+                                    false
+                                }
+
+                            suAvailable =
+                                try {
+                                    Shizuku.getUid() == 0
+                                } catch (_: Exception) {
+                                    false
+                                }
+                        }
+                    }
+
+                    result.success(
+                        mapOf(
+                            "installed" to installed,
+                            "running" to running,
+                            "permissionGranted" to permissionGranted,
+                            "suAvailable" to suAvailable
+                        )
+                    )
+                }
+
+                "connectShizuku" -> {
+
+                    try {
+
+                        if (!isShizukuInstalled()) {
+                            result.success(
+                                mapOf(
+                                    "success" to false,
+                                    "reason" to "not_installed"
+                                )
+                            )
+                            return@setMethodCallHandler
+                        }
+
+                        if (!Shizuku.pingBinder()) {
+                            result.success(
+                                mapOf(
+                                    "success" to false,
+                                    "reason" to "not_running"
+                                )
+                            )
+                            return@setMethodCallHandler
+                        }
+
+                        if (
+                            Shizuku.checkSelfPermission() ==
+                            PackageManager.PERMISSION_GRANTED
+                        ) {
+                            result.success(
+                                mapOf(
+                                    "success" to true,
+                                    "permissionGranted" to true
+                                )
+                            )
+                            return@setMethodCallHandler
+                        }
+
+                        if (
+                            Shizuku.shouldShowRequestPermissionRationale()
+                        ) {
+                            result.success(
+                                mapOf(
+                                    "success" to false,
+                                    "reason" to "rationale"
+                                )
+                            )
+                            return@setMethodCallHandler
+                        }
+
+                        Shizuku.requestPermission(
+                            SHIZUKU_PERMISSION_REQUEST_CODE
                         )
 
-                    result.success(info)
+                        result.success(
+                            mapOf(
+                                "success" to true,
+                                "permissionRequested" to true
+                            )
+                        )
+
+                    } catch (e: Exception) {
+
+                        result.error(
+                            "SHIZUKU_ERROR",
+                            e.message,
+                            null
+                        )
+                    }
+                }
+
+                "openShizuku" -> {
+
+                    try {
+
+                        val intent =
+                            packageManager
+                                .getLaunchIntentForPackage(
+                                    SHIZUKU_PACKAGE
+                                )
+
+                        if (intent == null) {
+
+                            result.success(false)
+
+                        } else {
+
+                            intent.addFlags(
+                                Intent.FLAG_ACTIVITY_NEW_TASK
+                            )
+
+                            startActivity(intent)
+
+                            result.success(true)
+                        }
+
+                    } catch (e: Exception) {
+
+                        result.error(
+                            "SHIZUKU_OPEN_ERROR",
+                            e.message,
+                            null
+                        )
+                    }
+                }
+
+                "getInstalledApps" -> {
+
+                    try {
+
+                        val apps =
+                            packageManager
+                                .getInstalledApplications(
+                                    PackageManager.GET_META_DATA
+                                )
+                                .map {
+                                    mapOf(
+                                        "packageName" to
+                                            it.packageName,
+                                        "label" to
+                                            packageManager
+                                                .getApplicationLabel(it)
+                                                .toString(),
+                                        "system" to
+                                            (
+                                                it.flags and
+                                                    android.content.pm.ApplicationInfo.FLAG_SYSTEM
+                                            ) != 0
+                                    )
+                                }
+
+                        result.success(apps)
+
+                    } catch (e: Exception) {
+
+                        result.error(
+                            "APPS_ERROR",
+                            e.message,
+                            null
+                        )
+                    }
                 }
 
                 "getSystemMonitorDetails" -> {
 
                     val cpuCount =
-                        Runtime.getRuntime().availableProcessors()
+                        Runtime.getRuntime()
+                            .availableProcessors()
 
                     val frequencies =
                         mutableListOf<Double>()
 
                     for (i in 0 until cpuCount) {
 
-                        val possiblePaths = listOf(
-                            "/sys/devices/system/cpu/cpu$i/cpufreq/scaling_cur_freq",
-                            "/sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_cur_freq"
-                        )
+                        val paths =
+                            listOf(
+                                "/sys/devices/system/cpu/cpu$i/cpufreq/scaling_cur_freq",
+                                "/sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_cur_freq"
+                            )
 
-                        var frequencyMHz = -1.0
+                        var frequency = -1.0
 
-                        for (path in possiblePaths) {
+                        for (path in paths) {
 
                             try {
 
                                 val file = File(path)
 
-                                if (file.exists() && file.canRead()) {
+                                if (
+                                    file.exists() &&
+                                    file.canRead()
+                                ) {
 
                                     val value =
-                                        file.readText().trim().toLongOrNull()
+                                        file.readText()
+                                            .trim()
+                                            .toLongOrNull()
 
-                                    if (value != null && value > 0) {
+                                    if (
+                                        value != null &&
+                                        value > 0
+                                    ) {
 
-                                        frequencyMHz =
+                                        frequency =
                                             if (value > 100000) {
                                                 value / 1000.0
                                             } else {
@@ -277,94 +494,49 @@ class MainActivity : FlutterActivity() {
                             }
                         }
 
-                        frequencies.add(frequencyMHz)
+                        frequencies.add(frequency)
                     }
 
                     val onlineCpuList =
                         try {
 
-                            val onlineFile =
+                            val file =
                                 File(
                                     "/sys/devices/system/cpu/online"
                                 )
 
                             if (
-                                onlineFile.exists() &&
-                                onlineFile.canRead()
+                                file.exists() &&
+                                file.canRead()
                             ) {
-                                onlineFile.readText().trim()
+                                file.readText().trim()
                             } else {
-                                "0-${
-                                    cpuCount - 1
-                                }"
+                                "0-${cpuCount - 1}"
                             }
 
                         } catch (_: Exception) {
                             "Unknown"
                         }
 
-                    var onlineCpuCount = 0
-
-                    if (onlineCpuList != "Unknown") {
-
-                        try {
-
-                            for (part in onlineCpuList.split(",")) {
-
-                                val trimmed =
-                                    part.trim()
-
-                                if (trimmed.contains("-")) {
-
-                                    val values =
-                                        trimmed.split("-")
-
-                                    val start =
-                                        values[0].toInt()
-
-                                    val end =
-                                        values[1].toInt()
-
-                                    if (end >= start) {
-                                        onlineCpuCount +=
-                                            end - start + 1
-                                    }
-
-                                } else {
-
-                                    trimmed.toIntOrNull()?.let {
-                                        onlineCpuCount++
-                                    }
-                                }
-                            }
-
-                        } catch (_: Exception) {
-                            onlineCpuCount = cpuCount
-                        }
-                    }
-
-                    if (onlineCpuCount <= 0) {
-                        onlineCpuCount = cpuCount
-                    }
-
                     val thermalZones =
                         mutableListOf<Map<String, Any>>()
 
                     try {
 
-                        val thermalDirectory =
+                        val directory =
                             File("/sys/class/thermal")
 
                         if (
-                            thermalDirectory.exists() &&
-                            thermalDirectory.isDirectory
+                            directory.exists() &&
+                            directory.isDirectory
                         ) {
 
                             val zones =
-                                thermalDirectory
-                                    .listFiles()
+                                directory.listFiles()
                                     ?.filter {
-                                        it.name.startsWith("thermal_zone")
+                                        it.name.startsWith(
+                                            "thermal_zone"
+                                        )
                                     }
                                     ?.sortedBy {
                                         it.name
@@ -376,7 +548,10 @@ class MainActivity : FlutterActivity() {
                                 try {
 
                                     val tempFile =
-                                        File(zone, "temp")
+                                        File(
+                                            zone,
+                                            "temp"
+                                        )
 
                                     if (
                                         !tempFile.exists() ||
@@ -392,7 +567,7 @@ class MainActivity : FlutterActivity() {
                                             .toLongOrNull()
                                             ?: continue
 
-                                    var temperature =
+                                    val temperature =
                                         raw / 1000.0
 
                                     if (
@@ -402,25 +577,30 @@ class MainActivity : FlutterActivity() {
                                         continue
                                     }
 
-                                    var type =
+                                    val type =
                                         try {
                                             File(
                                                 zone,
                                                 "type"
-                                            ).readText().trim()
+                                            )
+                                                .readText()
+                                                .trim()
                                         } catch (_: Exception) {
-                                            "Thermal zone"
+                                            zone.name
                                         }
-
-                                    if (type.isBlank()) {
-                                        type = zone.name
-                                    }
 
                                     thermalZones.add(
                                         mapOf(
                                             "name" to zone.name,
-                                            "type" to type,
-                                            "temperature" to temperature
+                                            "type" to (
+                                                if (type.isBlank()) {
+                                                    zone.name
+                                                } else {
+                                                    type
+                                                }
+                                            ),
+                                            "temperature" to
+                                                temperature
                                         )
                                     )
 
@@ -435,7 +615,6 @@ class MainActivity : FlutterActivity() {
                     result.success(
                         mapOf(
                             "cpu_count" to cpuCount,
-                            "online_cpu_count" to onlineCpuCount,
                             "online_cpu_list" to onlineCpuList,
                             "cpu_frequencies" to frequencies,
                             "thermal_zones" to thermalZones
@@ -445,92 +624,90 @@ class MainActivity : FlutterActivity() {
 
                 "checkRoot" -> {
 
-                    val paths = arrayOf(
+                    val paths =
+                        arrayOf(
+                            "/system/app/Superuser.apk",
+                            "/sbin/su",
+                            "/system/bin/su",
+                            "/system/xbin/su",
+                            "/data/local/xbin/su",
+                            "/data/local/bin/su",
+                            "/system/sd/xbin/su",
+                            "/system/bin/failsafe/su",
+                            "/data/local/su"
+                        )
 
-                        "/system/app/Superuser.apk",
-                        "/sbin/su",
-                        "/system/bin/su",
-                        "/system/xbin/su",
-                        "/data/local/xbin/su",
-                        "/data/local/bin/su",
-                        "/system/sd/xbin/su",
-                        "/system/bin/failsafe/su",
-                        "/data/local/su"
-                    )
-
-                    var isRooted = false
+                    var rooted = false
 
                     for (path in paths) {
 
                         if (File(path).exists()) {
-
-                            isRooted = true
+                            rooted = true
                             break
                         }
                     }
 
-                    result.success(isRooted)
+                    result.success(rooted)
                 }
 
                 "getUptime" -> {
 
-                    val uptimeMs =
+                    result.success(
                         android.os.SystemClock
                             .elapsedRealtime()
-
-                    result.success(uptimeMs)
+                    )
                 }
 
                 "hasStorageAccess" -> {
 
-                    val hasAccess =
+                    val access =
                         if (
                             Build.VERSION.SDK_INT >=
                             Build.VERSION_CODES.R
                         ) {
-                            Environment.isExternalStorageManager()
+                            Environment
+                                .isExternalStorageManager()
                         } else {
                             true
                         }
 
-                    result.success(hasAccess)
+                    result.success(access)
                 }
 
                 "openStorageAccessSettings" -> {
 
                     try {
 
-                        if (
-                            Build.VERSION.SDK_INT >=
-                            Build.VERSION_CODES.R
-                        ) {
+                        val intent =
+                            if (
+                                Build.VERSION.SDK_INT >=
+                                Build.VERSION_CODES.R
+                            ) {
 
-                            val intent =
                                 Intent(
-                                    Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION
-                                )
+                                    Settings
+                                        .ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION
+                                ).apply {
+                                    data =
+                                        Uri.parse(
+                                            "package:$packageName"
+                                        )
+                                }
 
-                            intent.data =
-                                Uri.parse(
-                                    "package:$packageName"
-                                )
+                            } else {
 
-                            startActivity(intent)
-
-                        } else {
-
-                            val intent =
                                 Intent(
-                                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-                                )
+                                    Settings
+                                        .ACTION_APPLICATION_DETAILS_SETTINGS
+                                ).apply {
+                                    data =
+                                        Uri.parse(
+                                            "package:$packageName"
+                                        )
+                                }
+                            }
 
-                            intent.data =
-                                Uri.parse(
-                                    "package:$packageName"
-                                )
-
-                            startActivity(intent)
-                        }
+                        startActivity(intent)
 
                         result.success(true)
 
@@ -612,7 +789,6 @@ class MainActivity : FlutterActivity() {
                                 connection.responseCode !in
                                 200..299
                             ) {
-
                                 throw Exception(
                                     "Download failed: HTTP ${connection.responseCode}"
                                 )
@@ -646,11 +822,12 @@ class MainActivity : FlutterActivity() {
                                 try {
 
                                     val apkUri =
-                                        FileProvider.getUriForFile(
-                                            this,
-                                            "$packageName.fileprovider",
-                                            apkFile
-                                        )
+                                        FileProvider
+                                            .getUriForFile(
+                                                this,
+                                                "$packageName.fileprovider",
+                                                apkFile
+                                            )
 
                                     val installIntent =
                                         Intent(
@@ -704,6 +881,18 @@ class MainActivity : FlutterActivity() {
                     result.notImplemented()
                 }
             }
+        }
+    }
+
+    private fun isShizukuInstalled(): Boolean {
+        return try {
+            packageManager.getPackageInfo(
+                SHIZUKU_PACKAGE,
+                0
+            )
+            true
+        } catch (_: PackageManager.NameNotFoundException) {
+            false
         }
     }
 }
