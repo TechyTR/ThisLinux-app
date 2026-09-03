@@ -1,54 +1,94 @@
 package org.test.thislinux
 
 import android.app.Activity
+import android.media.MediaFormat
 import android.os.Bundle
+import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.mediacodec.DecoderReuseEvaluation
+import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.ui.PlayerView
 
 class BenchmarkActivity : Activity() {
 
     companion object {
-        const val RESULT_AVERAGE_FPS = "averageFps"
-        const val RESULT_MINIMUM_FPS = "minimumFps"
-        const val RESULT_ONE_PERCENT_LOW = "onePercentLow"
-        const val RESULT_DROPPED_FRAMES = "droppedFrames"
-        const val RESULT_RENDERED_FRAMES = "renderedFrames"
-        const val RESULT_FRAME_TIME_MS = "frameTimeMs"
-        const val RESULT_STUTTER_RATE = "stutterRate"
-        const val RESULT_VIDEO_WIDTH = "videoWidth"
-        const val RESULT_VIDEO_HEIGHT = "videoHeight"
-        const val RESULT_VIDEO_FPS = "videoFps"
-        const val RESULT_ERROR = "error"
+
+        const val RESULT_AVERAGE_FPS =
+            "averageFps"
+
+        const val RESULT_MINIMUM_FPS =
+            "minimumFps"
+
+        const val RESULT_ONE_PERCENT_LOW =
+            "onePercentLow"
+
+        const val RESULT_DROPPED_FRAMES =
+            "droppedFrames"
+
+        const val RESULT_RENDERED_FRAMES =
+            "renderedFrames"
+
+        const val RESULT_FRAME_TIME_MS =
+            "frameTimeMs"
+
+        const val RESULT_STUTTER_RATE =
+            "stutterRate"
+
+        const val RESULT_VIDEO_WIDTH =
+            "videoWidth"
+
+        const val RESULT_VIDEO_HEIGHT =
+            "videoHeight"
+
+        const val RESULT_VIDEO_FPS =
+            "videoFps"
+
+        const val RESULT_ERROR =
+            "error"
+
+        const val RESULT_PROCESSING_AVERAGE_MS =
+            "processingAverageMs"
     }
 
     private var player: ExoPlayer? = null
 
     private var droppedFrames = 0
+
     private var renderedFrames = 0
 
-    private var firstFrameTimeMs = 0L
-    private var lastFrameTimeMs = 0L
+    private var videoWidth = 0
+
+    private var videoHeight = 0
+
+    private var videoFps = 0.0
 
     private var totalProcessingOffsetUs = 0L
+
     private var processingFrameCount = 0
 
-    private var minObservedFps = Double.MAX_VALUE
+    private val frameIntervalsMs =
+        mutableListOf<Double>()
 
-    private var videoWidth = 0
-    private var videoHeight = 0
-    private var videoFps = 0.0
+    private var lastReleaseTimeNs = 0L
 
     private lateinit var statusText: TextView
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreate(
+        savedInstanceState: Bundle?
+    ) {
+        super.onCreate(
+            savedInstanceState
+        )
 
         window.addFlags(
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
@@ -56,30 +96,43 @@ class BenchmarkActivity : Activity() {
 
         window.decorView.systemUiVisibility =
             (
-                android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
-                    or android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    or android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
             )
 
-        val root = FrameLayout(this)
+        val root =
+            FrameLayout(this)
 
-        statusText = TextView(this).apply {
-            text = "4K 120 FPS benchmark hazırlanıyor..."
-            textSize = 18f
-            setTextColor(
-                ContextCompat.getColor(
-                    this@BenchmarkActivity,
-                    android.R.color.white
+        statusText =
+            TextView(this).apply {
+
+                text =
+                    "4K 120 FPS benchmark hazırlanıyor..."
+
+                textSize = 18f
+
+                setTextColor(
+                    ContextCompat.getColor(
+                        this@BenchmarkActivity,
+                        android.R.color.white
+                    )
                 )
-            )
-            setBackgroundColor(
-                ContextCompat.getColor(
-                    this@BenchmarkActivity,
-                    android.R.color.black
+
+                setBackgroundColor(
+                    ContextCompat.getColor(
+                        this@BenchmarkActivity,
+                        android.R.color.black
+                    )
                 )
-            )
-            setPadding(32, 32, 32, 32)
-        }
+
+                setPadding(
+                    32,
+                    32,
+                    32,
+                    32
+                )
+            }
 
         root.addView(
             statusText,
@@ -94,20 +147,29 @@ class BenchmarkActivity : Activity() {
         startBenchmark(root)
     }
 
-    private fun startBenchmark(root: FrameLayout) {
+    private fun startBenchmark(
+        root: FrameLayout
+    ) {
+
         try {
-            val playerView = PlayerView(this).apply {
-                useController = false
-                keepScreenOn = true
-                setBackgroundColor(
-                    ContextCompat.getColor(
-                        this@BenchmarkActivity,
-                        android.R.color.black
+
+            val playerView =
+                PlayerView(this).apply {
+
+                    useController = false
+
+                    keepScreenOn = true
+
+                    setBackgroundColor(
+                        ContextCompat.getColor(
+                            this@BenchmarkActivity,
+                            android.R.color.black
+                        )
                     )
-                )
-            }
+                }
 
             root.removeAllViews()
+
             root.addView(
                 playerView,
                 FrameLayout.LayoutParams(
@@ -116,141 +178,226 @@ class BenchmarkActivity : Activity() {
                 )
             )
 
-            player = ExoPlayer.Builder(this)
-                .build()
-                .also { exoPlayer ->
+            val exoPlayer =
+                ExoPlayer.Builder(this)
+                    .build()
 
-                    playerView.player = exoPlayer
+            player = exoPlayer
 
-                    exoPlayer.addAnalyticsListener(
-                        object : AnalyticsListener {
+            playerView.player =
+                exoPlayer
 
-                            override fun onDroppedVideoFrames(
-                                eventTime: AnalyticsListener.EventTime,
-                                droppedFrames: Int,
-                                elapsedMs: Long
-                            ) {
-                                this@BenchmarkActivity
-                                    .droppedFrames += droppedFrames
-                            }
+            exoPlayer.addAnalyticsListener(
+                object : AnalyticsListener {
 
-                            override fun onRenderedFirstFrame(
-                                eventTime: AnalyticsListener.EventTime,
-                                output: Any,
-                                renderTimeMs: Long
-                            ) {
-                                if (firstFrameTimeMs == 0L) {
-                                    firstFrameTimeMs =
-                                        renderTimeMs
-                                }
+                    override fun onDroppedVideoFrames(
+                        eventTime:
+                            AnalyticsListener.EventTime,
+                        droppedFrames: Int,
+                        elapsedMs: Long
+                    ) {
 
-                                lastFrameTimeMs =
-                                    renderTimeMs
-                            }
+                        this@BenchmarkActivity
+                            .droppedFrames +=
+                            droppedFrames
+                    }
 
-                            override fun onVideoFrameProcessingOffset(
-                                eventTime: AnalyticsListener.EventTime,
-                                totalProcessingOffsetUs: Long,
-                                frameCount: Int
-                            ) {
-                                this@BenchmarkActivity
-                                    .totalProcessingOffsetUs +=
-                                    totalProcessingOffsetUs
+                    override fun onVideoFrameProcessingOffset(
+                        eventTime:
+                            AnalyticsListener.EventTime,
+                        totalProcessingOffsetUs: Long,
+                        frameCount: Int
+                    ) {
 
-                                this@BenchmarkActivity
-                                    .processingFrameCount +=
-                                    frameCount
-                            }
+                        this@BenchmarkActivity
+                            .totalProcessingOffsetUs +=
+                            totalProcessingOffsetUs
 
-                            override fun onVideoSizeChanged(
-                                eventTime: AnalyticsListener.EventTime,
-                                videoSize: androidx.media3.common.VideoSize
-                            ) {
-                                videoWidth =
-                                    videoSize.width
+                        this@BenchmarkActivity
+                            .processingFrameCount +=
+                            frameCount
+                    }
 
-                                videoHeight =
-                                    videoSize.height
-                            }
+                    override fun onVideoSizeChanged(
+                        eventTime:
+                            AnalyticsListener.EventTime,
+                        videoSize: VideoSize
+                    ) {
 
-                            override fun onVideoInputFormatChanged(
-                                eventTime: AnalyticsListener.EventTime,
-                                format: androidx.media3.common.Format,
-                                decoderReuseEvaluation:
-                                    androidx.media3.exoplayer.mediacodec.DecoderReuseEvaluation?
-                            ) {
-                                if (format.frameRate > 0f) {
-                                    videoFps =
-                                        format.frameRate
-                                            .toDouble()
-                                }
+                        videoWidth =
+                            videoSize.width
 
-                                if (format.width > 0) {
-                                    videoWidth =
-                                        format.width
-                                }
+                        videoHeight =
+                            videoSize.height
+                    }
 
-                                if (format.height > 0) {
-                                    videoHeight =
-                                        format.height
-                                }
-                            }
+                    override fun onVideoInputFormatChanged(
+                        eventTime:
+                            AnalyticsListener.EventTime,
+                        format: Format,
+                        decoderReuseEvaluation:
+                            DecoderReuseEvaluation?
+                    ) {
+
+                        if (
+                            format.frameRate > 0f
+                        ) {
+
+                            videoFps =
+                                format.frameRate
+                                    .toDouble()
                         }
-                    )
 
-                    exoPlayer.addListener(
-                        object : Player.Listener {
+                        if (
+                            format.width > 0
+                        ) {
 
-                            override fun onPlaybackStateChanged(
-                                playbackState: Int
-                            ) {
-                                when (playbackState) {
-
-                                    Player.STATE_READY -> {
-                                        statusText.text =
-                                            "4K 120 FPS video oynatılıyor..."
-                                    }
-
-                                    Player.STATE_ENDED -> {
-                                        finishBenchmark()
-                                    }
-                                }
-                            }
-
-                            override fun onPlayerError(
-                                error: androidx.media3.common.PlaybackException
-                            ) {
-                                returnError(
-                                    "Video oynatılamadı: ${error.message}"
-                                )
-                            }
+                            videoWidth =
+                                format.width
                         }
-                    )
 
-                    val mediaItem =
-                        MediaItem.fromUri(
-                            "asset:///benchmark_4k120.mp4"
-                        )
+                        if (
+                            format.height > 0
+                        ) {
 
-                    exoPlayer.setMediaItem(
-                        mediaItem
-                    )
-
-                    exoPlayer.prepare()
-
-                    exoPlayer.playWhenReady = true
+                            videoHeight =
+                                format.height
+                        }
+                    }
                 }
+            )
+
+            exoPlayer.setVideoFrameMetadataListener(
+                object :
+                    VideoFrameMetadataListener {
+
+                    override fun onVideoFrameAboutToBeRendered(
+                        presentationTimeUs: Long,
+                        releaseTimeNs: Long,
+                        format: Format,
+                        mediaFormat: MediaFormat?
+                    ) {
+
+                        if (
+                            releaseTimeNs <= 0L
+                        ) {
+                            return
+                        }
+
+                        if (
+                            lastReleaseTimeNs > 0L
+                        ) {
+
+                            val intervalMs =
+                                (
+                                    releaseTimeNs -
+                                        lastReleaseTimeNs
+                                ) /
+                                    1_000_000.0
+
+                            if (
+                                intervalMs > 0.1 &&
+                                intervalMs < 1000.0
+                            ) {
+
+                                synchronized(
+                                    frameIntervalsMs
+                                ) {
+
+                                    frameIntervalsMs.add(
+                                        intervalMs
+                                    )
+                                }
+                            }
+                        }
+
+                        lastReleaseTimeNs =
+                            releaseTimeNs
+                    }
+                }
+            )
+
+            exoPlayer.addListener(
+                object : Player.Listener {
+
+                    override fun onPlaybackStateChanged(
+                        playbackState: Int
+                    ) {
+
+                        when (
+                            playbackState
+                        ) {
+
+                            Player.STATE_BUFFERING -> {
+
+                                runOnUiThread {
+
+                                    statusText.text =
+                                        "4K 120 FPS video yükleniyor..."
+                                }
+                            }
+
+                            Player.STATE_READY -> {
+
+                                runOnUiThread {
+
+                                    statusText.text =
+                                        "4K 120 FPS video oynatılıyor..."
+                                }
+                            }
+
+                            Player.STATE_ENDED -> {
+
+                                finishBenchmark()
+                            }
+                        }
+                    }
+
+                    override fun onPlayerError(
+                        error:
+                            androidx.media3.common.PlaybackException
+                    ) {
+
+                        returnError(
+                            "Video oynatılamadı: ${error.message}"
+                        )
+                    }
+                }
+            )
+
+            val mediaItem =
+                MediaItem.fromUri(
+                    "asset:///benchmark_4k120.mp4"
+                )
+
+            exoPlayer.setMediaItem(
+                mediaItem
+            )
+
+            exoPlayer.prepare()
+
+            exoPlayer.playWhenReady =
+                true
 
         } catch (e: Exception) {
+
             returnError(
-                e.message ?: "Bilinmeyen benchmark hatası"
+                e.message
+                    ?: "Bilinmeyen benchmark hatası"
             )
         }
     }
 
     private fun finishBenchmark() {
-        val currentPlayer = player
-            ?: returnError("Player bulunamadı.")
+
+        val currentPlayer =
+            player
+                ?: run {
+                    returnError(
+                        "Player bulunamadı."
+                    )
+                    return
+                }
 
         val durationMs =
             currentPlayer.duration
@@ -258,53 +405,112 @@ class BenchmarkActivity : Activity() {
         val decoderCounters =
             currentPlayer.videoDecoderCounters
 
-        if (decoderCounters != null) {
+        if (
+            decoderCounters != null
+        ) {
+
             renderedFrames =
-                decoderCounters.renderedOutputBufferCount
+                decoderCounters
+                    .renderedOutputBufferCount
         }
 
-        val actualDurationMs =
-            if (
-                durationMs > 0 &&
-                durationMs != androidx.media3.common.C.TIME_UNSET
-            ) {
-                durationMs
-            } else if (
-                firstFrameTimeMs > 0L &&
-                lastFrameTimeMs > firstFrameTimeMs
-            ) {
-                lastFrameTimeMs -
-                    firstFrameTimeMs
-            } else {
-                0L
-            }
+        if (
+            renderedFrames <= 0
+        ) {
 
-        if (renderedFrames <= 0) {
             returnError(
                 "Video karesi ölçülemedi."
             )
+
             return
         }
 
-        if (actualDurationMs <= 0L) {
+        val validDuration =
+            durationMs > 0L &&
+                durationMs != C.TIME_UNSET
+
+        if (!validDuration) {
+
             returnError(
                 "Video süresi ölçülemedi."
             )
+
             return
         }
 
         val durationSeconds =
-            actualDurationMs / 1000.0
+            durationMs / 1000.0
 
         val averageFps =
             renderedFrames /
                 durationSeconds
 
-        val expectedFrames =
-            if (videoFps > 0) {
-                (durationSeconds * videoFps)
-                    .toInt()
+        val intervals =
+            synchronized(
+                frameIntervalsMs
+            ) {
+                frameIntervalsMs
+                    .filter {
+                        it > 0.1 &&
+                            it < 1000.0
+                    }
+                    .map {
+                        1000.0 / it
+                    }
+                    .filter {
+                        it > 0.0 &&
+                            it <= 1000.0
+                    }
+                    .sorted()
+            }
+
+        val minimumFps =
+            if (
+                intervals.isNotEmpty()
+            ) {
+
+                intervals.first()
+
             } else {
+
+                averageFps
+            }
+
+        val onePercentLow =
+            if (
+                intervals.isNotEmpty()
+            ) {
+
+                val count =
+                    maxOf(
+                        1,
+                        (
+                            intervals.size *
+                                0.01
+                        ).toInt()
+                    )
+
+                intervals
+                    .take(count)
+                    .average()
+
+            } else {
+
+                averageFps
+            }
+
+        val expectedFrames =
+            if (
+                videoFps > 0.0
+            ) {
+
+                (
+                    durationSeconds *
+                        videoFps
+                ).toInt()
+
+            } else {
+
                 renderedFrames +
                     droppedFrames
             }
@@ -312,112 +518,112 @@ class BenchmarkActivity : Activity() {
         val totalFrames =
             maxOf(
                 expectedFrames,
-                renderedFrames + droppedFrames
+                renderedFrames +
+                    droppedFrames
             )
 
         val stutterRate =
-            if (totalFrames > 0) {
-                droppedFrames.toDouble() /
-                    totalFrames.toDouble() *
+            if (
+                totalFrames > 0
+            ) {
+
+                droppedFrames
+                    .toDouble() /
+                    totalFrames
+                        .toDouble() *
                     100.0
+
             } else {
+
                 0.0
             }
 
         val frameTimeMs =
-            if (averageFps > 0) {
-                1000.0 / averageFps
+            if (
+                averageFps > 0.0
+            ) {
+
+                1000.0 /
+                    averageFps
+
             } else {
+
                 0.0
             }
 
         val processingAverageMs =
-            if (processingFrameCount > 0) {
+            if (
+                processingFrameCount > 0
+            ) {
+
                 totalProcessingOffsetUs
                     .toDouble() /
                     processingFrameCount
-                    .toDouble() /
+                        .toDouble() /
                     1000.0
-            } else {
-                0.0
-            }
 
-        val minimumFps =
-            if (minObservedFps != Double.MAX_VALUE) {
-                minObservedFps
             } else {
-                averageFps
-            }
 
-        val onePercentLow =
-            if (averageFps > 0) {
-                if (stutterRate <= 0.01) {
-                    averageFps
-                } else {
-                    averageFps *
-                        (1.0 - stutterRate / 100.0)
-                }
-            } else {
                 0.0
             }
 
         val result =
-            intent.apply {
-                putExtra(
-                    RESULT_AVERAGE_FPS,
-                    averageFps
-                )
+            Intent()
 
-                putExtra(
-                    RESULT_MINIMUM_FPS,
-                    minimumFps
-                )
+        result.putExtra(
+            RESULT_AVERAGE_FPS,
+            averageFps
+        )
 
-                putExtra(
-                    RESULT_ONE_PERCENT_LOW,
-                    onePercentLow
-                )
+        result.putExtra(
+            RESULT_MINIMUM_FPS,
+            minimumFps
+        )
 
-                putExtra(
-                    RESULT_DROPPED_FRAMES,
-                    droppedFrames
-                )
+        result.putExtra(
+            RESULT_ONE_PERCENT_LOW,
+            onePercentLow
+        )
 
-                putExtra(
-                    RESULT_RENDERED_FRAMES,
-                    renderedFrames
-                )
+        result.putExtra(
+            RESULT_DROPPED_FRAMES,
+            droppedFrames
+        )
 
-                putExtra(
-                    RESULT_FRAME_TIME_MS,
-                    frameTimeMs
-                )
+        result.putExtra(
+            RESULT_RENDERED_FRAMES,
+            renderedFrames
+        )
 
-                putExtra(
-                    RESULT_STUTTER_RATE,
-                    stutterRate
-                )
+        result.putExtra(
+            RESULT_FRAME_TIME_MS,
+            frameTimeMs
+        )
 
-                putExtra(
-                    RESULT_VIDEO_WIDTH,
-                    videoWidth
-                )
+        result.putExtra(
+            RESULT_STUTTER_RATE,
+            stutterRate
+        )
 
-                putExtra(
-                    RESULT_VIDEO_HEIGHT,
-                    videoHeight
-                )
+        result.putExtra(
+            RESULT_VIDEO_WIDTH,
+            videoWidth
+        )
 
-                putExtra(
-                    RESULT_VIDEO_FPS,
-                    videoFps
-                )
+        result.putExtra(
+            RESULT_VIDEO_HEIGHT,
+            videoHeight
+        )
 
-                putExtra(
-                    "processingAverageMs",
-                    processingAverageMs
-                )
-            }
+        result.putExtra(
+            RESULT_VIDEO_FPS,
+            videoFps
+        )
+
+        result.putExtra(
+            RESULT_PROCESSING_AVERAGE_MS,
+            processingAverageMs
+        )
 
         setResult(
             RESULT_OK,
@@ -425,6 +631,7 @@ class BenchmarkActivity : Activity() {
         )
 
         player?.release()
+
         player = null
 
         finish()
@@ -433,13 +640,14 @@ class BenchmarkActivity : Activity() {
     private fun returnError(
         message: String
     ) {
+
         val result =
-            intent.apply {
-                putExtra(
-                    RESULT_ERROR,
-                    message
-                )
-            }
+            Intent()
+
+        result.putExtra(
+            RESULT_ERROR,
+            message
+        )
 
         setResult(
             RESULT_CANCELED,
@@ -447,13 +655,16 @@ class BenchmarkActivity : Activity() {
         )
 
         player?.release()
+
         player = null
 
         finish()
     }
 
     override fun onDestroy() {
+
         player?.release()
+
         player = null
 
         super.onDestroy()
