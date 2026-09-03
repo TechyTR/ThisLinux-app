@@ -20,15 +20,13 @@ class BottomNavBar extends StatelessWidget {
 
   Widget _icon(BottomNavigationBarItem item, bool selected) {
     final source = selected ? item.activeIcon : item.icon;
-    return source is IconData
-        ? Icon(source, size: 22, color: selected ? accent : mutedColor)
-        : IconTheme(
-            data: IconThemeData(
-              size: 22,
-              color: selected ? accent : mutedColor,
-            ),
-            child: source,
-          );
+    return IconTheme(
+      data: IconThemeData(
+        size: 22,
+        color: selected ? accent : mutedColor,
+      ),
+      child: source,
+    );
   }
 
   @override
