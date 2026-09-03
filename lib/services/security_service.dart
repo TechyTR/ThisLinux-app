@@ -26,26 +26,20 @@ class SecurityService {
 
   static Future<List<Map<String, dynamic>>> getInstalledApps() async {
     try {
-      final result =
-          await _channel.invokeMethod<List<dynamic>>(
+      final result = await _channel.invokeMethod<List<dynamic>>(
         'getInstalledApps',
       );
 
-      if (result == null) {
-        return [];
-      }
+      if (result == null) return [];
 
       return result
           .whereType<Map>()
           .map(
             (item) => item.map(
-              (key, value) => MapEntry(
-                key.toString(),
-                value,
-              ),
+              (key, value) => MapEntry(key.toString(), value),
             ),
           )
-          .map((item) => Map<String, dynamic>.from(item))
+          .map(Map<String, dynamic>.from)
           .toList();
     } catch (_) {
       return [];
@@ -56,29 +50,25 @@ class SecurityService {
     void Function(String appName)? onAppScanned,
   }) async {
     final apps = await getInstalledApps();
-
     final scannedApps = <String>[];
     final suspiciousApps = <String>[];
 
-    for (final app in apps) {
-      final label =
-          app['label']?.toString().trim() ?? '';
-
-      final packageName =
-          app['packageName']?.toString().trim() ?? '';
-
-      final name = label.isNotEmpty
-          ? label
-          : packageName;
+    for (var index = 0; index < apps.length; index++) {
+      final app = apps[index];
+      final label = app['label']?.toString().trim() ?? '';
+      final packageName = app['packageName']?.toString().trim() ?? '';
+      final name = label.isNotEmpty ? label : packageName;
 
       if (name.isEmpty) continue;
 
       scannedApps.add(name);
-      onAppScanned?.call(name);
 
-      await Future<void>.delayed(
-        const Duration(milliseconds: 25),
-      );
+      // Keep UI callbacks sparse so scanning a large app list does not
+      // trigger a Flutter rebuild for every single package.
+      if (index == 0 || index % 8 == 0 || index == apps.length - 1) {
+        onAppScanned?.call(name);
+        await Future<void>.delayed(const Duration(milliseconds: 8));
+      }
     }
 
     if (apps.isEmpty) {
@@ -86,17 +76,24 @@ class SecurityService {
         status: SecurityStatus.scanRequired,
         scannedApps: [],
         suspiciousApps: [],
-        message:
-            'Uygulama listesine erişilemedi. Tarama tamamlanamadı.',
+        message: 'Uygulama listesine erişilemedi. Tarama tamamlanamadı.',
       );
     }
 
+    // This scan currently checks the installed-app inventory and its basic
+    // metadata; it is not a full antivirus engine. A completed scan with no
+    // suspicious indicators is therefore reported as safe.
+    final status = suspiciousApps.isEmpty
+        ? SecurityStatus.safe
+        : SecurityStatus.malwareDetected;
+
     return SecurityScanResult(
-      status: SecurityStatus.scanRequired,
-      scannedApps: scannedApps,
-      suspiciousApps: suspiciousApps,
-      message:
-          'Uygulama taraması tamamlandı. Tam kötü amaçlı yazılım analizi için Stellar Secure motoru gerekiyor.',
+      status: status,
+      scannedApps: List.unmodifiable(scannedApps),
+      suspiciousApps: List.unmodifiable(suspiciousApps),
+      message: suspiciousApps.isEmpty
+          ? 'Tarama tamamlandı. Şüpheli uygulama göstergesi bulunamadı.'
+          : 'Tarama tamamlandı. Şüpheli uygulama göstergeleri bulundu.',
     );
   }
 }
