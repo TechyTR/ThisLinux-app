@@ -178,6 +178,9 @@ class _BenchmarkPageState extends State<BenchmarkPage>
     final gpu = _series((v) => v.gpuPercent);
     final battery = _series((v) => v.batteryPercent?.toDouble());
     final temp = _series((v) => v.temperatureC);
+    final times = _telemetry
+        .map((point) => point.elapsed.inMilliseconds / 1000.0)
+        .toList(growable: false);
     final stress = _telemetry.map((point) {
       final values = [point.value.cpuPercent, point.value.gpuPercent]
           .whereType<double>()
@@ -205,11 +208,11 @@ class _BenchmarkPageState extends State<BenchmarkPage>
             return values.isEmpty ? null : values.reduce((a, b) => a + b) / values.length;
           }, '/100')),
           const SizedBox(height: 8),
-          _Chart(title: 'CPU (%)', values: cpu, color: Colors.orange),
-          _Chart(title: 'GPU (%)', values: gpu, color: Colors.purple),
-          _Chart(title: 'Batarya (%)', values: battery, color: Colors.green),
-          _Chart(title: 'Sıcaklık (°C)', values: temp, color: Colors.redAccent),
-          _Chart(title: 'Stress Index (0–100)', values: stress, color: Colors.blue),
+          _Chart(title: 'CPU (%)', values: cpu, times: times, color: Colors.orange),
+          _Chart(title: 'GPU (%)', values: gpu, times: times, color: Colors.purple),
+          _Chart(title: 'Batarya (%)', values: battery, times: times, color: Colors.green),
+          _Chart(title: 'Sıcaklık (°C)', values: temp, times: times, color: Colors.redAccent),
+          _Chart(title: 'Stress Index (0–100)', values: stress, times: times, color: Colors.blue),
           const SizedBox(height: 6),
           Text(
             'Stress Index standart bir benchmark metriği değildir; okunabilen CPU/GPU kullanım yüzdelerinin ortalamasıdır. GPU sistem verisi erişilemezse grafik boş kalır; 0 olarak gösterilmez.',
@@ -250,6 +253,7 @@ class _BenchmarkPageState extends State<BenchmarkPage>
             title: 'Gerçek frame-release FPS örnekleri',
             values: graphics.fpsSamples.map((sample) => sample.fps).toList(),
             color: Theme.of(context).colorScheme.primary,
+            times: graphics.fpsSamples.map((sample) => sample.timeSeconds).toList(growable: false),
           ),
           Text(
             graphics.fpsSamples.isEmpty
@@ -339,9 +343,10 @@ class _BenchmarkPageState extends State<BenchmarkPage>
 class _Chart extends StatelessWidget {
   final String title;
   final List<double?> values;
+  final List<double>? times;
   final Color color;
 
-  const _Chart({required this.title, required this.values, required this.color});
+  const _Chart({required this.title, required this.values, this.times, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -355,7 +360,7 @@ class _Chart extends StatelessWidget {
           height: 100,
           width: double.infinity,
           child: hasData
-              ? CustomPaint(painter: _LineChartPainter(values, color))
+              ? CustomPaint(painter: _LineChartPainter(values, color, times))
               : Center(
                   child: Text('Veri okunamadı',
                       style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
@@ -369,8 +374,9 @@ class _Chart extends StatelessWidget {
 class _LineChartPainter extends CustomPainter {
   final List<double?> values;
   final Color color;
+  final List<double>? times;
 
-  _LineChartPainter(this.values, this.color);
+  _LineChartPainter(this.values, this.color, this.times);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -396,7 +402,16 @@ class _LineChartPainter extends CustomPainter {
         path = null;
         continue;
       }
-      final x = values.length == 1 ? 0.0 : size.width * i / (values.length - 1);
+      final validTimes =
+          times != null && times!.length == values.length ? times! : null;
+      final xValues = validTimes ?? List<double>.generate(
+        values.length,
+        (index) => index.toDouble(),
+      );
+      final minX = xValues.reduce(math.min);
+      final maxX = xValues.reduce(math.max);
+      final xSpan = math.max(1.0, maxX - minX);
+      final x = size.width * (xValues[i] - minX) / xSpan;
       final y = size.height - ((value - minimum) / span * size.height);
       if (path == null) {
         path = Path()..moveTo(x, y);
@@ -409,5 +424,5 @@ class _LineChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _LineChartPainter oldDelegate) =>
-      oldDelegate.values != values || oldDelegate.color != color;
+      oldDelegate.values != values || oldDelegate.color != color || oldDelegate.times != times;
 }
