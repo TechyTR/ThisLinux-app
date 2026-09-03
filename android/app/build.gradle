@@ -7,7 +7,7 @@ plugins {
 android {
     namespace = "org.test.thislinux"
 
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
 
     ndkVersion = "26.1.10909125"
 
@@ -25,7 +25,7 @@ android {
 
         minSdk = 23
 
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
 
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -42,9 +42,8 @@ dependencies {
     implementation "dev.rikka.shizuku:api:13.1.5"
     implementation "dev.rikka.shizuku:provider:13.1.5"
 
-    // Media3 1.4.1 supports compileSdk 34.
-    implementation "androidx.media3:media3-exoplayer:1.4.1"
-    implementation "androidx.media3:media3-ui:1.4.1"
+    implementation "androidx.media3:media3-exoplayer:1.11.0"
+    implementation "androidx.media3:media3-ui:1.11.0"
 }
 
 flutter {
