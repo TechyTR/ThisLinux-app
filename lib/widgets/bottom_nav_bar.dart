@@ -29,11 +29,6 @@ class BottomNavBar extends StatelessWidget {
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.memory_outlined),
-            selectedIcon: Icon(Icons.memory),
-            label: 'System',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.monitor_heart_outlined),
             selectedIcon: Icon(Icons.monitor_heart),
             label: 'Monitor',
@@ -94,21 +89,14 @@ class _LiquidGlassNavigationBar extends StatelessWidget {
             height: 70,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(32),
-
-              // Ana cam yüzeyi:
-              // Ortası mümkün olduğunca saydam.
               color: isLight
                   ? Colors.white.withOpacity(0.22)
                   : Colors.black.withOpacity(0.28),
-
-              // Camın dış kenarı.
               border: Border.all(
                 color: isLight
                     ? Colors.white.withOpacity(0.68)
                     : Colors.white.withOpacity(0.28),
-                width: 1.0,
               ),
-
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(
@@ -122,7 +110,6 @@ class _LiquidGlassNavigationBar extends StatelessWidget {
             ),
             child: Stack(
               children: [
-                // Üst kenardaki cam ışığı.
                 Positioned(
                   left: 14,
                   right: 14,
@@ -142,8 +129,6 @@ class _LiquidGlassNavigationBar extends StatelessWidget {
                     ),
                   ),
                 ),
-
-                // Çok hafif iç parlama.
                 Positioned.fill(
                   child: IgnorePointer(
                     child: DecoratedBox(
@@ -166,18 +151,14 @@ class _LiquidGlassNavigationBar extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final itemWidth = constraints.maxWidth / 5;
+                    final itemWidth = constraints.maxWidth / 4;
 
                     return Stack(
                       children: [
-                        // Hareket eden gerçek cam seçim parçası.
                         AnimatedPositioned(
-                          duration: const Duration(
-                            milliseconds: 500,
-                          ),
+                          duration: const Duration(milliseconds: 500),
                           curve: Curves.easeOutCubic,
                           left: itemWidth * currentIndex + 5,
                           top: 7,
@@ -191,25 +172,17 @@ class _LiquidGlassNavigationBar extends StatelessWidget {
                                   sigmaX: 18,
                                   sigmaY: 18,
                                 ),
-                                child: DecoratedBox(
+                                child: Container(
                                   decoration: BoxDecoration(
-                                    borderRadius:
-                                        BorderRadius.circular(25),
-
-                                    // Seçili cam parçasının içi
-                                    // özellikle saydam tutuluyor.
+                                    borderRadius: BorderRadius.circular(25),
                                     color: isLight
                                         ? Colors.white.withOpacity(0.16)
                                         : Colors.white.withOpacity(0.08),
-
-                                    // Kenarlar merkezden çok daha belirgin.
                                     border: Border.all(
                                       color: isLight
                                           ? Colors.white.withOpacity(0.72)
                                           : Colors.white.withOpacity(0.32),
-                                      width: 1.0,
                                     ),
-
                                     boxShadow: [
                                       BoxShadow(
                                         color: accent.withOpacity(
@@ -218,18 +191,10 @@ class _LiquidGlassNavigationBar extends StatelessWidget {
                                         blurRadius: 18,
                                         spreadRadius: -2,
                                       ),
-                                      BoxShadow(
-                                        color: Colors.white.withOpacity(
-                                          isLight ? 0.10 : 0.05,
-                                        ),
-                                        blurRadius: 8,
-                                        spreadRadius: -1,
-                                      ),
                                     ],
                                   ),
                                   child: Stack(
                                     children: [
-                                      // Seçili camın üst highlight'ı.
                                       Positioned(
                                         left: 10,
                                         right: 10,
@@ -249,26 +214,6 @@ class _LiquidGlassNavigationBar extends StatelessWidget {
                                           ),
                                         ),
                                       ),
-
-                                      // Hafif iç highlight.
-                                      Positioned.fill(
-                                        child: DecoratedBox(
-                                          decoration: BoxDecoration(
-                                            borderRadius:
-                                                BorderRadius.circular(25),
-                                            gradient: LinearGradient(
-                                              begin: Alignment.topCenter,
-                                              end: Alignment.bottomCenter,
-                                              colors: [
-                                                Colors.white.withOpacity(
-                                                  isLight ? 0.08 : 0.04,
-                                                ),
-                                                Colors.transparent,
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
                                     ],
                                   ),
                                 ),
@@ -276,7 +221,6 @@ class _LiquidGlassNavigationBar extends StatelessWidget {
                             ),
                           ),
                         ),
-
                         Row(
                           children: [
                             _item(
@@ -289,18 +233,10 @@ class _LiquidGlassNavigationBar extends StatelessWidget {
                             ),
                             _item(
                               context,
-                              Icons.memory_outlined,
-                              Icons.memory,
-                              'System',
-                              1,
-                              accent,
-                            ),
-                            _item(
-                              context,
                               Icons.monitor_heart_outlined,
                               Icons.monitor_heart,
                               'Monitor',
-                              2,
+                              1,
                               accent,
                             ),
                             _item(
@@ -308,7 +244,7 @@ class _LiquidGlassNavigationBar extends StatelessWidget {
                               Icons.note_outlined,
                               Icons.note,
                               'Notes',
-                              3,
+                              2,
                               accent,
                             ),
                             _item(
@@ -316,7 +252,7 @@ class _LiquidGlassNavigationBar extends StatelessWidget {
                               Icons.info_outline,
                               Icons.info,
                               'App',
-                              4,
+                              3,
                               accent,
                             ),
                           ],
@@ -343,9 +279,8 @@ class _LiquidGlassNavigationBar extends StatelessWidget {
   ) {
     final selected = currentIndex == index;
 
-    final mutedColor = Theme.of(context)
-        .colorScheme
-        .onSurfaceVariant;
+    final mutedColor =
+        Theme.of(context).colorScheme.onSurfaceVariant;
 
     return Expanded(
       child: GestureDetector(
@@ -359,21 +294,13 @@ class _LiquidGlassNavigationBar extends StatelessWidget {
               children: [
                 AnimatedScale(
                   scale: selected ? 1.06 : 1.0,
-                  duration: const Duration(
-                    milliseconds: 300,
-                  ),
+                  duration: const Duration(milliseconds: 300),
                   curve: Curves.easeOutCubic,
                   child: AnimatedSwitcher(
-                    duration: const Duration(
-                      milliseconds: 220,
-                    ),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
+                    duration: const Duration(milliseconds: 220),
                     child: Icon(
                       selected ? selectedIcon : icon,
-                      key: ValueKey(
-                        '$index-$selected',
-                      ),
+                      key: ValueKey('$index-$selected'),
                       size: 21,
                       color: selected
                           ? accent
@@ -381,24 +308,21 @@ class _LiquidGlassNavigationBar extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 3),
-
                 AnimatedDefaultTextStyle(
-                  duration: const Duration(
-                    milliseconds: 220,
+                  duration: const Duration(milliseconds: 220),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: selected ? 10.5 : 10,
+                      fontWeight: selected
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                      color: selected
+                          ? accent
+                          : mutedColor.withOpacity(0.82),
+                    ),
                   ),
-                  curve: Curves.easeOutCubic,
-                  style: TextStyle(
-                    fontSize: selected ? 10.5 : 10,
-                    fontWeight: selected
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    color: selected
-                        ? accent
-                        : mutedColor.withOpacity(0.82),
-                  ),
-                  child: Text(label),
                 ),
               ],
             ),
