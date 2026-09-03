@@ -18,10 +18,24 @@ class BottomNavBar extends StatelessWidget {
     required this.items,
   });
 
+  Widget _icon(BottomNavigationBarItem item, bool selected) {
+    final source = selected ? item.activeIcon : item.icon;
+    return source is IconData
+        ? Icon(source, size: 22, color: selected ? accent : mutedColor)
+        : IconTheme(
+            data: IconThemeData(
+              size: 22,
+              color: selected ? accent : mutedColor,
+            ),
+            child: source,
+          );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isGlass = Theme.of(context).scaffoldBackgroundColor.a < 0.99;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final isGlass = theme.scaffoldBackgroundColor.a < 0.99;
 
     return SafeArea(
       top: false,
@@ -65,10 +79,7 @@ class BottomNavBar extends StatelessWidget {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(19),
                           child: BackdropFilter(
-                            filter: ImageFilter.blur(
-                              sigmaX: 14,
-                              sigmaY: 14,
-                            ),
+                            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
                             child: DecoratedBox(
                               decoration: BoxDecoration(
                                 color: isDark
@@ -135,26 +146,18 @@ class BottomNavBar extends StatelessWidget {
                                       duration: const Duration(milliseconds: 180),
                                       switchInCurve: Curves.easeOutCubic,
                                       switchOutCurve: Curves.easeInCubic,
-                                      child: Icon(
-                                        selected ? item.activeIcon : item.icon,
-                                        key: ValueKey('$index-$selected'),
-                                        size: 22,
-                                        color: selected ? accent : mutedColor,
-                                      ),
+                                      child: _icon(item, selected),
                                     ),
                                     const SizedBox(height: 2),
                                     AnimatedDefaultTextStyle(
                                       duration: const Duration(milliseconds: 180),
                                       curve: Curves.easeOutCubic,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall!
-                                          .copyWith(
-                                            color: selected ? accent : mutedColor,
-                                            fontWeight: selected
-                                                ? FontWeight.w700
-                                                : FontWeight.w500,
-                                          ),
+                                      style: theme.textTheme.labelSmall!.copyWith(
+                                        color: selected ? accent : mutedColor,
+                                        fontWeight: selected
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                      ),
                                       child: Text(item.label ?? ''),
                                     ),
                                   ],
