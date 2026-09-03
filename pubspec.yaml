@@ -33,7 +33,10 @@ flutter:
 
   assets:
     - assets/icon.png
-  
+    - assets/Bosphorus_3840x2160_120fps_420_8bit_HEVC_RAW.mp4
+    - assets/HoneyBee_3840x2160_120fps_420_8bit_HEVC_RAW.mp4
+    - assets/Jockey_3840x2160_120fps_420_8bit_HEVC_RAW.mp4
+
 flutter_launcher_icons:
   android: true
   ios: false
