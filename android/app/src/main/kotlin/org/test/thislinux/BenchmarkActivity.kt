@@ -19,7 +19,7 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.mediacodec.DecoderReuseEvaluation
 import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.ui.PlayerView
-import kotlin.math.roundTolnt.
+import kotlin.math.roundToInt
 
 class BenchmarkActivity : Activity() {
 
@@ -319,10 +319,6 @@ class BenchmarkActivity : Activity() {
                         reason: Int
                     ) {
 
-                        /*
-                         * Videolar arası geçiş süresini
-                         * FPS/stutter ölçümüne dahil etmiyoruz.
-                         */
                         lastReleaseTimeNs = 0L
 
                         val index =
@@ -376,12 +372,15 @@ class BenchmarkActivity : Activity() {
                             androidx.media3.common.PlaybackException
                     ) {
                         if (!benchmarkFinished) {
+
                             benchmarkFinished = true
 
                             returnError(
                                 "4K 120 FPS video oynatılamadı: " +
-                                    (error.message
-                                        ?: "Bilinmeyen Media3 hatası")
+                                    (
+                                        error.message
+                                            ?: "Bilinmeyen Media3 hatası"
+                                    )
                             )
                         }
                     }
@@ -390,6 +389,7 @@ class BenchmarkActivity : Activity() {
 
             val mediaItems =
                 benchmarkVideos.map { path ->
+
                     MediaItem.fromUri(
                         "asset:///flutter_assets/$path"
                     )
@@ -431,15 +431,18 @@ class BenchmarkActivity : Activity() {
             currentPlayer.videoDecoderCounters
 
         if (decoderCounters != null) {
+
             renderedFrames =
                 decoderCounters
                     .renderedOutputBufferCount
         }
 
         if (renderedFrames <= 0) {
+
             returnError(
                 "Video karesi ölçülemedi."
             )
+
             return
         }
 
@@ -447,19 +450,17 @@ class BenchmarkActivity : Activity() {
             durationMs <= 0L ||
             durationMs == C.TIME_UNSET
         ) {
+
             returnError(
                 "Toplam video süresi ölçülemedi."
             )
+
             return
         }
 
         val durationSeconds =
             durationMs / 1000.0
 
-        /*
-         * 3 video × 5 saniye = yaklaşık 15 saniye.
-         * 120 FPS × 15 saniye = yaklaşık 1800 kaynak karesi.
-         */
         val averageFps =
             renderedFrames /
                 durationSeconds
@@ -468,6 +469,7 @@ class BenchmarkActivity : Activity() {
             synchronized(
                 frameIntervalsMs
             ) {
+
                 frameIntervalsMs
                     .filter {
                         it > 0.1 &&
@@ -484,9 +486,12 @@ class BenchmarkActivity : Activity() {
 
         val minimumFps =
             if (fpsSamples.isNotEmpty()) {
+
                 fpsSamples.minOrNull()
                     ?: averageFps
+
             } else {
+
                 averageFps
             }
 
@@ -510,6 +515,7 @@ class BenchmarkActivity : Activity() {
                     .average()
 
             } else {
+
                 averageFps
             }
 
@@ -545,14 +551,18 @@ class BenchmarkActivity : Activity() {
                 ) * 100.0
 
             } else {
+
                 0.0
             }
 
         val frameTimeMs =
             if (averageFps > 0.0) {
+
                 1000.0 /
                     averageFps
+
             } else {
+
                 0.0
             }
 
@@ -566,6 +576,7 @@ class BenchmarkActivity : Activity() {
                     1000.0
 
             } else {
+
                 0.0
             }
 
