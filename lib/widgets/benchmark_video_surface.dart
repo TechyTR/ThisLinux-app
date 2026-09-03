@@ -33,95 +33,78 @@ class BenchmarkVideoSurface
       clipBehavior:
           Clip.antiAlias,
       child: Stack(
-        alignment:
-            Alignment.center,
+        alignment: Alignment.center,
         children: [
-          if (!running)
-            Column(
-              mainAxisAlignment:
-                  MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons
-                      .ondemand_video_rounded,
-                  size: 48,
-                  color:
-                      Colors.white
-                          .withOpacity(
-                    0.75,
-                  ),
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                const Text(
-                  '4K 120 FPS Grafik Testi',
-                  style: TextStyle(
-                    color:
-                        Colors.white,
-                    fontSize: 16,
-                    fontWeight:
-                        FontWeight.w800,
-                  ),
-                ),
-              ],
-            )
-          else
-            Column(
-              mainAxisAlignment:
-                  MainAxisAlignment.center,
-              children: [
-                const CircularProgressIndicator(
+          Column(
+            mainAxisAlignment:
+                MainAxisAlignment.center,
+            children: [
+              Icon(
+                running
+                    ? Icons
+                        .ondemand_video_rounded
+                    : Icons
+                        .play_circle_outline_rounded,
+                size: 52,
+                color: Colors.white
+                    .withOpacity(0.8),
+              ),
+              const SizedBox(
+                height: 12,
+              ),
+              Text(
+                running
+                    ? '4K 120 FPS video testi çalışıyor'
+                    : '4K 120 FPS Grafik Testi',
+                style: const TextStyle(
                   color: Colors.white,
+                  fontSize: 16,
+                  fontWeight:
+                      FontWeight.w800,
                 ),
+                textAlign:
+                    TextAlign.center,
+              ),
+              if (running) ...[
                 const SizedBox(
-                  height: 15,
+                  height: 8,
                 ),
                 const Text(
-                  '4K 120 FPS test hazırlanıyor...',
+                  'Gerçek video decoder ölçümü',
                   style: TextStyle(
-                    color:
-                        Colors.white,
-                    fontWeight:
-                        FontWeight.w700,
+                    color: Colors.white70,
+                    fontSize: 12,
                   ),
                 ),
               ],
-            ),
-
-          if (running)
-            Positioned(
-              top: 12,
-              right: 12,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration:
-                    BoxDecoration(
-                  color: Colors.black
-                      .withOpacity(
-                    0.65,
-                  ),
-                  borderRadius:
-                      BorderRadius.circular(
-                    12,
-                  ),
-                ),
-                child: const Text(
-                  '4K • 120 FPS',
-                  style: TextStyle(
-                    color:
-                        Colors.white,
-                    fontSize: 11,
-                    fontWeight:
-                        FontWeight.w800,
-                  ),
+            ],
+          ),
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.black
+                    .withOpacity(0.65),
+                borderRadius:
+                    BorderRadius.circular(12),
+              ),
+              child: const Text(
+                '3840 × 2160 • 120 FPS',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight:
+                      FontWeight.w800,
                 ),
               ),
             ),
+          ),
         ],
       ),
     );
