@@ -10,7 +10,6 @@ import 'system_monitor_page.dart';
 class HomeShell extends StatefulWidget {
   final AppThemeColor selectedTheme;
   final AppThemeStyle selectedStyle;
-
   final Future<void> Function(AppThemeColor) onThemeChanged;
   final Future<void> Function(AppThemeStyle) onStyleChanged;
 
@@ -28,7 +27,6 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _currentIndex = 0;
-
   late List<Widget> _pages;
 
   @override
@@ -63,21 +61,15 @@ class _HomeShellState extends State<HomeShell> {
 
   void _selectDestination(int index) {
     if (index == _currentIndex) return;
-
-    setState(() {
-      _currentIndex = index;
-    });
+    setState(() => _currentIndex = index);
   }
 
   @override
   void didUpdateWidget(covariant HomeShell oldWidget) {
     super.didUpdateWidget(oldWidget);
-
     if (oldWidget.selectedTheme != widget.selectedTheme ||
         oldWidget.selectedStyle != widget.selectedStyle) {
-      setState(() {
-        _pages = _buildPages();
-      });
+      _pages = _buildPages();
     }
   }
 
@@ -88,45 +80,11 @@ class _HomeShellState extends State<HomeShell> {
 
     return Scaffold(
       extendBody: widget.selectedStyle != AppThemeStyle.normal,
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 320),
-        reverseDuration: const Duration(milliseconds: 220),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        layoutBuilder: (
-          Widget? currentChild,
-          List<Widget> previousChildren,
-        ) {
-          return Stack(
-            alignment: Alignment.center,
-            children: [
-              ...previousChildren,
-              if (currentChild != null) currentChild,
-            ],
-          );
-        },
-        transitionBuilder: (child, animation) {
-          final curved = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-          );
-
-          final slide = Tween<Offset>(
-            begin: const Offset(0.025, 0),
-            end: Offset.zero,
-          ).animate(curved);
-
-          return FadeTransition(
-            opacity: curved,
-            child: SlideTransition(
-              position: slide,
-              child: child,
-            ),
-          );
-        },
-        child: KeyedSubtree(
-          key: ValueKey(_currentIndex),
-          child: _pages[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: List.generate(
+          _pages.length,
+          (index) => RepaintBoundary(child: _pages[index]),
         ),
       ),
       bottomNavigationBar: BottomNavBar(
