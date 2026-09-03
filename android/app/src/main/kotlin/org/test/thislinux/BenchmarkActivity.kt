@@ -1,6 +1,7 @@
 package org.test.thislinux
 
 import android.app.Activity
+import android.content.Intent
 import android.media.MediaFormat
 import android.os.Bundle
 import android.view.View
@@ -81,7 +82,16 @@ class BenchmarkActivity : Activity() {
 
     private var lastReleaseTimeNs = 0L
 
+    private var benchmarkFinished = false
+
     private lateinit var statusText: TextView
+
+    private val benchmarkVideos =
+        listOf(
+            "assets/Bosphorus_3840x2160_120fps_420_8bit_HEVC_RAW.mp4",
+            "assets/HoneyBee_3840x2160_120fps_420_8bit_HEVC_RAW.mp4",
+            "assets/Jockey_3840x2160_120fps_420_8bit_HEVC_RAW.mp4"
+        )
 
     override fun onCreate(
         savedInstanceState: Bundle?
@@ -150,7 +160,6 @@ class BenchmarkActivity : Activity() {
     private fun startBenchmark(
         root: FrameLayout
     ) {
-
         try {
 
             val playerView =
@@ -196,7 +205,6 @@ class BenchmarkActivity : Activity() {
                         droppedFrames: Int,
                         elapsedMs: Long
                     ) {
-
                         this@BenchmarkActivity
                             .droppedFrames +=
                             droppedFrames
@@ -208,7 +216,6 @@ class BenchmarkActivity : Activity() {
                         totalProcessingOffsetUs: Long,
                         frameCount: Int
                     ) {
-
                         this@BenchmarkActivity
                             .totalProcessingOffsetUs +=
                             totalProcessingOffsetUs
@@ -223,12 +230,15 @@ class BenchmarkActivity : Activity() {
                             AnalyticsListener.EventTime,
                         videoSize: VideoSize
                     ) {
+                        if (videoSize.width > 0) {
+                            videoWidth =
+                                videoSize.width
+                        }
 
-                        videoWidth =
-                            videoSize.width
-
-                        videoHeight =
-                            videoSize.height
+                        if (videoSize.height > 0) {
+                            videoHeight =
+                                videoSize.height
+                        }
                     }
 
                     override fun onVideoInputFormatChanged(
@@ -238,28 +248,18 @@ class BenchmarkActivity : Activity() {
                         decoderReuseEvaluation:
                             DecoderReuseEvaluation?
                     ) {
-
-                        if (
-                            format.frameRate > 0f
-                        ) {
-
+                        if (format.frameRate > 0f) {
                             videoFps =
                                 format.frameRate
                                     .toDouble()
                         }
 
-                        if (
-                            format.width > 0
-                        ) {
-
+                        if (format.width > 0) {
                             videoWidth =
                                 format.width
                         }
 
-                        if (
-                            format.height > 0
-                        ) {
-
+                        if (format.height > 0) {
                             videoHeight =
                                 format.height
                         }
@@ -278,32 +278,25 @@ class BenchmarkActivity : Activity() {
                         mediaFormat: MediaFormat?
                     ) {
 
-                        if (
-                            releaseTimeNs <= 0L
-                        ) {
+                        if (releaseTimeNs <= 0L) {
                             return
                         }
 
-                        if (
-                            lastReleaseTimeNs > 0L
-                        ) {
+                        if (lastReleaseTimeNs > 0L) {
 
                             val intervalMs =
                                 (
                                     releaseTimeNs -
                                         lastReleaseTimeNs
-                                ) /
-                                    1_000_000.0
+                                ) / 1_000_000.0
 
                             if (
                                 intervalMs > 0.1 &&
                                 intervalMs < 1000.0
                             ) {
-
                                 synchronized(
                                     frameIntervalsMs
                                 ) {
-
                                     frameIntervalsMs.add(
                                         intervalMs
                                     )
@@ -320,35 +313,59 @@ class BenchmarkActivity : Activity() {
             exoPlayer.addListener(
                 object : Player.Listener {
 
+                    override fun onMediaItemTransition(
+                        mediaItem: MediaItem?,
+                        reason: Int
+                    ) {
+
+                        /*
+                         * Videolar arası geçiş süresini
+                         * FPS/stutter ölçümüne dahil etmiyoruz.
+                         */
+                        lastReleaseTimeNs = 0L
+
+                        val index =
+                            exoPlayer.currentMediaItemIndex
+
+                        val name =
+                            when (index) {
+                                0 -> "Bosphorus"
+                                1 -> "HoneyBee"
+                                2 -> "Jockey"
+                                else -> "Video"
+                            }
+
+                        runOnUiThread {
+                            statusText.text =
+                                "4K 120 FPS test ediliyor...\n\n$name"
+                        }
+                    }
+
                     override fun onPlaybackStateChanged(
                         playbackState: Int
                     ) {
 
-                        when (
-                            playbackState
-                        ) {
+                        when (playbackState) {
 
                             Player.STATE_BUFFERING -> {
-
                                 runOnUiThread {
-
                                     statusText.text =
-                                        "4K 120 FPS video yükleniyor..."
+                                        "4K 120 FPS video hazırlanıyor..."
                                 }
                             }
 
                             Player.STATE_READY -> {
-
                                 runOnUiThread {
-
                                     statusText.text =
-                                        "4K 120 FPS video oynatılıyor..."
+                                        "4K 120 FPS benchmark çalışıyor..."
                                 }
                             }
 
                             Player.STATE_ENDED -> {
-
-                                finishBenchmark()
+                                if (!benchmarkFinished) {
+                                    benchmarkFinished = true
+                                    finishBenchmark()
+                                }
                             }
                         }
                     }
@@ -357,21 +374,28 @@ class BenchmarkActivity : Activity() {
                         error:
                             androidx.media3.common.PlaybackException
                     ) {
+                        if (!benchmarkFinished) {
+                            benchmarkFinished = true
 
-                        returnError(
-                            "Video oynatılamadı: ${error.message}"
-                        )
+                            returnError(
+                                "4K 120 FPS video oynatılamadı: " +
+                                    (error.message
+                                        ?: "Bilinmeyen Media3 hatası")
+                            )
+                        }
                     }
                 }
             )
 
-            val mediaItem =
-                MediaItem.fromUri(
-                    "asset:///benchmark_4k120.mp4"
-                )
+            val mediaItems =
+                benchmarkVideos.map { path ->
+                    MediaItem.fromUri(
+                        "asset:///flutter_assets/$path"
+                    )
+                }
 
-            exoPlayer.setMediaItem(
-                mediaItem
+            exoPlayer.setMediaItems(
+                mediaItems
             )
 
             exoPlayer.prepare()
@@ -405,47 +429,41 @@ class BenchmarkActivity : Activity() {
         val decoderCounters =
             currentPlayer.videoDecoderCounters
 
-        if (
-            decoderCounters != null
-        ) {
-
+        if (decoderCounters != null) {
             renderedFrames =
                 decoderCounters
                     .renderedOutputBufferCount
         }
 
-        if (
-            renderedFrames <= 0
-        ) {
-
+        if (renderedFrames <= 0) {
             returnError(
                 "Video karesi ölçülemedi."
             )
-
             return
         }
 
-        val validDuration =
-            durationMs > 0L &&
-                durationMs != C.TIME_UNSET
-
-        if (!validDuration) {
-
+        if (
+            durationMs <= 0L ||
+            durationMs == C.TIME_UNSET
+        ) {
             returnError(
-                "Video süresi ölçülemedi."
+                "Toplam video süresi ölçülemedi."
             )
-
             return
         }
 
         val durationSeconds =
             durationMs / 1000.0
 
+        /*
+         * 3 video × 5 saniye = yaklaşık 15 saniye.
+         * 120 FPS × 15 saniye = yaklaşık 1800 kaynak karesi.
+         */
         val averageFps =
             renderedFrames /
                 durationSeconds
 
-        val intervals =
+        val fpsSamples =
             synchronized(
                 frameIntervalsMs
             ) {
@@ -461,53 +479,46 @@ class BenchmarkActivity : Activity() {
                         it > 0.0 &&
                             it <= 1000.0
                     }
-                    .sorted()
             }
 
         val minimumFps =
-            if (
-                intervals.isNotEmpty()
-            ) {
-
-                intervals.first()
-
+            if (fpsSamples.isNotEmpty()) {
+                fpsSamples.minOrNull()
+                    ?: averageFps
             } else {
-
                 averageFps
             }
 
-        val onePercentLow =
-            if (
-                intervals.isNotEmpty()
-            ) {
+        val sortedSamples =
+            fpsSamples.sorted()
 
-                val count =
+        val onePercentLow =
+            if (sortedSamples.isNotEmpty()) {
+
+                val sampleCount =
                     maxOf(
                         1,
                         (
-                            intervals.size *
+                            sortedSamples.size *
                                 0.01
                         ).toInt()
                     )
 
-                intervals
-                    .take(count)
+                sortedSamples
+                    .take(sampleCount)
                     .average()
 
             } else {
-
                 averageFps
             }
 
         val expectedFrames =
-            if (
-                videoFps > 0.0
-            ) {
+            if (videoFps >= 119.0) {
 
                 (
                     durationSeconds *
                         videoFps
-                ).toInt()
+                ).roundToInt()
 
             } else {
 
@@ -523,38 +534,29 @@ class BenchmarkActivity : Activity() {
             )
 
         val stutterRate =
-            if (
-                totalFrames > 0
-            ) {
+            if (totalFrames > 0) {
 
-                droppedFrames
-                    .toDouble() /
-                    totalFrames
-                        .toDouble() *
-                    100.0
+                (
+                    droppedFrames
+                        .toDouble() /
+                        totalFrames
+                            .toDouble()
+                ) * 100.0
 
             } else {
-
                 0.0
             }
 
         val frameTimeMs =
-            if (
-                averageFps > 0.0
-            ) {
-
+            if (averageFps > 0.0) {
                 1000.0 /
                     averageFps
-
             } else {
-
                 0.0
             }
 
         val processingAverageMs =
-            if (
-                processingFrameCount > 0
-            ) {
+            if (processingFrameCount > 0) {
 
                 totalProcessingOffsetUs
                     .toDouble() /
@@ -563,7 +565,6 @@ class BenchmarkActivity : Activity() {
                     1000.0
 
             } else {
-
                 0.0
             }
 
