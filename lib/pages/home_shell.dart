@@ -35,29 +35,27 @@ class _HomeShellState extends State<HomeShell> {
     _pages = _buildPages();
   }
 
-  List<Widget> _buildPages() {
-    return [
-      DashboardPage(
-        selectedTheme: widget.selectedTheme,
-        selectedStyle: widget.selectedStyle,
-        onThemeChanged: widget.onThemeChanged,
-        onStyleChanged: widget.onStyleChanged,
-      ),
-      SystemMonitorPage(
-        selectedTheme: widget.selectedTheme,
-        selectedStyle: widget.selectedStyle,
-        onThemeChanged: widget.onThemeChanged,
-        onStyleChanged: widget.onStyleChanged,
-      ),
-      const NotesPage(),
-      AppInfoPage(
-        selectedTheme: widget.selectedTheme,
-        selectedStyle: widget.selectedStyle,
-        onThemeChanged: widget.onThemeChanged,
-        onStyleChanged: widget.onStyleChanged,
-      ),
-    ];
-  }
+  List<Widget> _buildPages() => [
+        DashboardPage(
+          selectedTheme: widget.selectedTheme,
+          selectedStyle: widget.selectedStyle,
+          onThemeChanged: widget.onThemeChanged,
+          onStyleChanged: widget.onStyleChanged,
+        ),
+        SystemMonitorPage(
+          selectedTheme: widget.selectedTheme,
+          selectedStyle: widget.selectedStyle,
+          onThemeChanged: widget.onThemeChanged,
+          onStyleChanged: widget.onStyleChanged,
+        ),
+        const NotesPage(),
+        AppInfoPage(
+          selectedTheme: widget.selectedTheme,
+          selectedStyle: widget.selectedStyle,
+          onThemeChanged: widget.onThemeChanged,
+          onStyleChanged: widget.onStyleChanged,
+        ),
+      ];
 
   void _selectDestination(int index) {
     if (index == _currentIndex) return;
@@ -75,8 +73,7 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final mutedColor = colorScheme.onSurfaceVariant;
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       extendBody: widget.selectedStyle != AppThemeStyle.normal,
@@ -90,8 +87,8 @@ class _HomeShellState extends State<HomeShell> {
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
         onTap: _selectDestination,
-        accent: colorScheme.primary,
-        mutedColor: mutedColor,
+        accent: scheme.primary,
+        mutedColor: scheme.onSurfaceVariant,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_outlined),
@@ -99,13 +96,13 @@ class _HomeShellState extends State<HomeShell> {
             label: 'Ana Sayfa',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.monitor_outlined),
-            activeIcon: Icon(Icons.monitor),
-            label: 'Sistem',
+            icon: Icon(Icons.monitor_heart_outlined),
+            activeIcon: Icon(Icons.monitor_heart),
+            label: 'Monitor',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.notes_outlined),
-            activeIcon: Icon(Icons.notes),
+            icon: Icon(Icons.note_outlined),
+            activeIcon: Icon(Icons.note),
             label: 'Notlar',
           ),
           BottomNavigationBarItem(
