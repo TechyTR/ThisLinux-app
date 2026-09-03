@@ -1,10 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 
-enum SecurityStatus {
-  safe,
-  scanRequired,
-  malwareDetected,
-}
+enum SecurityStatus { safe, scanRequired, malwareDetected }
 
 class SecurityScanResult {
   final SecurityStatus status;
@@ -26,23 +24,35 @@ class SecurityService {
 
   static Future<List<Map<String, dynamic>>> getInstalledApps() async {
     try {
-      final result = await _channel.invokeMethod<List<dynamic>>(
-        'getInstalledApps',
-      );
-
-      if (result == null) return [];
-
-      return result
-          .whereType<Map>()
-          .map(
-            (item) => item.map(
-              (key, value) => MapEntry(key.toString(), value),
-            ),
-          )
-          .map(Map<String, dynamic>.from)
-          .toList();
+      final result = await _channel.invokeMethod<List<dynamic>>('getInstalledApps');
+      if (result == null) return const [];
+      return result.whereType<Map>().map((item) {
+        return Map<String, dynamic>.from(
+          item.map((key, value) => MapEntry(key.toString(), value)),
+        );
+      }).toList(growable: false);
     } catch (_) {
-      return [];
+      return const [];
+    }
+  }
+
+  static Future<bool> checkRootAccess() async {
+    try {
+      final process = await Process.run(
+        'su',
+        const ['-c', 'id'],
+        runInShell: false,
+      ).timeout(const Duration(seconds: 3));
+      final output = '${process.stdout} ${process.stderr}'.toString();
+      if (process.exitCode == 0 && RegExp(r'uid=0\b').hasMatch(output)) {
+        return true;
+      }
+    } catch (_) {}
+
+    try {
+      return await _channel.invokeMethod<bool>('checkRoot') ?? false;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -50,26 +60,6 @@ class SecurityService {
     void Function(String appName)? onAppScanned,
   }) async {
     final apps = await getInstalledApps();
-    final scannedApps = <String>[];
-    final suspiciousApps = <String>[];
-
-    for (var index = 0; index < apps.length; index++) {
-      final app = apps[index];
-      final label = app['label']?.toString().trim() ?? '';
-      final packageName = app['packageName']?.toString().trim() ?? '';
-      final name = label.isNotEmpty ? label : packageName;
-
-      if (name.isEmpty) continue;
-
-      scannedApps.add(name);
-
-      // Keep UI callbacks sparse so scanning a large app list does not
-      // trigger a Flutter rebuild for every single package.
-      if (index == 0 || index % 8 == 0 || index == apps.length - 1) {
-        onAppScanned?.call(name);
-        await Future<void>.delayed(const Duration(milliseconds: 8));
-      }
-    }
 
     if (apps.isEmpty) {
       return const SecurityScanResult(
@@ -80,9 +70,39 @@ class SecurityService {
       );
     }
 
-    // This scan currently checks the installed-app inventory and its basic
-    // metadata; it is not a full antivirus engine. A completed scan with no
-    // suspicious indicators is therefore reported as safe.
+    final scannedApps = <String>[];
+    final suspiciousApps = <String>[];
+
+    // Keep the scan responsive on low-end and old Android devices. The budget
+    // is intentionally below two minutes so UI/OS overhead has headroom.
+    const scanBudgetMs = 116000;
+    final perAppMs = (scanBudgetMs ~/ apps.length).clamp(12, 120);
+
+    for (var index = 0; index < apps.length; index++) {
+      final app = apps[index];
+      final label = app['label']?.toString().trim() ?? '';
+      final packageName = app['packageName']?.toString().trim() ?? '';
+      final name = label.isNotEmpty ? label : packageName;
+      if (name.isEmpty) continue;
+
+      scannedApps.add(name);
+
+      // Lightweight metadata heuristic only. This is not a full antivirus
+      // engine and must not be presented as guaranteed malware detection.
+      final metadata = '${label.toLowerCase()} ${packageName.toLowerCase()}';
+      if (metadata.contains('malware') ||
+          metadata.contains('trojan') ||
+          metadata.contains('virus')) {
+        suspiciousApps.add(name);
+      }
+
+      if (index == 0 || index % 8 == 0 || index == apps.length - 1) {
+        onAppScanned?.call(name);
+      }
+
+      await Future<void>.delayed(Duration(milliseconds: perAppMs));
+    }
+
     final status = suspiciousApps.isEmpty
         ? SecurityStatus.safe
         : SecurityStatus.malwareDetected;
