@@ -83,6 +83,9 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final mutedColor = colorScheme.onSurfaceVariant;
+
     return Scaffold(
       extendBody: widget.selectedStyle != AppThemeStyle.normal,
       body: AnimatedSwitcher(
@@ -128,8 +131,31 @@ class _HomeShellState extends State<HomeShell> {
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
-        selectedStyle: widget.selectedStyle,
-        onDestinationSelected: _selectDestination,
+        onTap: _selectDestination,
+        accent: colorScheme.primary,
+        mutedColor: mutedColor,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard_outlined),
+            activeIcon: Icon(Icons.dashboard),
+            label: 'Ana Sayfa',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.monitor_outlined),
+            activeIcon: Icon(Icons.monitor),
+            label: 'Sistem',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.notes_outlined),
+            activeIcon: Icon(Icons.notes),
+            label: 'Notlar',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.info_outline),
+            activeIcon: Icon(Icons.info),
+            label: 'Hakkında',
+          ),
+        ],
       ),
     );
   }
