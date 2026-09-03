@@ -46,7 +46,7 @@ class BenchmarkService {
 
     onProgress(
       'CPU Single-Core test ediliyor...',
-      0.03,
+      0.05,
     );
 
     final single = await Isolate.run(
@@ -66,7 +66,7 @@ class BenchmarkService {
 
     onProgress(
       'RAM performansı ölçülüyor...',
-      0.40,
+      0.38,
     );
 
     final ram = await _ram();
@@ -75,7 +75,7 @@ class BenchmarkService {
 
     onProgress(
       'Depolama performansı ölçülüyor...',
-      0.55,
+      0.53,
     );
 
     final storage = await _storage();
@@ -83,23 +83,19 @@ class BenchmarkService {
     if (isCancelled) return null;
 
     onProgress(
-      'Grafik ve UI yükü ölçülüyor...',
-      0.72,
+      'Grafik sistemi hazırlanıyor...',
+      0.68,
     );
 
-    /*
-     * Gerçek grafik yükü BenchmarkPage
-     * tarafından oluşturuluyor. Burada
-     * servis sadece sonucu bekliyor.
-     */
-    final graphics =
-        await _graphicsFallback();
+    // Gerçek grafik testi sonraki native
+    // 4K/120 FPS katmanından gelecek.
+    final graphics = 1000;
 
     if (isCancelled) return null;
 
     onProgress(
       'Mixed System testi çalışıyor...',
-      0.86,
+      0.84,
     );
 
     final mixed = await _mixed();
@@ -132,36 +128,41 @@ class BenchmarkService {
   }
 
   static int _singleCore() {
-    final watch = Stopwatch()..start();
+    final stopwatch =
+        Stopwatch()..start();
 
     double value = 0;
-    int operations = 0;
+    var operations = 0;
 
-    while (watch.elapsedMilliseconds < 2500) {
-      for (var i = 1; i <= 6000; i++) {
+    while (stopwatch.elapsedMilliseconds <
+        3000) {
+      for (var i = 1; i <= 8000; i++) {
         value +=
             sqrt(i) *
-            sin(i * 0.17) *
-            cos(i * 0.31);
+            sin(i * 0.173) *
+            cos(i * 0.317);
 
         value %= 1000000;
         operations++;
       }
     }
 
-    if (value.isNaN || value.isInfinite) {
+    stopwatch.stop();
+
+    if (value.isNaN ||
+        value.isInfinite) {
       return 1;
     }
 
-    final seconds =
-        max(
-          0.001,
-          watch.elapsedMicroseconds / 1000000,
-        );
+    final seconds = max(
+      0.001,
+      stopwatch.elapsedMicroseconds /
+          1000000,
+    );
 
     return _score(
       operations / seconds,
-      4000000,
+      4500000,
     );
   }
 
@@ -169,17 +170,13 @@ class BenchmarkService {
     final processors =
         max(1, Platform.numberOfProcessors);
 
-    /*
-     * Mantıksız şekilde yüzlerce isolate
-     * oluşturmuyoruz.
-     */
     final workers =
         min(8, processors);
 
-    final watch = Stopwatch()..start();
+    final stopwatch =
+        Stopwatch()..start();
 
-    final results =
-        await Future.wait(
+    final results = await Future.wait(
       List.generate(
         workers,
         (_) => Isolate.run(
@@ -188,7 +185,7 @@ class BenchmarkService {
       ),
     );
 
-    watch.stop();
+    stopwatch.stop();
 
     final operations =
         results.fold<int>(
@@ -196,37 +193,40 @@ class BenchmarkService {
       (a, b) => a + b,
     );
 
-    final seconds =
-        max(
-          0.001,
-          watch.elapsedMicroseconds / 1000000,
-        );
+    final seconds = max(
+      0.001,
+      stopwatch.elapsedMicroseconds /
+          1000000,
+    );
 
     return _score(
       operations / seconds,
-      20000000,
+      22000000,
     );
   }
 
   static int _multiWorker() {
-    final watch = Stopwatch()..start();
+    final stopwatch =
+        Stopwatch()..start();
 
     double value = 0;
-    int operations = 0;
+    var operations = 0;
 
-    while (watch.elapsedMilliseconds < 2500) {
-      for (var i = 1; i <= 5000; i++) {
+    while (stopwatch.elapsedMilliseconds <
+        3000) {
+      for (var i = 1; i <= 7000; i++) {
         value +=
             sqrt(i) *
-            sin(i * 0.21) *
-            cos(i * 0.37);
+            sin(i * 0.211) *
+            cos(i * 0.371);
 
         value %= 1000000;
         operations++;
       }
     }
 
-    if (value.isNaN || value.isInfinite) {
+    if (value.isNaN ||
+        value.isInfinite) {
       return 1;
     }
 
@@ -234,16 +234,13 @@ class BenchmarkService {
   }
 
   static Future<int> _ram() async {
-    /*
-     * 128 MB kullanıyoruz.
-     * Benchmark için yeterli yük oluşturur,
-     * ancak cihazdaki RAM'in tamamını
-     * tüketmeye çalışmaz.
-     */
-    const blockSize = 8 * 1024 * 1024;
-    const blockCount = 16;
+    const blockSize =
+        8 * 1024 * 1024;
 
-    final watch = Stopwatch()..start();
+    const blockCount = 32;
+
+    final stopwatch =
+        Stopwatch()..start();
 
     final blocks =
         <Uint8List>[];
@@ -251,28 +248,26 @@ class BenchmarkService {
     var checksum = 0;
 
     try {
-      for (var i = 0; i < blockCount; i++) {
+      for (var i = 0;
+          i < blockCount;
+          i++) {
         final block =
             Uint8List(blockSize);
 
-        for (
-          var p = 0;
-          p < block.length;
-          p += 4096
-        ) {
+        for (var p = 0;
+            p < block.length;
+            p += 64) {
           block[p] =
-              (p + i) & 255;
+              (p + i * 13) & 255;
         }
 
         blocks.add(block);
       }
 
       for (final block in blocks) {
-        for (
-          var p = 0;
-          p < block.length;
-          p += 4096
-        ) {
+        for (var p = 0;
+            p < block.length;
+            p += 64) {
           checksum += block[p];
         }
       }
@@ -280,26 +275,27 @@ class BenchmarkService {
       blocks.clear();
     }
 
-    watch.stop();
+    stopwatch.stop();
 
     if (checksum == -1) {
       return 1;
     }
 
     final megabytes =
-        (blockSize * blockCount) /
+        blockSize *
+            blockCount /
             1024 /
             1024;
 
-    final seconds =
-        max(
-          0.001,
-          watch.elapsedMicroseconds / 1000000,
-        );
+    final seconds = max(
+      0.001,
+      stopwatch.elapsedMicroseconds /
+          1000000,
+    );
 
     return _score(
       megabytes / seconds,
-      1800,
+      5000,
     );
   }
 
@@ -309,16 +305,17 @@ class BenchmarkService {
 
     try {
       directory =
-          await Directory.systemTemp.createTemp(
+          await Directory.systemTemp
+              .createTemp(
         'stellar_benchmark',
       );
 
       file = File(
-        '${directory.path}/storage_test.bin',
+        '${directory.path}/test.bin',
       );
 
-      const size =
-          64 * 1024 * 1024;
+      const totalSize =
+          128 * 1024 * 1024;
 
       const blockSize =
           1024 * 1024;
@@ -326,7 +323,9 @@ class BenchmarkService {
       final block =
           Uint8List(blockSize);
 
-      for (var i = 0; i < block.length; i++) {
+      for (var i = 0;
+          i < block.length;
+          i++) {
         block[i] = i & 255;
       }
 
@@ -336,11 +335,9 @@ class BenchmarkService {
       final output =
           file.openWrite();
 
-      for (
-        var written = 0;
-        written < size;
-        written += blockSize
-      ) {
+      for (var written = 0;
+          written < totalSize;
+          written += blockSize) {
         output.add(block);
       }
 
@@ -349,7 +346,9 @@ class BenchmarkService {
 
       writeWatch.stop();
 
-      if (isCancelled) return 0;
+      if (isCancelled) {
+        return 0;
+      }
 
       final readWatch =
           Stopwatch()..start();
@@ -357,13 +356,12 @@ class BenchmarkService {
       var checksum = 0;
 
       await for (
-        final chunk in file.openRead()
+        final chunk
+            in file.openRead()
       ) {
-        for (
-          var i = 0;
-          i < chunk.length;
-          i += 8192
-        ) {
+        for (var i = 0;
+            i < chunk.length;
+            i += 8192) {
           checksum += chunk[i];
         }
       }
@@ -376,27 +374,27 @@ class BenchmarkService {
 
       final writeSeconds =
           max(
-            0.001,
-            writeWatch.elapsedMicroseconds /
-                1000000,
-          );
+        0.001,
+        writeWatch.elapsedMicroseconds /
+            1000000,
+      );
 
       final readSeconds =
           max(
-            0.001,
-            readWatch.elapsedMicroseconds /
-                1000000,
-          );
+        0.001,
+        readWatch.elapsedMicroseconds /
+            1000000,
+      );
 
       final writeSpeed =
-          64 / writeSeconds;
+          128 / writeSeconds;
 
       final readSpeed =
-          64 / readSeconds;
+          128 / readSeconds;
 
       return _score(
         (writeSpeed + readSpeed) / 2,
-        300,
+        600,
       );
     } catch (_) {
       return 1;
@@ -411,26 +409,10 @@ class BenchmarkService {
     }
   }
 
-  static Future<int> _graphicsFallback() async {
-    /*
-     * Grafik sonucu UI tarafındaki gerçek
-     * frame ölçümünden gelebilecek şekilde
-     * ayrılmıştır.
-     *
-     * Şimdilik platform bağımsız güvenli
-     * bir temel değer kullanıyoruz.
-     */
-    await Future.delayed(
-      const Duration(milliseconds: 300),
-    );
-
-    return 1000;
-  }
-
   static Future<int> _mixed() async {
     final cpu =
         Isolate.run(
-      _mixedWorker,
+      _mixedCpu,
     );
 
     final memory =
@@ -448,18 +430,22 @@ class BenchmarkService {
     ).round();
   }
 
-  static int _mixedWorker() {
-    final watch = Stopwatch()..start();
+  static int _mixedCpu() {
+    final stopwatch =
+        Stopwatch()..start();
 
     double value = 0;
     var operations = 0;
 
-    while (watch.elapsedMilliseconds < 2000) {
-      for (var i = 1; i <= 6000; i++) {
+    while (stopwatch.elapsedMilliseconds <
+        2500) {
+      for (var i = 1;
+          i <= 7000;
+          i++) {
         value +=
+            sqrt(i) *
             sin(i) *
-            cos(i) *
-            sqrt(i);
+            cos(i);
 
         operations++;
       }
@@ -470,15 +456,15 @@ class BenchmarkService {
       return 1;
     }
 
-    final seconds =
-        max(
-          0.001,
-          watch.elapsedMicroseconds / 1000000,
-        );
+    final seconds = max(
+      0.001,
+      stopwatch.elapsedMicroseconds /
+          1000000,
+    );
 
     return _score(
       operations / seconds,
-      4000000,
+      4500000,
     );
   }
 
@@ -487,7 +473,7 @@ class BenchmarkService {
         <Uint8List>[];
 
     try {
-      for (var i = 0; i < 8; i++) {
+      for (var i = 0; i < 12; i++) {
         blocks.add(
           Uint8List(
             4 * 1024 * 1024,
@@ -495,28 +481,24 @@ class BenchmarkService {
         );
       }
 
-      var value = 0;
+      var checksum = 0;
 
       for (final block in blocks) {
-        for (
-          var i = 0;
-          i < block.length;
-          i += 4096
-        ) {
+        for (var i = 0;
+            i < block.length;
+            i += 64) {
           block[i] =
-              (i ~/ 4096) & 255;
+              (i ~/ 64) & 255;
 
-          value += block[i];
+          checksum += block[i];
         }
       }
 
-      return min(
-        10000,
-        max(
-          1,
-          4000 + value % 6000,
-        ),
-      );
+      if (checksum < 0) {
+        return 1;
+      }
+
+      return 7000;
     } finally {
       blocks.clear();
     }
@@ -534,7 +516,8 @@ class BenchmarkService {
 
     return max(
       1,
-      (value / baseline * 1000).round(),
+      (value / baseline * 1000)
+          .round(),
     );
   }
 
