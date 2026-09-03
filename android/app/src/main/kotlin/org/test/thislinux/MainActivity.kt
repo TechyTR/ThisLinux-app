@@ -44,6 +44,49 @@ class MainActivity : FlutterActivity() {
 
             when (call.method) {
 
+                "run4K120Benchmark" -> {
+    try {
+        startActivityForResult(
+            Intent(
+                this,
+                BenchmarkActivity::class.java
+            ),
+            BENCHMARK_REQUEST_CODE
+        )
+
+        result.success(true)
+
+    } catch (e: Exception) {
+        result.error(
+            "BENCHMARK_ERROR",
+            e.message,
+            null
+        )
+    }
+}
+
+"getDisplayRefreshRate" -> {
+    result.success(
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            display?.refreshRate?.toDouble() ?: 60.0
+        } else {
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.refreshRate.toDouble()
+        }
+    )
+}
+
+"cancel4K120Benchmark" -> {
+    try {
+        finishActivity(
+            BENCHMARK_REQUEST_CODE
+        )
+    } catch (_: Exception) {
+    }
+
+    result.success(true)
+}
+
                 "getDeviceInfo" -> {
 
                     val activityManager =
