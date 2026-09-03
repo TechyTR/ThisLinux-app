@@ -19,6 +19,8 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.mediacodec.DecoderReuseEvaluation
 import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.ui.PlayerView
+import org.json.JSONArray
+import org.json.JSONObject
 import kotlin.math.roundToInt
 
 class BenchmarkActivity : Activity() {
@@ -60,6 +62,9 @@ class BenchmarkActivity : Activity() {
 
         const val RESULT_PROCESSING_AVERAGE_MS =
             "processingAverageMs"
+
+        const val RESULT_FPS_SAMPLES =
+            "fpsSamples"
     }
 
     private var player: ExoPlayer? = null
@@ -82,6 +87,20 @@ class BenchmarkActivity : Activity() {
         mutableListOf<Double>()
 
     private var lastReleaseTimeNs = 0L
+
+    private var firstReleaseTimeNs = 0L
+
+    private var sampleWindowStartNs = 0L
+
+    private var sampleWindowFrameCount = 0
+
+    private data class FrameRateSample(
+        val timeSeconds: Double,
+        val fps: Double
+    )
+
+    private val frameRateSamples =
+        mutableListOf<FrameRateSample>()
 
     private var benchmarkFinished = false
 
@@ -281,6 +300,40 @@ class BenchmarkActivity : Activity() {
 
                         if (releaseTimeNs <= 0L) {
                             return
+                        }
+
+                        if (firstReleaseTimeNs == 0L) {
+                            firstReleaseTimeNs = releaseTimeNs
+                            sampleWindowStartNs = releaseTimeNs
+                        }
+
+                        sampleWindowFrameCount += 1
+
+                        val windowElapsedNs =
+                            releaseTimeNs - sampleWindowStartNs
+
+                        if (
+                            sampleWindowFrameCount > 0 &&
+                            windowElapsedNs >= 500_000_000L
+                        ) {
+                            val fps =
+                                sampleWindowFrameCount /
+                                    (windowElapsedNs / 1_000_000_000.0)
+
+                            if (fps.isFinite() && fps > 0.0) {
+                                synchronized(frameRateSamples) {
+                                    frameRateSamples.add(
+                                        FrameRateSample(
+                                            (releaseTimeNs - firstReleaseTimeNs) /
+                                                1_000_000_000.0,
+                                            fps
+                                        )
+                                    )
+                                }
+                            }
+
+                            sampleWindowStartNs = releaseTimeNs
+                            sampleWindowFrameCount = 0
                         }
 
                         if (lastReleaseTimeNs > 0L) {
@@ -580,6 +633,22 @@ class BenchmarkActivity : Activity() {
                 0.0
             }
 
+        appendPendingFpsSample()
+
+        val fpsSamplesJson =
+            JSONArray().apply {
+                synchronized(frameRateSamples) {
+                    frameRateSamples.forEach { sample ->
+                        put(
+                            JSONObject().apply {
+                                put("timeSeconds", sample.timeSeconds)
+                                put("fps", sample.fps)
+                            }
+                        )
+                    }
+                }
+            }.toString()
+
         val result =
             Intent()
 
@@ -638,6 +707,11 @@ class BenchmarkActivity : Activity() {
             processingAverageMs
         )
 
+        result.putExtra(
+            RESULT_FPS_SAMPLES,
+            fpsSamplesJson
+        )
+
         setResult(
             RESULT_OK,
             result
@@ -648,6 +722,36 @@ class BenchmarkActivity : Activity() {
         player = null
 
         finish()
+    }
+
+    private fun appendPendingFpsSample() {
+        if (
+            firstReleaseTimeNs == 0L ||
+            sampleWindowStartNs == 0L ||
+            sampleWindowFrameCount <= 0 ||
+            lastReleaseTimeNs <= sampleWindowStartNs
+        ) {
+            return
+        }
+
+        val elapsedNs =
+            lastReleaseTimeNs - sampleWindowStartNs
+
+        val fps =
+            sampleWindowFrameCount /
+                (elapsedNs / 1_000_000_000.0)
+
+        if (fps.isFinite() && fps > 0.0) {
+            synchronized(frameRateSamples) {
+                frameRateSamples.add(
+                    FrameRateSample(
+                        (lastReleaseTimeNs - firstReleaseTimeNs) /
+                            1_000_000_000.0,
+                        fps
+                    )
+                )
+            }
+        }
     }
 
     private fun returnError(
