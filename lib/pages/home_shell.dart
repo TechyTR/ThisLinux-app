@@ -5,7 +5,6 @@ import '../widgets/bottom_nav_bar.dart';
 import 'app_info_page.dart';
 import 'dashboard_page.dart';
 import 'notes_page.dart';
-import 'system_info_page.dart';
 import 'system_monitor_page.dart';
 
 class HomeShell extends StatefulWidget {
@@ -45,16 +44,6 @@ class _HomeShellState extends State<HomeShell> {
         selectedStyle: widget.selectedStyle,
         onThemeChanged: widget.onThemeChanged,
         onStyleChanged: widget.onStyleChanged,
-        onSystemInfo: () => _openPage(1),
-        onSystemMonitor: () => _openPage(2),
-        onNotes: () => _openPage(3),
-        onAppInfo: () => _openPage(4),
-      ),
-      SystemInfoPage(
-        selectedTheme: widget.selectedTheme,
-        selectedStyle: widget.selectedStyle,
-        onThemeChanged: widget.onThemeChanged,
-        onStyleChanged: widget.onStyleChanged,
       ),
       SystemMonitorPage(
         selectedTheme: widget.selectedTheme,
@@ -70,14 +59,6 @@ class _HomeShellState extends State<HomeShell> {
         onStyleChanged: widget.onStyleChanged,
       ),
     ];
-  }
-
-  void _openPage(int index) {
-    if (index < 0 || index >= _pages.length) return;
-
-    setState(() {
-      _currentIndex = index;
-    });
   }
 
   void _selectDestination(int index) {
@@ -122,7 +103,7 @@ class _HomeShellState extends State<HomeShell> {
           );
         },
         transitionBuilder: (child, animation) {
-          final fade = CurvedAnimation(
+          final curved = CurvedAnimation(
             parent: animation,
             curve: Curves.easeOutCubic,
           );
@@ -130,10 +111,10 @@ class _HomeShellState extends State<HomeShell> {
           final slide = Tween<Offset>(
             begin: const Offset(0.025, 0),
             end: Offset.zero,
-          ).animate(fade);
+          ).animate(curved);
 
           return FadeTransition(
-            opacity: fade,
+            opacity: curved,
             child: SlideTransition(
               position: slide,
               child: child,
