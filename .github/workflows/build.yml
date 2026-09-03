@@ -15,6 +15,28 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Verify benchmark video assets
+        shell: bash
+        run: |
+          set -e
+          for file in \
+            assets/Bosphorus_3840x2160_120fps_420_8bit_HEVC_RAW.mp4 \
+            assets/HoneyBee_3840x2160_120fps_420_8bit_HEVC_RAW.mp4 \
+            assets/Jockey_3840x2160_120fps_420_8bit_HEVC_RAW.mp4; do
+            if [ ! -f "$file" ]; then
+              echo "Missing benchmark asset: $file"
+              exit 1
+            fi
+            size=$(stat -c%s "$file")
+            if [ "$size" -lt 1000000 ]; then
+              echo "Benchmark asset is not a real video (likely Git LFS pointer): $file ($size bytes)"
+              exit 1
+            fi
+            echo "Verified $file: $size bytes"
+          done
 
       - name: Set up Java
         uses: actions/setup-java@v5
