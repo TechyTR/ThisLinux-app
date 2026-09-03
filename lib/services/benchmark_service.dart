@@ -3,6 +3,8 @@ import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'benchmark_graphics_service.dart';
+
 class BenchmarkResult {
   final int singleCore;
   final int multiCore;
@@ -12,6 +14,8 @@ class BenchmarkResult {
   final int mixed;
   final int total;
 
+  final GraphicsBenchmarkResult? graphicsResult;
+
   const BenchmarkResult({
     required this.singleCore,
     required this.multiCore,
@@ -20,525 +24,351 @@ class BenchmarkResult {
     required this.graphics,
     required this.mixed,
     required this.total,
+    required this.graphicsResult,
   });
 }
 
 class BenchmarkService {
   static bool _cancelled = false;
 
-  static void cancel() {
-    _cancelled = true;
-  }
-
-  static void reset() {
-    _cancelled = false;
-  }
-
-  static bool get isCancelled => _cancelled;
-
   static Future<BenchmarkResult?> run({
-    required void Function(
-      String status,
-      double progress,
-    ) onProgress,
+    void Function(String status, double progress)?
+        onProgress,
   }) async {
-    reset();
+    _cancelled = false;
 
-    onProgress(
-      'CPU Single-Core test ediliyor...',
-      0.05,
-    );
-
-    final single = await Isolate.run(
-      _singleCore,
-    );
-
-    if (isCancelled) return null;
-
-    onProgress(
-      'CPU Multi-Core test ediliyor...',
-      0.20,
-    );
-
-    final multi = await _multiCore();
-
-    if (isCancelled) return null;
-
-    onProgress(
-      'RAM performansı ölçülüyor...',
-      0.38,
-    );
-
-    final ram = await _ram();
-
-    if (isCancelled) return null;
-
-    onProgress(
-      'Depolama performansı ölçülüyor...',
-      0.53,
-    );
-
-    final storage = await _storage();
-
-    if (isCancelled) return null;
-
-    onProgress(
-      'Grafik sistemi hazırlanıyor...',
-      0.68,
-    );
-
-    // Gerçek grafik testi sonraki native
-    // 4K/120 FPS katmanından gelecek.
-    final graphics = 1000;
-
-    if (isCancelled) return null;
-
-    onProgress(
-      'Mixed System testi çalışıyor...',
-      0.84,
-    );
-
-    final mixed = await _mixed();
-
-    if (isCancelled) return null;
-
-    final total = _total(
-      single,
-      multi,
-      ram,
-      storage,
-      graphics,
-      mixed,
-    );
-
-    onProgress(
-      'Benchmark tamamlandı.',
-      1.0,
-    );
-
-    return BenchmarkResult(
-      singleCore: single,
-      multiCore: multi,
-      ram: ram,
-      storage: storage,
-      graphics: graphics,
-      mixed: mixed,
-      total: total,
-    );
-  }
-
-  static int _singleCore() {
-    final stopwatch =
-        Stopwatch()..start();
-
-    double value = 0;
-    var operations = 0;
-
-    while (stopwatch.elapsedMilliseconds <
-        3000) {
-      for (var i = 1; i <= 8000; i++) {
-        value +=
-            sqrt(i) *
-            sin(i * 0.173) *
-            cos(i * 0.317);
-
-        value %= 1000000;
-        operations++;
-      }
+    void progress(
+      String status,
+      double value,
+    ) {
+      onProgress?.call(
+        status,
+        value.clamp(0.0, 1.0),
+      );
     }
-
-    stopwatch.stop();
-
-    if (value.isNaN ||
-        value.isInfinite) {
-      return 1;
-    }
-
-    final seconds = max(
-      0.001,
-      stopwatch.elapsedMicroseconds /
-          1000000,
-    );
-
-    return _score(
-      operations / seconds,
-      4500000,
-    );
-  }
-
-  static Future<int> _multiCore() async {
-    final processors =
-        max(1, Platform.numberOfProcessors);
-
-    final workers =
-        min(8, processors);
-
-    final stopwatch =
-        Stopwatch()..start();
-
-    final results = await Future.wait(
-      List.generate(
-        workers,
-        (_) => Isolate.run(
-          _multiWorker,
-        ),
-      ),
-    );
-
-    stopwatch.stop();
-
-    final operations =
-        results.fold<int>(
-      0,
-      (a, b) => a + b,
-    );
-
-    final seconds = max(
-      0.001,
-      stopwatch.elapsedMicroseconds /
-          1000000,
-    );
-
-    return _score(
-      operations / seconds,
-      22000000,
-    );
-  }
-
-  static int _multiWorker() {
-    final stopwatch =
-        Stopwatch()..start();
-
-    double value = 0;
-    var operations = 0;
-
-    while (stopwatch.elapsedMilliseconds <
-        3000) {
-      for (var i = 1; i <= 7000; i++) {
-        value +=
-            sqrt(i) *
-            sin(i * 0.211) *
-            cos(i * 0.371);
-
-        value %= 1000000;
-        operations++;
-      }
-    }
-
-    if (value.isNaN ||
-        value.isInfinite) {
-      return 1;
-    }
-
-    return operations;
-  }
-
-  static Future<int> _ram() async {
-    const blockSize =
-        8 * 1024 * 1024;
-
-    const blockCount = 32;
-
-    final stopwatch =
-        Stopwatch()..start();
-
-    final blocks =
-        <Uint8List>[];
-
-    var checksum = 0;
 
     try {
-      for (var i = 0;
-          i < blockCount;
-          i++) {
-        final block =
-            Uint8List(blockSize);
-
-        for (var p = 0;
-            p < block.length;
-            p += 64) {
-          block[p] =
-              (p + i * 13) & 255;
-        }
-
-        blocks.add(block);
-      }
-
-      for (final block in blocks) {
-        for (var p = 0;
-            p < block.length;
-            p += 64) {
-          checksum += block[p];
-        }
-      }
-    } finally {
-      blocks.clear();
-    }
-
-    stopwatch.stop();
-
-    if (checksum == -1) {
-      return 1;
-    }
-
-    final megabytes =
-        blockSize *
-            blockCount /
-            1024 /
-            1024;
-
-    final seconds = max(
-      0.001,
-      stopwatch.elapsedMicroseconds /
-          1000000,
-    );
-
-    return _score(
-      megabytes / seconds,
-      5000,
-    );
-  }
-
-  static Future<int> _storage() async {
-    Directory? directory;
-    File? file;
-
-    try {
-      directory =
-          await Directory.systemTemp
-              .createTemp(
-        'stellar_benchmark',
+      progress(
+        'CPU tek çekirdek testi hazırlanıyor...',
+        0.02,
       );
 
-      file = File(
-        '${directory.path}/test.bin',
+      final singleCore =
+          await _singleCoreBenchmark(
+        onProgress: (value) {
+          progress(
+            'CPU tek çekirdek test ediliyor...',
+            0.02 + value * 0.18,
+          );
+        },
       );
 
-      const totalSize =
-          128 * 1024 * 1024;
+      if (_cancelled) return null;
 
-      const blockSize =
-          1024 * 1024;
-
-      final block =
-          Uint8List(blockSize);
-
-      for (var i = 0;
-          i < block.length;
-          i++) {
-        block[i] = i & 255;
-      }
-
-      final writeWatch =
-          Stopwatch()..start();
-
-      final output =
-          file.openWrite();
-
-      for (var written = 0;
-          written < totalSize;
-          written += blockSize) {
-        output.add(block);
-      }
-
-      await output.flush();
-      await output.close();
-
-      writeWatch.stop();
-
-      if (isCancelled) {
-        return 0;
-      }
-
-      final readWatch =
-          Stopwatch()..start();
-
-      var checksum = 0;
-
-      await for (
-        final chunk
-            in file.openRead()
-      ) {
-        for (var i = 0;
-            i < chunk.length;
-            i += 8192) {
-          checksum += chunk[i];
-        }
-      }
-
-      readWatch.stop();
-
-      if (checksum == -1) {
-        return 1;
-      }
-
-      final writeSeconds =
-          max(
-        0.001,
-        writeWatch.elapsedMicroseconds /
-            1000000,
+      progress(
+        'CPU çoklu çekirdek testi hazırlanıyor...',
+        0.20,
       );
 
-      final readSeconds =
-          max(
-        0.001,
-        readWatch.elapsedMicroseconds /
-            1000000,
+      final multiCore =
+          await _multiCoreBenchmark(
+        onProgress: (value) {
+          progress(
+            'CPU çoklu çekirdek test ediliyor...',
+            0.20 + value * 0.23,
+          );
+        },
       );
 
-      final writeSpeed =
-          128 / writeSeconds;
+      if (_cancelled) return null;
 
-      final readSpeed =
-          128 / readSeconds;
+      progress(
+        'RAM bant genişliği ölçülüyor...',
+        0.43,
+      );
 
-      return _score(
-        (writeSpeed + readSpeed) / 2,
-        600,
+      final ram =
+          await _ramBenchmark(
+        onProgress: (value) {
+          progress(
+            'RAM test ediliyor...',
+            0.43 + value * 0.14,
+          );
+        },
+      );
+
+      if (_cancelled) return null;
+
+      progress(
+        'Depolama performansı ölçülüyor...',
+        0.57,
+      );
+
+      final storage =
+          await _storageBenchmark(
+        onProgress: (value) {
+          progress(
+            'Depolama test ediliyor...',
+            0.57 + value * 0.14,
+          );
+        },
+      );
+
+      if (_cancelled) return null;
+
+      progress(
+        'Gerçek 4K 120 FPS grafik testi başlatılıyor...',
+        0.71,
+      );
+
+      final graphicsResult =
+          await BenchmarkGraphicsService.run();
+
+      if (_cancelled) return null;
+
+      final graphics =
+          graphicsResult == null
+              ? 0
+              : _graphicsScore(
+                  graphicsResult,
+                );
+
+      progress(
+        'Karma sistem testi çalışıyor...',
+        0.86,
+      );
+
+      final mixed =
+          await _mixedBenchmark(
+        onProgress: (value) {
+          progress(
+            'CPU + RAM karma testi...',
+            0.86 + value * 0.10,
+          );
+        },
+      );
+
+      if (_cancelled) return null;
+
+      progress(
+        'Stellar Score hesaplanıyor...',
+        0.98,
+      );
+
+      final total =
+          _calculateTotal(
+        singleCore: singleCore,
+        multiCore: multiCore,
+        ram: ram,
+        storage: storage,
+        graphics: graphics,
+        mixed: mixed,
+      );
+
+      progress(
+        'Benchmark tamamlandı.',
+        1.0,
+      );
+
+      return BenchmarkResult(
+        singleCore: singleCore,
+        multiCore: multiCore,
+        ram: ram,
+        storage: storage,
+        graphics: graphics,
+        mixed: mixed,
+        total: total,
+        graphicsResult: graphicsResult,
       );
     } catch (_) {
-      return 1;
-    } finally {
-      try {
-        await file?.delete();
-      } catch (_) {}
-
-      try {
-        await directory?.delete();
-      } catch (_) {}
+      return null;
     }
   }
 
-  static Future<int> _mixed() async {
-    final cpu =
-        Isolate.run(
-      _mixedCpu,
-    );
+  static void cancel() {
+    _cancelled = true;
 
-    final memory =
-        _mixedMemory();
-
-    final results =
-        await Future.wait([
-      cpu,
-      memory,
-    ]);
-
-    return (
-      results[0] * 0.65 +
-      results[1] * 0.35
-    ).round();
+    BenchmarkGraphicsService.cancel();
   }
 
-  static int _mixedCpu() {
-    final stopwatch =
-        Stopwatch()..start();
-
-    double value = 0;
-    var operations = 0;
-
-    while (stopwatch.elapsedMilliseconds <
-        2500) {
-      for (var i = 1;
-          i <= 7000;
-          i++) {
-        value +=
-            sqrt(i) *
-            sin(i) *
-            cos(i);
-
-        operations++;
-      }
-    }
-
-    if (value.isNaN ||
-        value.isInfinite) {
-      return 1;
-    }
-
-    final seconds = max(
-      0.001,
-      stopwatch.elapsedMicroseconds /
-          1000000,
-    );
-
-    return _score(
-      operations / seconds,
-      4500000,
-    );
-  }
-
-  static Future<int> _mixedMemory() async {
-    final blocks =
-        <Uint8List>[];
-
-    try {
-      for (var i = 0; i < 12; i++) {
-        blocks.add(
-          Uint8List(
-            4 * 1024 * 1024,
-          ),
-        );
-      }
-
-      var checksum = 0;
-
-      for (final block in blocks) {
-        for (var i = 0;
-            i < block.length;
-            i += 64) {
-          block[i] =
-              (i ~/ 64) & 255;
-
-          checksum += block[i];
-        }
-      }
-
-      if (checksum < 0) {
-        return 1;
-      }
-
-      return 7000;
-    } finally {
-      blocks.clear();
-    }
-  }
-
-  static int _score(
-    double value,
-    double baseline,
-  ) {
-    if (value <= 0 ||
-        value.isNaN ||
-        value.isInfinite) {
-      return 1;
-    }
-
-    return max(
-      1,
-      (value / baseline * 1000)
-          .round(),
-    );
-  }
-
-  static int _total(
-    int single,
-    int multi,
-    int ram,
-    int storage,
-    int graphics,
-    int mixed,
-  ) {
-    return max(
-      1,
-      (
-        single * 0.20 +
-        multi * 0.25 +
+  static int _calculateTotal({
+    required int singleCore,
+    required int multiCore,
+    required int ram,
+    required int storage,
+    required int graphics,
+    required int mixed,
+  }) {
+    final score =
+        singleCore * 0.20 +
+        multiCore * 0.25 +
         ram * 0.15 +
         storage * 0.15 +
         graphics * 0.10 +
-        mixed * 0.15
-      ).round(),
-    );
+        mixed * 0.15;
+
+    return score.round();
   }
-}
+
+  static int _graphicsScore(
+    GraphicsBenchmarkResult result,
+  ) {
+    if (!result.isValid) {
+      return 0;
+    }
+
+    const targetFps = 120.0;
+
+    final averageRatio =
+        (result.averageFps / targetFps)
+            .clamp(0.0, 1.0);
+
+    final lowRatio =
+        (result.onePercentLow / targetFps)
+            .clamp(0.0, 1.0);
+
+    final minimumRatio =
+        (result.minimumFps / targetFps)
+            .clamp(0.0, 1.0);
+
+    final dropPenalty =
+        (1.0 -
+                result.stutterRate /
+                    100.0)
+            .clamp(0.0, 1.0);
+
+    final processingScore =
+        if (result.processingAverageMs <= 0) {
+          1.0;
+        } else {
+          (1.0 -
+                  result.processingAverageMs /
+                      16.67)
+              .clamp(0.0, 1.0);
+        };
+
+    final score =
+        averageRatio * 0.35 +
+        lowRatio * 0.25 +
+        minimumRatio * 0.15 +
+        dropPenalty * 0.15 +
+        processingScore * 0.10;
+
+    return (score * 10000)
+        .round()
+        .clamp(0, 10000);
+  }
+
+  static Future<int> _singleCoreBenchmark({
+    void Function(double progress)?
+        onProgress,
+  }) async {
+    return Isolate.run(() {
+      final stopwatch =
+          Stopwatch()..start();
+
+      const duration =
+          Duration(seconds: 3);
+
+      double value = 0.123456789;
+
+      int operations = 0;
+
+      while (
+          stopwatch.elapsed <
+              duration) {
+        value =
+            sin(value) *
+                cos(value) +
+            sqrt(
+              value.abs() + 1.0,
+            );
+
+        value =
+            value -
+                value.floorToDouble();
+
+        operations += 4;
+      }
+
+      stopwatch.stop();
+
+      if (value.isNaN) {
+        return 0;
+      }
+
+      final operationsPerSecond =
+          operations /
+              stopwatch.elapsedMicroseconds *
+              1000000;
+
+      final score =
+          sqrt(
+                operationsPerSecond,
+              ) *
+              2.0;
+
+      return score
+          .round()
+          .clamp(0, 10000);
+    });
+  }
+
+  static Future<int> _multiCoreBenchmark({
+    void Function(double progress)?
+        onProgress,
+  }) async {
+    final cores =
+        max(
+          1,
+          Platform.numberOfProcessors,
+        );
+
+    final receivePort =
+        ReceivePort();
+
+    final isolates =
+        <Isolate>[];
+
+    int completed = 0;
+
+    try {
+      for (int i = 0; i < cores; i++) {
+        final isolate =
+            await Isolate.spawn(
+          _multiCoreWorker,
+          receivePort.sendPort,
+        );
+
+        isolates.add(isolate);
+      }
+
+      final stopwatch =
+          Stopwatch()..start();
+
+      final expected =
+          cores;
+
+      await for (
+        final message
+        in receivePort
+      ) {
+        if (message is int) {
+          completed++;
+
+          onProgress?.call(
+            completed /
+                expected,
+          );
+
+          if (
+              completed >=
+                  expected) {
+            break;
+          }
+        }
+      }
+
+      stopwatch.stop();
+
+     
