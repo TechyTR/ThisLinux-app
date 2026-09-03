@@ -1,17 +1,8 @@
 import 'package:flutter/material.dart';
 
-enum AppThemeColor {
-  purple,
-  blue,
-  green,
-  orange,
-}
+enum AppThemeColor { purple, blue, green, orange }
 
-enum AppThemeStyle {
-  normal,
-  liquidGlassLight,
-  liquidGlassDark,
-}
+enum AppThemeStyle { normal, liquidGlassLight, liquidGlassDark }
 
 extension AppThemeColorExtension on AppThemeColor {
   Color get seed {
@@ -58,7 +49,6 @@ class AppTheme {
       seedColor: color.seed,
       brightness: Brightness.dark,
     );
-
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
@@ -67,9 +57,7 @@ class AppTheme {
       appBarTheme: const AppBarTheme(elevation: 0),
       cardTheme: CardThemeData(
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     );
   }
@@ -79,7 +67,6 @@ class AppTheme {
       seedColor: color.seed,
       brightness: Brightness.light,
     );
-
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
@@ -96,11 +83,14 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: BorderSide(
-            color: Colors.white.withOpacity(0.52),
-            width: 1,
-          ),
+          side: BorderSide(color: Colors.white.withOpacity(0.52)),
         ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: Colors.white.withOpacity(0.86),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
       ),
       dividerTheme: DividerThemeData(
         color: Colors.white.withOpacity(0.32),
@@ -111,22 +101,15 @@ class AppTheme {
         fillColor: Colors.white.withOpacity(0.30),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(
-            color: Colors.white.withOpacity(0.48),
-          ),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.48)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(
-            color: Colors.white.withOpacity(0.42),
-          ),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.42)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(
-            color: color.seed.withOpacity(0.55),
-            width: 1.3,
-          ),
+          borderSide: BorderSide(color: color.seed.withOpacity(0.55), width: 1.3),
         ),
       ),
     );
@@ -137,7 +120,6 @@ class AppTheme {
       seedColor: color.seed,
       brightness: Brightness.dark,
     );
-
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
@@ -154,11 +136,14 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: BorderSide(
-            color: Colors.white.withOpacity(0.17),
-            width: 1,
-          ),
+          side: BorderSide(color: Colors.white.withOpacity(0.17)),
         ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: const Color(0xFF15171D).withOpacity(0.94),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
       ),
       dividerTheme: DividerThemeData(
         color: Colors.white.withOpacity(0.12),
@@ -169,47 +154,34 @@ class AppTheme {
         fillColor: Colors.white.withOpacity(0.055),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(
-            color: Colors.white.withOpacity(0.16),
-          ),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.16)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(
-            color: Colors.white.withOpacity(0.13),
-          ),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.13)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(
-            color: color.seed.withOpacity(0.50),
-            width: 1.3,
-          ),
+          borderSide: BorderSide(color: color.seed.withOpacity(0.50), width: 1.3),
         ),
       ),
     );
   }
 
-  static AppThemeColor colorFromString(String value) {
-    return AppThemeColor.values.firstWhere(
-      (item) => item.name == value,
-      orElse: () => AppThemeColor.purple,
-    );
-  }
+  static AppThemeColor colorFromString(String value) => AppThemeColor.values.firstWhere(
+        (item) => item.name == value,
+        orElse: () => AppThemeColor.purple,
+      );
 
   static String colorToString(AppThemeColor color) => color.name;
 
-  static AppThemeStyle styleFromString(String value) {
-    return AppThemeStyle.values.firstWhere(
-      (item) => item.name == value,
-      orElse: () => AppThemeStyle.normal,
-    );
-  }
+  static AppThemeStyle styleFromString(String value) => AppThemeStyle.values.firstWhere(
+        (item) => item.name == value,
+        orElse: () => AppThemeStyle.normal,
+      );
 
   static String styleToString(AppThemeStyle style) => style.name;
-
   static Color colorOf(AppThemeColor color) => color.seed;
-
   static String labelOf(AppThemeColor color) => color.label;
 
   static String styleLabelOf(AppThemeStyle style) {
