@@ -8,6 +8,9 @@ class GraphicsBenchmarkResult {
   final int renderedFrames;
   final double frameTimeMs;
   final double stutterRate;
+  final int videoWidth;
+  final int videoHeight;
+  final double videoFps;
 
   const GraphicsBenchmarkResult({
     required this.averageFps,
@@ -17,6 +20,9 @@ class GraphicsBenchmarkResult {
     required this.renderedFrames,
     required this.frameTimeMs,
     required this.stutterRate,
+    required this.videoWidth,
+    required this.videoHeight,
+    required this.videoFps,
   });
 
   factory GraphicsBenchmarkResult.fromMap(
@@ -59,6 +65,12 @@ class GraphicsBenchmarkResult {
           number(map['frameTimeMs']),
       stutterRate:
           number(map['stutterRate']),
+      videoWidth:
+          integer(map['videoWidth']),
+      videoHeight:
+          integer(map['videoHeight']),
+      videoFps:
+          number(map['videoFps']),
     );
   }
 }
@@ -69,8 +81,7 @@ class BenchmarkGraphicsService {
     'org.test.thislinux/benchmark_graphics',
   );
 
-  static Future<GraphicsBenchmarkResult?>
-      run() async {
+  static Future<GraphicsBenchmarkResult?> run() async {
     try {
       final result =
           await _channel.invokeMethod<
@@ -82,30 +93,28 @@ class BenchmarkGraphicsService {
         return null;
       }
 
-      return GraphicsBenchmarkResult
-          .fromMap(result);
+      return GraphicsBenchmarkResult.fromMap(
+        result,
+      );
     } catch (_) {
       return null;
     }
   }
 
-  static Future<double?>
-      getDisplayRefreshRate() async {
+  static Future<double?> getDisplayRefreshRate() async {
     try {
       final result =
-          await _channel.invokeMethod<
-              double>(
+          await _channel.invokeMethod<num>(
         'getDisplayRefreshRate',
       );
 
-      return result;
+      return result?.toDouble();
     } catch (_) {
       return null;
     }
   }
 
-  static Future<void>
-      cancel() async {
+  static Future<void> cancel() async {
     try {
       await _channel.invokeMethod(
         'cancel4K120Benchmark',
