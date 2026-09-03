@@ -62,7 +62,11 @@ jobs:
           text = path.read_text()
           text = text.replace(
               'import androidx.media3.exoplayer.mediacodec.DecoderReuseEvaluation',
-              'import androidx.media3.decoder.DecoderReuseEvaluation'
+              'import androidx.media3.exoplayer.DecoderReuseEvaluation'
+          )
+          text = text.replace(
+              'import androidx.media3.decoder.DecoderReuseEvaluation',
+              'import androidx.media3.exoplayer.DecoderReuseEvaluation'
           )
           path.write_text(text)
 
@@ -70,9 +74,9 @@ jobs:
           text = path.read_text()
           old = '''"system" to (\n                                            it.flags and\n                                                android.content\n                                                    .pm\n                                                    .ApplicationInfo\n                                                    .FLAG_SYSTEM\n                                        ) != 0'''
           new = '''"system" to (\n                                            (it.flags and\n                                                android.content\n                                                    .pm\n                                                    .ApplicationInfo\n                                                    .FLAG_SYSTEM) != 0\n                                        )'''
-          if old not in text:
-              raise SystemExit('MainActivity system flag pattern not found')
-          path.write_text(text.replace(old, new, 1))
+          if old in text:
+              text = text.replace(old, new, 1)
+          path.write_text(text)
           PY
 
       - name: Build APK
