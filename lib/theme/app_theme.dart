@@ -42,25 +42,18 @@ extension AppThemeColorExtension on AppThemeColor {
 }
 
 class AppTheme {
-  static ThemeData build(
-    AppThemeColor color,
-    AppThemeStyle style,
-  ) {
+  static ThemeData build(AppThemeColor color, AppThemeStyle style) {
     switch (style) {
       case AppThemeStyle.normal:
         return _normal(color);
-
       case AppThemeStyle.liquidGlassLight:
         return _liquidGlassLight(color);
-
       case AppThemeStyle.liquidGlassDark:
         return _liquidGlassDark(color);
     }
   }
 
-  static ThemeData _normal(
-    AppThemeColor color,
-  ) {
+  static ThemeData _normal(AppThemeColor color) {
     final scheme = ColorScheme.fromSeed(
       seedColor: color.seed,
       brightness: Brightness.dark,
@@ -71,10 +64,8 @@ class AppTheme {
       brightness: Brightness.dark,
       colorScheme: scheme,
       scaffoldBackgroundColor: const Color(0xFF101010),
-      appBarTheme: const AppBarTheme(
-        elevation: 0,
-      ),
-      cardTheme: CardTheme(
+      appBarTheme: const AppBarTheme(elevation: 0),
+      cardTheme: CardThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
@@ -83,9 +74,7 @@ class AppTheme {
     );
   }
 
-  static ThemeData _liquidGlassLight(
-    AppThemeColor color,
-  ) {
+  static ThemeData _liquidGlassLight(AppThemeColor color) {
     final scheme = ColorScheme.fromSeed(
       seedColor: color.seed,
       brightness: Brightness.light,
@@ -95,18 +84,13 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       colorScheme: scheme,
-
-      // Düz beyaz yerine hafif renkli ve katmanlı
-      // bir arka plan kullanıyoruz.
       scaffoldBackgroundColor: const Color(0xFFF4F3F8),
-
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
       ),
-
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: Colors.white.withOpacity(0.38),
         surfaceTintColor: Colors.white.withOpacity(0.08),
         elevation: 0,
@@ -118,12 +102,10 @@ class AppTheme {
           ),
         ),
       ),
-
       dividerTheme: DividerThemeData(
         color: Colors.white.withOpacity(0.32),
         thickness: 0.7,
       ),
-
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white.withOpacity(0.30),
@@ -150,9 +132,7 @@ class AppTheme {
     );
   }
 
-  static ThemeData _liquidGlassDark(
-    AppThemeColor color,
-  ) {
+  static ThemeData _liquidGlassDark(AppThemeColor color) {
     final scheme = ColorScheme.fromSeed(
       seedColor: color.seed,
       brightness: Brightness.dark,
@@ -162,36 +142,28 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: scheme,
-
-      // Saf siyah yerine hafif katmanlı koyu zemin.
       scaffoldBackgroundColor: const Color(0xFF08090D),
-
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
       ),
-
-      cardTheme: CardTheme(
-        // Çok saydam cam.
+      cardTheme: CardThemeData(
         color: Colors.white.withOpacity(0.065),
         surfaceTintColor: Colors.white.withOpacity(0.025),
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
           side: BorderSide(
-            // Kenar merkezden belirgin.
             color: Colors.white.withOpacity(0.17),
             width: 1,
           ),
         ),
       ),
-
       dividerTheme: DividerThemeData(
         color: Colors.white.withOpacity(0.12),
         thickness: 0.7,
       ),
-
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white.withOpacity(0.055),
@@ -218,61 +190,36 @@ class AppTheme {
     );
   }
 
-  static AppThemeColor colorFromString(
-    String value,
-  ) {
+  static AppThemeColor colorFromString(String value) {
     return AppThemeColor.values.firstWhere(
       (item) => item.name == value,
       orElse: () => AppThemeColor.purple,
     );
   }
 
-  static String colorToString(
-    AppThemeColor color,
-  ) {
-    return color.name;
-  }
+  static String colorToString(AppThemeColor color) => color.name;
 
-  static AppThemeStyle styleFromString(
-    String value,
-  ) {
+  static AppThemeStyle styleFromString(String value) {
     return AppThemeStyle.values.firstWhere(
       (item) => item.name == value,
       orElse: () => AppThemeStyle.normal,
     );
   }
 
-  static String styleToString(
-    AppThemeStyle style,
-  ) {
-    return style.name;
-  }
+  static String styleToString(AppThemeStyle style) => style.name;
 
-  static Color colorOf(
-    AppThemeColor color,
-  ) {
-    return color.seed;
-  }
+  static Color colorOf(AppThemeColor color) => color.seed;
 
-  static String labelOf(
-    AppThemeColor color,
-  ) {
-    return color.label;
-  }
+  static String labelOf(AppThemeColor color) => color.label;
 
-  static String styleLabelOf(
-    AppThemeStyle style,
-  ) {
+  static String styleLabelOf(AppThemeStyle style) {
     switch (style) {
       case AppThemeStyle.normal:
         return 'Material Design';
-
       case AppThemeStyle.liquidGlassLight:
         return 'Liquid Glass Light';
-
       case AppThemeStyle.liquidGlassDark:
         return 'Liquid Glass Dark';
     }
   }
 }
-
